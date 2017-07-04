@@ -1,6 +1,6 @@
-##Petra-M(RF)
+## Petra-M(RF)
 
-###EM3D : Frequency domain Maxwell equation in 3D
+### EM3D : Frequency domain Maxwell equation in 3D
   Domain:   
      EM3D_Anisotropic : tensor dielectric
      EM3D_Vac         : scalar dielectric
