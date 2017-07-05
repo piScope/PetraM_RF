@@ -9,7 +9,7 @@
 
 COPYRIGHT
 
-The following copyright applies to each file in the MFEM distribution, unless
+The following copyright applies to each file in the Petra-M distribution, unless
 otherwise stated in the file:
 
 Copyright (c) 2016-, S. Shiraiwa and PSFC, MIT
@@ -25,9 +25,9 @@ Petra-M is free software; you can redistribute it and/or modify it under the ter
 of the GNU Lesser General Public License (as published by the Free Software
 Foundation) version 3.0 dated June 2007, with the following EXCEPTIONS:
 
-   1. Subclasses of PyMFEM classes do not constitute a derivative work.
+   1. Subclasses of Petra-M classes do not constitute a derivative work.
 
-   2. Importing PyMFEM to any python software does not constitute a
+   2. Importing Petra-M to any python software does not constitute a
       derivative work and does not require the author to provide source code for
       the application.
 
