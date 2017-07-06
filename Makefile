@@ -4,8 +4,8 @@ INSTALLDIR=$(shell echo $(PetraM))
 ifeq ($(INSTALLDIR),)
    INSTALLDIR := /usr/local/PetraM
 endif
-BINDIR=$(PETRAMDIR)/bin
-LIBDIR=$(PETRAMDIR))/lib
+BINDIR=$(INSTALLDIR)/bin
+LIBDIR=$(INSTALLDIR)/lib
 
 default: compile
 
