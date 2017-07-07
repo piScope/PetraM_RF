@@ -19,3 +19,6 @@
   Pair:
  *    EM3D_Floquet     : Periodic boundary condition
 
+### Build/Install
+  This module is pure-Python. Please consult README.md in PetraM_base for
+  steps to install this module.
