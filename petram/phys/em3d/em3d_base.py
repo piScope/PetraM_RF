@@ -18,6 +18,12 @@ class EM3D_Domain(Domain, Phys):
     def __init__(self, **kwargs):
         super(EM3D_Domain, self).__init__(**kwargs)
         Phys.__init__(self)
+        
+    def attribute_set(self, v):
+        super(EM3D_Domain, self).attribute_set(v)
+        v['sel_readonly'] = False
+        v['sel_index'] = []
+        return v
 
 class EM3D_Bdry(Bdry, Phys):
     has_3rd_panel = True        
@@ -25,5 +31,11 @@ class EM3D_Bdry(Bdry, Phys):
     def __init__(self, **kwargs):
         super(EM3D_Bdry, self).__init__(**kwargs)
         Phys.__init__(self)
+        
+    def attribute_set(self, v):
+        super(EM3D_Bdry, self).attribute_set(v)
+        v['sel_readonly'] = False
+        v['sel_index'] = []
+        return v
     
     

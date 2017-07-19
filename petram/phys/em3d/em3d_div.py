@@ -92,7 +92,14 @@ class EM3D_Div(Domain, Phys):
                    for x in self._sel_index]
         
         for dom, idx in zip(domains, self._sel_index):
-            coeff2 = dom.get_epsilonr_coeff(real = real)
+            coeff1, coeff2, coeff3 = dom.get_coeffs(real = real)           
+            self.add_integrator(engine, 'epsilonr', coeff1,
+                                mbf.AddDomainIntegrator,
+                                itg, idx=[idx], vt  = dom.vt)
+            self.add_integrator(engine, 'sigma', coeff3,
+                                mbf.AddDomainIntegrator,
+                                itg, idx=[idx], vt  = dom.vt)
+            '''
             if coeff2 is not None:        
                 coeff2 = self.restrict_coeff(coeff2, engine, idx = [idx])
                 mbf.AddDomainIntegrator(itg(coeff2))
@@ -100,7 +107,7 @@ class EM3D_Div(Domain, Phys):
             if coeff3 is not None:
                 coeff3 = self.restrict_coeff(coeff3, engine, idx = [idx])
                 mbf.AddDomainIntegrator(itg(coeff3))
-
+            '''
     def apply_essential(self, engine, gf, real = False, kfes = 0):
         if kfes == 0: return
         if real:       

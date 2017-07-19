@@ -44,11 +44,8 @@ from petram.phys.em3d.em3d_vac import EM3D_Vac
 
 txt_predefined = 'freq, e0, mu0'
 
-from petram.phys.vtable import VtableElement, Vtable   
-data1 =  (('label1', VtableElement(None, 
-                                     guilabel = 'Default Domain (Vac)',
-                                     default =  "eps_r=1, mu_r=1, sigma=0",
-                                     tip = "this is pure vacuum" )),)
+from petram.phys.vtable import VtableElement, Vtable
+
 data2 =  (('label1', VtableElement(None, 
                                      guilabel = 'Default Bdry (PMC)',
                                      default =   "Ht = 0",
@@ -56,23 +53,20 @@ data2 =  (('label1', VtableElement(None,
 class EM3D_DefDomain(EM3D_Vac):
     can_delete = False
     nlterms = []
-    vt  = Vtable(data1)          
+    #vt  = Vtable(data1)
+    #do not use vtable here, since we want to use
+    #vtable defined in EM3D_Vac in add_bf_conttribution
+    
     def __init__(self, **kwargs):
         super(EM3D_DefDomain, self).__init__(**kwargs)
-
-    '''      
     def panel1_param(self):
         return [['Default Domain (Vac)',   "eps_r=1, mu_r=1, sigma=0",  2, {}],]
-    
     def get_panel1_value(self):
         return None
-
     def import_panel1_value(self, v):
         pass
-    
     def panel1_tip(self):
         return None
-    '''
     def get_possible_domain(self):
         return []
           

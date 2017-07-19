@@ -79,12 +79,6 @@ class Mur(PhysCoefficient):
 class EM3D_Vac(EM3D_Domain):
     vt  = Vtable(data)
     #nlterms = ['epsilonr']    
-    def attribute_set(self, v):
-        super(EM3D_Vac, self).attribute_set(v)
-        v['sel_readonly'] = False
-        v['sel_index'] = []
-        return v
-     
     def has_bf_contribution(self, kfes):
         if kfes == 0: return True
         else: return False
