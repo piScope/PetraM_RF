@@ -39,15 +39,28 @@ import traceback
 
 from petram.model import Domain, Bdry, Pair
 from petram.phys.phys_model import Phys, PhysModule
+from petram.phys.em3d.em3d_base import EM3D_Bdry
 from petram.phys.em3d.em3d_vac import EM3D_Vac
 
-txt_predefined = 'freq, e0, mu0'    
+txt_predefined = 'freq, e0, mu0'
 
+from petram.phys.vtable import VtableElement, Vtable   
+data1 =  (('label1', VtableElement(None, 
+                                     guilabel = 'Default Domain (Vac)',
+                                     default =  "eps_r=1, mu_r=1, sigma=0",
+                                     tip = "this is pure vacuum" )),)
+data2 =  (('label1', VtableElement(None, 
+                                     guilabel = 'Default Bdry (PMC)',
+                                     default =   "Ht = 0",
+                                     tip = "this is a natural BC" )),)
 class EM3D_DefDomain(EM3D_Vac):
     can_delete = False
+    nlterms = []
+    vt  = Vtable(data1)          
     def __init__(self, **kwargs):
         super(EM3D_DefDomain, self).__init__(**kwargs)
 
+    '''      
     def panel1_param(self):
         return [['Default Domain (Vac)',   "eps_r=1, mu_r=1, sigma=0",  2, {}],]
     
@@ -56,13 +69,19 @@ class EM3D_DefDomain(EM3D_Vac):
 
     def import_panel1_value(self, v):
         pass
-
+    
+    def panel1_tip(self):
+        return None
+    '''
     def get_possible_domain(self):
         return []
+          
         
-class EM3D_DefBdry(Bdry, Phys):
+class EM3D_DefBdry(EM3D_Bdry):
     can_delete = False
-    is_essential = False    
+    is_essential = False
+    nlterms = []          
+    vt  = Vtable(data2)                    
     def __init__(self, **kwargs):
         super(EM3D_DefBdry, self).__init__(**kwargs)
         Phys.__init__(self)
@@ -72,10 +91,19 @@ class EM3D_DefBdry(Bdry, Phys):
         v['sel_readonly'] = False
         v['sel_index'] = ['remaining']
         return v
-        
+    '''   
     def panel1_param(self):
         return [['Default Bdry (PMC)',   "Ht = 0",  2, {}],]
 
+    def get_panel1_value(self):
+        return None
+
+    def import_panel1_value(self, v):
+        pass
+    
+    def panel1_tip(self):
+        return None
+    '''
     def get_possible_bdry(self):
         return []                
 
