@@ -10,6 +10,7 @@ import numpy as np
 
 from petram.model import Bdry
 from petram.phys.phys_model  import Phys
+from petram.phys.em3d.em3d_base import EM3D_Bdry, EM3D_Domain
 
 from petram.helper.geom import connect_pairs
 from petram.helper.geom import find_circle_center_radius
@@ -211,7 +212,7 @@ class C_jwHt_CoaxTEM(mfem.VectorPyCoefficient):
        else:
             return H.imag
 
-class EM3D_Port(Bdry, Phys):
+class EM3D_Port(EM3D_Bdry):
     def __init__(self, mode = 'TE', mn = '0,1', inc_amp='1',
                  inc_phase='0', port_idx= 1):
         super(EM3D_Port, self).__init__(mode = mode,

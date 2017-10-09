@@ -75,7 +75,8 @@ class EM3D_Div(Domain, Phys):
     def get_mixedbf_loc(self):
         '''
         r, c, and flag of MixedBilinearForm
-        flag -1 
+           flag1 : take transpose
+           flag2 : take conj
         '''
         return [(0, 1, -1, -1), (1, 0, 1, 1)]
 
@@ -85,7 +86,7 @@ class EM3D_Div(Domain, Phys):
         sol_extra[name] = np.array(sol)
     '''
 
-    def add_mix_contribution(self, engine, mbf, r, c, real = True):
+    def add_mix_contribution(self, engine, mbf, r, c, is_trans, real = True):
         itg =  mfem.MixedVectorWeakDivergenceIntegrator
         domains = [engine.find_domain_by_index(self.get_root_phys(), x,
                                                check_enabled = True)

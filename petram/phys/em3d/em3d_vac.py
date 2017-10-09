@@ -62,17 +62,18 @@ class Sigma(PhysCoefficient):
        if self.real:  return v.real
        else: return v.imag
 
-class Mur(PhysCoefficient):
+class InvMu(PhysCoefficient):
    '''
       1./mu0/mur
    '''
    def __init__(self, *args, **kwargs):
-       super(Mur, self).__init__(*args, **kwargs)
+       self.omega = kwargs.pop('omega', 1.0)      
+       super(InvMu, self).__init__(*args, **kwargs)
 
    def EvalValue(self, x):
        from em3d_const import mu0, epsilon0      
-       v = super(Mur, self).EvalValue(x)
-       v = 1/mu0/x
+       v = super(InvMu, self).EvalValue(x)
+       v = 1/mu0/v
        if self.real:  return v.real
        else: return v.imag
        
@@ -101,7 +102,7 @@ class EM3D_Vac(EM3D_Domain):
               coeff1 = PhysConstant(eps)
 
         if isinstance(m, str):
-           coeff2 = Mur(m,  self.get_root_phys().ind_vars,
+           coeff2 = InvMu(m,  self.get_root_phys().ind_vars,
                             self._local_ns, self._global_ns,
                             real = real, omega = omega)
         else:
