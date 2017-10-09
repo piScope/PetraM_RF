@@ -128,9 +128,9 @@ class Epsilon_o_r_phi(M_PHI, eps_o_r):
 class Sigma_o_r_phi(M_PHI, sigma_o_r):
     pass
  
-class Epsilon_x_r_rz(M_RZ, eps_o_r):
+class Epsilon_x_r_rz(M_RZ, eps_x_r):
     pass
-class Epsilon_x_r_phi(M_PHI, eps_o_r):
+class Epsilon_x_r_phi(M_PHI, eps_x_r):
     pass
 class Sigma_x_r_rz(M_RZ, sigma_x_r):
     pass
@@ -160,9 +160,9 @@ class InvMu_x_r(PhysCoefficient):
        if self.real:  return v.real
        else: return v.imag
        
-class iInvMu_o_r(PhysCoefficient):
+class InvMu_o_r(PhysCoefficient):
    '''
-      1./mu0/mur/r
+      1/mu0/mur/r
    '''
    def __init__(self, *args, **kwargs):
        self.tmode = kwargs.pop('tmode', 0.0)      
@@ -171,21 +171,36 @@ class iInvMu_o_r(PhysCoefficient):
    def EvalValue(self, x):
        from em2da_const import mu0, epsilon0      
        v = super(InvMu_o_r, self).EvalValue(x)
-       v = 1j/mu0/v/x[0]*self.tmode
+       v = 1./mu0/v/x[0]
        if self.real:  return v.real
        else: return v.imag
        
-class InvMu2_o_r(PhysCoefficient):
+class neg_iInvMu_m_o_r(PhysCoefficient):
    '''
-      1./mu0/mur/r
+      -1j/mu0/mur/r
    '''
    def __init__(self, *args, **kwargs):
-       self.tmode = kwargs.pop('tmode', 0.0)      
-       super(InvMu_o_r, self).__init__(*args, **kwargs)
+       self.tmode = kwargs.pop('tmode', 1.0)      
+       super(neg_iInvMu_m_o_r, self).__init__(*args, **kwargs)
   
    def EvalValue(self, x):
        from em2da_const import mu0, epsilon0      
-       v = super(InvMu_o_r, self).EvalValue(x)
+       v = super(neg_iInvMu_m_o_r, self).EvalValue(x)
+       v = -1j/mu0/v/x[0]*self.tmode
+       if self.real:  return v.real
+       else: return v.imag
+       
+class InvMu_m2_o_r(PhysCoefficient):
+   '''
+      1./mu0/mur/r/m^2
+   '''
+   def __init__(self, *args, **kwargs):
+       self.tmode = kwargs.pop('tmode', 1.0)      
+       super(InvMu_m2_o_r, self).__init__(*args, **kwargs)
+  
+   def EvalValue(self, x):
+       from em2da_const import mu0, epsilon0      
+       v = super(InvMu_m2_o_r, self).EvalValue(x)
        v = 1/mu0/v/x[0]*self.tmode*self.tmode
        if self.real:  return v.real
        else: return v.imag
@@ -208,7 +223,7 @@ class EM2Da_Anisotropic(EM2Da_Domain):
            flag1 : take transpose
            flag2 : take conj
         '''
-        return [(0, 1, 1, 1), (1, 0, 1, -1), (0, 1, -1, 1)]
+        return [(0, 1, 1, 1), (1, 0, 1, 1),(0, 1, -1, 1)]
 
     def add_bf_contribution(self, engine, a, real = True, kfes=0):
         from em2da_const import mu0, epsilon0
@@ -244,7 +259,7 @@ class EM2Da_Anisotropic(EM2Da_Domain):
                                 mfem.VectorFEMassIntegrator)
             
             if tmode != 0:
-                imu_o_r_2 = InvMu2_o_r(m,  self.get_root_phys().ind_vars,
+                imu_o_r_2 = InvMu_m2_o_r(m,  self.get_root_phys().ind_vars,
                                       self._local_ns, self._global_ns,
                                       real = real, tmode = tmode)
                 self.add_integrator(engine, 'mur', imu_o_r_2,
@@ -294,37 +309,40 @@ class EM2Da_Anisotropic(EM2Da_Domain):
         if not isinstance(m, str): m = str(m)
         if not isinstance(s, str): s = str(s)
         
-        imv_o_r_3 = iInvMu_o_r(m,  self.get_root_phys().ind_vars,
+        imv_o_r_3 = neg_iInvMu_m_o_r(m,  self.get_root_phys().ind_vars,
                               self._local_ns, self._global_ns,
                               real = real, tmode = -tmode)
-        e = Epsilon_21(2, e, self.get_root_phys().ind_vars,
+        if r == 1 and c == 0:        
+            e = Epsilon_21(2, e, self.get_root_phys().ind_vars,
                                 self._local_ns, self._global_ns,
                                 real = real, omega = omega)
-        s = Sigma_21(2, s,  self.get_root_phys().ind_vars,
+            s = Sigma_21(2, s,  self.get_root_phys().ind_vars,
                               self._local_ns, self._global_ns,
                               real = real, omega = omega)
-               
-        if r == 1 and c == 0:
             #if  is_trans:
             itg = mfem.MixedDotProductIntegrator
             self.add_integrator(engine, 'epsilon', e,
                                 mbf.AddDomainIntegrator, itg)
             self.add_integrator(engine, 'sigma', s,
                                 mbf.AddDomainIntegrator, itg)
-            #else:
             itg =  mfem.MixedVectorWeakDivergenceIntegrator
             self.add_integrator(engine, 'mur', imv_o_r_3,
                                 mbf.AddDomainIntegrator, itg)
         else:
-            if  is_trans:
-                pass
-            else:
+            if is_trans == -1:
+                e = Epsilon_12(2, e, self.get_root_phys().ind_vars,
+                                self._local_ns, self._global_ns,
+                                real = real, omega = omega)
+                s = Sigma_12(2, s,  self.get_root_phys().ind_vars,
+                              self._local_ns, self._global_ns,
+                              real = real, omega = omega)
+               
                 itg = mfem.MixedDotProductIntegrator
                 self.add_integrator(engine, 'epsilon', e,
                                 mbf.AddDomainIntegrator, itg)
                 self.add_integrator(engine, 'sigma', s,
                                 mbf.AddDomainIntegrator, itg)
-            #else:   
+            else:
                 itg =  mfem.MixedVectorGradientIntegrator
                 self.add_integrator(engine, 'mur', imv_o_r_3,
                                 mbf.AddDomainIntegrator, itg)

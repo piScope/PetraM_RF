@@ -111,7 +111,7 @@ class H_TE_phi(mfem.PyCoefficient):
        # x, y is positive (first quadrant)       
        x = np.sqrt(np.sum((p - self.c)**2))/self.a # 0 < x < 1
        H = 1j*self.AA* self.m/self.a*np.sin(self.m*np.pi*x)
-       H = H * np.exp(1j*self.phase/180.*np.pi)
+       H = -H * np.exp(1j*self.phase/180.*np.pi)
        if self.real:
             return H.real
        else:

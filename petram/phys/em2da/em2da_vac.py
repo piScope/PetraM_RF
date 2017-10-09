@@ -77,7 +77,7 @@ class Sigma_o_r(PhysCoefficient):
    def EvalValue(self, x):
        from em2da_const import mu0, epsilon0
        v = super(Sigma_o_r, self).EvalValue(x)
-       v = 1j * self.omega * v/x[0]
+       v = -1j * self.omega * v/x[0]
        if self.real:  return v.real
        else: return v.imag
        
@@ -92,7 +92,7 @@ class Sigma_x_r(PhysCoefficient):
    def EvalValue(self, x):
        from em2da_const import mu0, epsilon0
        v = super(Sigma_x_r, self).EvalValue(x)
-       v = 1j * self.omega * v * x[0]
+       v = -1j * self.omega * v * x[0]
        if self.real:  return v.real
        else: return v.imag
 
@@ -112,7 +112,7 @@ class InvMu_x_r(PhysCoefficient):
        
 class InvMu_o_r(PhysCoefficient):
    '''
-      1./mu0/mur/r
+      1j/mu0/mur/r
    '''
    def __init__(self, *args, **kwargs):
        self.tmode = kwargs.pop('tmode', 1.0)      
@@ -127,7 +127,7 @@ class InvMu_o_r(PhysCoefficient):
 
 class neg_iInvMu_m_o_r(PhysCoefficient):
    '''
-      1./mu0/mur/r
+      -1j/mu0/mur/r
    '''
    def __init__(self, *args, **kwargs):
        self.tmode = kwargs.pop('tmode', 1.0)      
@@ -142,7 +142,7 @@ class neg_iInvMu_m_o_r(PhysCoefficient):
        
 class InvMu_m2_o_r(PhysCoefficient):
    '''
-      1./mu0/mur/r
+      1./mu0/mur/r/m^2
    '''
    def __init__(self, *args, **kwargs):
        self.tmode = kwargs.pop('tmode', 1.0)      
