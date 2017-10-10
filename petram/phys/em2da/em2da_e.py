@@ -36,7 +36,6 @@ class rEt(PhysCoefficient):
        PhysCoefficient.__init__(self, *args, **kwargs)
    def EvalValue(self, x):
        v = super(rEt, self).EvalValue(x)
-       print v
        v = v[1]*x[0]
        if self.real:  return v.real
        else: return v.imag

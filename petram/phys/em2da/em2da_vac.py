@@ -125,18 +125,18 @@ class InvMu_o_r(PhysCoefficient):
        if self.real:  return v.real
        else: return v.imag
 
-class neg_iInvMu_m_o_r(PhysCoefficient):
+class iInvMu_m_o_r(PhysCoefficient):
    '''
       -1j/mu0/mur/r
    '''
    def __init__(self, *args, **kwargs):
        self.tmode = kwargs.pop('tmode', 1.0)      
-       super(neg_iInvMu_m_o_r, self).__init__(*args, **kwargs)
+       super(iInvMu_m_o_r, self).__init__(*args, **kwargs)
   
    def EvalValue(self, x):
        from em2da_const import mu0, epsilon0      
-       v = super(neg_iInvMu_m_o_r, self).EvalValue(x)
-       v = -1j/mu0/v/x[0]*self.tmode
+       v = super(iInvMu_m_o_r, self).EvalValue(x)
+       v = 1j/mu0/v/x[0]*self.tmode
        if self.real:  return v.real
        else: return v.imag
        
@@ -260,11 +260,12 @@ class EM2Da_Vac(EM2Da_Domain):
         if not isinstance(m, str): m = str(m)
         if not isinstance(s, str): s = str(s)
         
-        imv_o_r_3 = neg_iInvMu_m_o_r(m,  self.get_root_phys().ind_vars,
+        imv_o_r_3 = iInvMu_m_o_r(m,  self.get_root_phys().ind_vars,
                               self._local_ns, self._global_ns,
                               real = real, tmode = -tmode)
 
         if r == 1 and c == 0:
+            # (-a u_vec, div v_scalar)           
             itg =  mfem.MixedVectorWeakDivergenceIntegrator
         else:
             itg =  mfem.MixedVectorGradientIntegrator

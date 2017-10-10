@@ -42,11 +42,15 @@ data =  (('epsilonr', VtableElement('epsilonr', type='complex',
 '''
 Expansion of matrix is as follows
 
-            [e_rz  e_12 ][Erz ]
-[Wrz, Wphi] [           ][    ] = Wrz e_rz Erz + Wrz e_12 Ephi 
-            [e_21  e_phi][Ephi]
+               [e_rz  e_12 ][Erz ]
+[Wrz, Wphx] =  [           ][    ] = Wrz e_rz Erz + Wrz e_12 Ephi 
+               [e_21  e_phi][Ephx]
 
                                 + Wphi e_21 Erz + Wphi*e_phi*Ephi
+
+
+  Erz = Er e_r + Ez e_z
+  Ephx = - rho Ephi
 '''
 
 from em2da_const import mu0, epsilon0
@@ -103,6 +107,12 @@ class eps(object):
         v = - v * epsilon0 * self.omega * self.omega
         if self.real:  return v.real
         else: return v.imag
+class neg_eps(object):
+    def apply_factor(self, x, v):
+        v = v * epsilon0 * self.omega * self.omega
+        if self.real:  return v.real
+        else: return v.imag
+
 class sigma_o_r(object):
     def apply_factor(self, x, v):
         v = - 1j * self.omega * v / x[0]       
@@ -116,6 +126,11 @@ class sigma_x_r(object):
 class sigma(object):
     def apply_factor(self, x, v):
         v = - 1j * self.omega * v
+        if self.real:  return v.real
+        else: return v.imag
+class neg_sigma(object):
+    def apply_factor(self, x, v):
+        v = 1j * self.omega * v
         if self.real:  return v.real
         else: return v.imag
         
@@ -137,13 +152,13 @@ class Sigma_x_r_rz(M_RZ, sigma_x_r):
 class Sigma_x_r_phi(M_PHI, sigma_x_r):
     pass
  
-class Epsilon_21(M_21, eps):
+class Epsilon_21(M_21, neg_eps):
     pass
-class Epsilon_12(M_12, eps):
+class Epsilon_12(M_12, neg_eps):
     pass   
-class Sigma_12(M_12, sigma):
+class Sigma_12(M_12, neg_sigma):
     pass
-class Sigma_21(M_21, sigma):
+class Sigma_21(M_21, neg_sigma):
     pass
 
 class InvMu_x_r(PhysCoefficient):
@@ -175,18 +190,18 @@ class InvMu_o_r(PhysCoefficient):
        if self.real:  return v.real
        else: return v.imag
        
-class neg_iInvMu_m_o_r(PhysCoefficient):
+class iInvMu_m_o_r(PhysCoefficient):
    '''
       -1j/mu0/mur/r
    '''
    def __init__(self, *args, **kwargs):
        self.tmode = kwargs.pop('tmode', 1.0)      
-       super(neg_iInvMu_m_o_r, self).__init__(*args, **kwargs)
+       super(iInvMu_m_o_r, self).__init__(*args, **kwargs)
   
    def EvalValue(self, x):
        from em2da_const import mu0, epsilon0      
-       v = super(neg_iInvMu_m_o_r, self).EvalValue(x)
-       v = -1j/mu0/v/x[0]*self.tmode
+       v = super(iInvMu_m_o_r, self).EvalValue(x)
+       v = 1j/mu0/v/x[0]*self.tmode
        if self.real:  return v.real
        else: return v.imag
        
@@ -309,7 +324,7 @@ class EM2Da_Anisotropic(EM2Da_Domain):
         if not isinstance(m, str): m = str(m)
         if not isinstance(s, str): s = str(s)
         
-        imv_o_r_3 = neg_iInvMu_m_o_r(m,  self.get_root_phys().ind_vars,
+        imv_o_r_3 = iInvMu_m_o_r(m,  self.get_root_phys().ind_vars,
                               self._local_ns, self._global_ns,
                               real = real, tmode = -tmode)
         if r == 1 and c == 0:        
@@ -320,12 +335,14 @@ class EM2Da_Anisotropic(EM2Da_Domain):
                               self._local_ns, self._global_ns,
                               real = real, omega = omega)
             #if  is_trans:
+            # (a_vec dot u_vec, v_scalar)                        
             itg = mfem.MixedDotProductIntegrator
             self.add_integrator(engine, 'epsilon', e,
                                 mbf.AddDomainIntegrator, itg)
             self.add_integrator(engine, 'sigma', s,
                                 mbf.AddDomainIntegrator, itg)
-            itg =  mfem.MixedVectorWeakDivergenceIntegrator
+            # (-a u_vec, div v_scalar)            
+            itg =  mfem.MixedVectorWeakDivergenceIntegrator 
             self.add_integrator(engine, 'mur', imv_o_r_3,
                                 mbf.AddDomainIntegrator, itg)
         else:
@@ -343,6 +360,7 @@ class EM2Da_Anisotropic(EM2Da_Domain):
                 self.add_integrator(engine, 'sigma', s,
                                 mbf.AddDomainIntegrator, itg)
             else:
+                # (a grad u_scalar, v_vec)
                 itg =  mfem.MixedVectorGradientIntegrator
                 self.add_integrator(engine, 'mur', imv_o_r_3,
                                 mbf.AddDomainIntegrator, itg)
