@@ -77,7 +77,7 @@ class E_TE_phi(mfem.PyCoefficient):
        p = np.array(x)
        # x, y is positive (first quadrant)
        xx = np.sqrt(np.sum((p - self.c)**2))/self.a # 0 < x < 1       
-       Ephi = self.m/self.a*np.sin(self.m*np.pi*xx)*x[0]
+       Ephi = self.m/self.a*np.sin(self.m*np.pi*xx)*(x[0]) #Ephi = -rho Ephi
        if self.real:
             return -Ephi.real
        else:
@@ -101,22 +101,65 @@ class H_TE_rz(mfem.VectorPyCoefficient):
        if kc > k:
           raise ValueError('Mode does not propagate')
        beta = np.sqrt(k**2 - kc**2)
-             
-       AA = omega*bdry.mur*mu0*np.pi/kc/kc*amp
-       self.AA = omega*beta*np.pi/kc/kc/AA
+       dprint1("propagation constant:" + str(beta))
+       
+       AA = omega*bdry.mur*mu0*np.pi/kc/kc
+       self.AA = omega*beta*np.pi/kc/kc/AA*amp
 
    def EvalValue(self, x):
        p = np.array(x)
        # x, y is positive (first quadrant)       
        xx = np.sqrt(np.sum((p - self.c)**2))/self.a # 0 < x < 1
-       H = 1j*self.AA* self.m/self.a*np.sin(self.m*np.pi*xx)*x[0]
-       H = -1j* H * np.exp(1j*self.phase/180.*np.pi)*self.a_vec
+       H = 1j*self.AA* self.m/self.a*np.sin(self.m*np.pi*xx)
+       H = -H * np.exp(1j*self.phase/180.*np.pi)*self.a_vec*x[0]
+       H = np.array([H[0], 0])
+       #return np.array([1,1.])
+       if self.real:
+            return H.real
+       else:
+            return H.imag
+         
+class H_TE_phi(mfem.PyCoefficient):
+   def __init__(self, phase, bdry, real = True, amp = 1.0):
+       mfem.PyCoefficient.__init__(self)
+       
+       self.real = real
+       self.phase = phase  # phase !=0 for incoming wave
+
+       freq, omega = bdry.get_root_phys().get_freq_omega()        
+
+       self.a, self.c  = bdry.a, bdry.c       
+       self.a_vec = bdry.a_vec
+       self.m, self.n = bdry.mn[0], bdry.mn[1]
+
+       k = omega*np.sqrt(bdry.epsilonr*epsilon0 * bdry.mur*mu0)
+       kc = np.abs(bdry.mn[0]*np.pi/bdry.a)
+       if kc > k:
+          raise ValueError('Mode does not propagate')
+       beta = np.sqrt(k**2 - kc**2)
+       dprint1("propagation constant:" + str(beta))
+       
+       AA = omega*bdry.mur*mu0*np.pi/kc/kc*amp
+       self.AA = omega*beta*np.pi/kc/kc/AA
+       self.beta = beta
+       self.fac = 1/mu0/bdry.mur*amp
+       '''
+        AA = beta/amp/mu
+       '''
+
+   def EvalValue(self, x):
+       p = np.array(x)
+       # x, y is positive (first quadrant)       
+       xx = np.sqrt(np.sum((p - self.c)**2))/self.a # 0 < x < 1
+       #H = 1j*self.AA* self.m/self.a*np.sin(self.m*np.pi*xx)
+       H = (-1j*self.beta-1/x[0])*self.fac* self.m/self.a*np.sin(self.m*np.pi*xx)
+       H = H * np.exp(1j*self.phase/180.*np.pi)
        if self.real:
             return H.real
        else:
             return H.imag
 
-H_TE_phi = None
+H_TE_rz = None
 E_TE_rz = None
 
 
@@ -231,10 +274,26 @@ class EM2Da_Port(EM2Da_Bdry):
     ### rectangular port
         self.a_vec = (vv[0] - vv[-1])
         self.a = np.sqrt(np.sum(self.a_vec**2))
+        self.a_vec /= self.a
         self.c = vv[-1]
         dprint1("Cornor " + self.c.__repr__())
         dprint1("Edge  " + self.a.__repr__())
         dprint1("Edge Vec." + list(self.a_vec).__repr__())
+
+        Erz, Ephi = self.get_e_coeff_cls()
+        Hrz, Hphi = self.get_h_coeff_cls()
+        
+
+        if self.mode == 'TE':
+           dprint1("E field pattern")           
+           c1 = Ephi(self, real = True)
+           c2 = Hrz(2, 0.0, self, real = False)           
+           for p in vv:
+               dprint1(p.__repr__() + ' : ' + c1.EvalValue(p).__repr__())
+           dprint1("H field pattern")
+           for p in vv:
+               dprint1(p.__repr__() + ' : ' + c2.EvalValue(p).__repr__())
+        
 
     def get_h_coeff_cls(self):
         m = sys.modules[__name__]
@@ -250,13 +309,17 @@ class EM2Da_Port(EM2Da_Bdry):
      
     def has_lf_contribution(self, kfes):
         self.vt.preprocess_params(self)
-        inc_amp, inc_phase = self.vt.make_value_or_expression(self)         
+        inc_amp, inc_phase = self.vt.make_value_or_expression(self)
         if kfes == 1:
             if self.mode == 'TE':
+                return inc_amp != 0               
+            elif self.mode == 'Ephi':
                 return inc_amp != 0
         elif kfes == 0:
-            if self.mode == 'Ephi':
+            if self.mode == 'TE':
                 return inc_amp != 0
+            elif self.mode == 'Ephi':
+                return False
         else:
             return False
 
@@ -273,18 +336,24 @@ class EM2Da_Port(EM2Da_Bdry):
         phase = np.angle(inc_wave)*180/np.pi
         amp   = np.abs(inc_wave)
 
-        if (kfes == 0 and self.mode == 'TE'):  # E~phi B ~rz
-            coeff = Hrz(2, phase, self, real = real, amp = amp) 
+#        if (kfes == 0 and self.mode == 'TE'):  # E~phi B ~rz
+#            coeff = Hrz(2, phase, self, real = real, amp = amp) 
+#            self.add_integrator(engine, 'inc_amp', coeff,
+#                                b.AddBoundaryIntegrator,
+#                                mfem.VectorFEDomainLFIntegrator)
+#                                mfem.VectorFEBoundaryTangentLFIntegrator)
+        if (kfes == 1 and self.mode == 'TE'):  # E~phi B ~rz
+            coeff = Hphi(phase, self, real = real, amp = amp) 
             self.add_integrator(engine, 'inc_amp', coeff,
                                 b.AddBoundaryIntegrator,
-                                mfem.VectorFEBoundaryTangentLFIntegrator)
+                                mfem.BoundaryLFIntegrator)
+
         else:
             pass
 
 
     def has_extra_DoF(self, kfes):
-        if self.mode == 'TE':       
-            return True
+        if self.mode == 'TE' and kfes == 1: return True
         elif kfes == 0:
             if self.mode == 'Ephi':
                  return True
@@ -306,19 +375,21 @@ class EM2Da_Port(EM2Da_Bdry):
         Erz, Ephi = self.get_e_coeff_cls()
         Hrz, Hphi = self.get_h_coeff_cls()
         fes = engine.get_fes(self.get_root_phys(), kfes)
-        
-        if (kfes == 0 and self.mode == 'TE'):
 
+        '''
+        if (kfes == 0 and self.mode == 'TE'):
            lf1 = engine.new_lf(fes)
            Ht = Hrz(2, 0.0, self, real = True)
            Ht = self.restrict_coeff(Ht, engine, vec = True)
-           intg = mfem.VectorFEBoundaryTangentLFIntegrator(Ht)
+           intg =  mfem.VectorFEDomainLFIntegrator(Ht)
+           #intg = mfem.VectorFEBoundaryTangentLFIntegrator(Ht)
            lf1.AddBoundaryIntegrator(intg)
            lf1.Assemble()
            lf1i = engine.new_lf(fes)
            Ht = Hrz(2, 0.0, self, real = False)
            Ht = self.restrict_coeff(Ht, engine, vec = True)
-           intg = mfem.VectorFEBoundaryTangentLFIntegrator(Ht)           
+           intg =  mfem.VectorFEDomainLFIntegrator(Ht)           
+           #intg = mfem.VectorFEBoundaryTangentLFIntegrator(Ht)           
            lf1i.AddBoundaryIntegrator(intg)
            lf1i.Assemble()
 
@@ -329,9 +400,28 @@ class EM2Da_Port(EM2Da_Bdry):
            # are slightly different in parallel and serial
            # in serial numpy returns (1,1) array, while in parallel
            # MFEM returns a number. np.sum takes care of this.
-           return (v1, None, None, None, True)
-        
-        elif (kfes == 1 and self.mode == 'TE'):
+           return (v1, None, None, None, False)
+        '''
+        if (kfes == 1 and self.mode == 'TE'):
+           
+           lf1 = engine.new_lf(fes)
+           Ht = Hphi(0.0, self, real = True)
+           Ht = self.restrict_coeff(Ht, engine)
+           intg = mfem.BoundaryLFIntegrator(Ht)
+           lf1.AddBoundaryIntegrator(intg)
+           lf1.Assemble()
+           
+           lf1i = engine.new_lf(fes)
+           Ht = Hphi(0.0, self, real = False)           
+           Ht = self.restrict_coeff(Ht, engine)
+           intg = mfem.BoundaryLFIntegrator(Ht)
+           lf1i.AddBoundaryIntegrator(intg)
+           lf1i.Assemble()
+
+           from mfem.common.chypre import LF2PyVec
+           v1 = LF2PyVec(lf1, lf1i)
+           v1 *= -1
+           
            lf2 = engine.new_lf(fes)
            Et = Ephi(self, real = True)
            Et = self.restrict_coeff(Et, engine)
@@ -344,13 +434,7 @@ class EM2Da_Port(EM2Da_Bdry):
            arr = self.get_restriction_array(engine)
            x.ProjectBdrCoefficient(Et,  arr)
 
-           inc_amp, inc_phase = self.vt.make_value_or_expression(self)
-           t4 = np.array([[inc_amp*np.exp(1j*inc_phase/180.*np.pi)]])
 
-           '''
-           v1 = LF2PyVec(lf1, lf1i)
-           v1 *= -1
-           '''
            v2 = LF2PyVec(lf2, None, horizontal = True)
            x  = LF2PyVec(x, None)
 
@@ -359,9 +443,16 @@ class EM2Da_Port(EM2Da_Bdry):
            # in serial numpy returns (1,1) array, while in parallel
            # MFEM returns a number. np.sum takes care of this.
            tmp = np.sum(v2.dot(x))
-           v2 *= 1./tmp
-           t3 =  np.array(1).reshape(1,1)        
-           return (None, v2, t3, t4, True)
+           v2 *= -1/tmp/2.
+           
+           t3 =  np.array(1).reshape(1,1)
+           inc_amp, inc_phase = self.vt.make_value_or_expression(self)
+           t4 = np.array([[inc_amp*np.exp(1j*inc_phase/180.*np.pi)]])
+           #return (None, v2, t3, t4, True)
+           return (v1, v2, t3, t4, True)
+
+
+           
 
   
 

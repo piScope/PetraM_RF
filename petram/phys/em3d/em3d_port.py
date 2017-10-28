@@ -99,7 +99,7 @@ class C_jwHt_TE(mfem.VectorPyCoefficient):
        if kc > k:
           raise ValueError('Mode does not propagate')
        beta = np.sqrt(k**2 - kc**2)
-             
+       dprint1("propagation constant:" + str(beta))
        AA = omega*bdry.mur*mu0*np.pi/kc/kc*amp
        self.AA = omega*beta*np.pi/kc/kc/AA
 
