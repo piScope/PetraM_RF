@@ -1,4 +1,4 @@
-from petram.phys.em3d.em3d_base import EM3D_Bdry, EM3D_Domain
+from petram.phys.em2da.em2da_base import EM2Da_Bdry, EM2Da_Domain
 
 from petram.phys.vtable import VtableElement, Vtable   
 data =  (('label1', VtableElement(None, 
@@ -9,7 +9,7 @@ data =  (('label1', VtableElement(None,
 from petram.model import Domain, Bdry, Pair
 from petram.phys.phys_model  import Phys
 
-class EM3D_PEC(EM3D_Bdry):
+class EM2Da_PEC(EM2Da_Bdry):
     has_essential = True
     nlterms = []
     vt  = Vtable(data)          
@@ -17,6 +17,8 @@ class EM3D_PEC(EM3D_Bdry):
     def get_essential_idx(self, kfes):
         if kfes == 0:
             return self._sel_index
+        elif kfes == 1:
+            return self._sel_index            
         else:
             return []
 
