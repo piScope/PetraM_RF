@@ -271,18 +271,46 @@ class EM3D(PhysModule):
             add_expression(v, 'normB', suffix, ind_vars,
                            '(conj(Bx)*Bx + conj(By)*By + conj(Bz)*Bz)**(0.5)',
                            ['B'])
-            add_expression(v, 'Px', suffix, ind_vars,
+
+            # Poynting Flux
+            add_expression(v, 'Poyx', suffix, ind_vars,
                            '(conj(Ey)*Bz - conj(Ez)*By)/mu0', ['B', 'E'])
-            add_expression(v, 'Py', suffix, ind_vars,
+            add_expression(v, 'Poyy', suffix, ind_vars,
                            '(conj(Ez)*Bx - conj(Ex)*Bz)/mu0', ['B', 'E'])
-            add_expression(v, 'Pz', suffix, ind_vars,
+            add_expression(v, 'Poyz', suffix, ind_vars,
                            '(conj(Ex)*By - conj(Ey)*Bx)/mu0', ['B', 'E'])
+
+            #e = - epsion * w^2 - i * sigma * w
+            # Jd : displacement current  = -i omega* e0 er E
             add_expression(v, 'Jdx', suffix, ind_vars,
-                           '(-1j*(dot(epsilonr, E))*freq*2*pi*e0)[0]', ['epsilonr', 'E'])
+                           '(-1j*(dot(epsilonr, E))*freq*2*pi*e0)[0]', 
+                           ['epsilonr', 'E'])
             add_expression(v, 'Jdy', suffix, ind_vars,
-                           '(-1j*(dot(epsilonr, E))*freq*2*pi*e0)[1]', ['epsilonr', 'E'])
+                           '(-1j*(dot(epsilonr, E))*freq*2*pi*e0)[1]', 
+                           ['epsilonr', 'E'])
             add_expression(v, 'Jdz', suffix, ind_vars,
-                           '(-1j*(dot(epsilonr, E))*freq*2*pi*e0)[2]', ['epsilonr', 'E'])
+                           '(-1j*(dot(epsilonr, E))*freq*2*pi*e0)[2]', 
+                           ['epsilonr', 'E'])
+            # Ji : induced current = sigma *E
+            add_expression(v, 'Jix', suffix, ind_vars,
+                           '(dot(sigma, E))[0]', 
+                           ['sigma', 'E'])
+            add_expression(v, 'Jiy', suffix, ind_vars,
+                           '(dot(sigma, E))[1]', 
+                           ['sigma', 'E'])
+            add_expression(v, 'Jiz', suffix, ind_vars,
+                           '(dot(sigma, E))[2]', 
+                           ['sigma', 'E'])
+            # Jp : polarization current (Jp = -i omega* e0 (er - 1) E
+            add_expression(v, 'Jpx', suffix, ind_vars,
+                           '(-1j*(dot(epsilonr, E) - E)*freq*2*pi*e0)[0]', 
+                           ['epsilonr', 'E'])
+            add_expression(v, 'Jpy', suffix, ind_vars,
+                           '(-1j*(dot(epsilonr, E) - E)*freq*2*pi*e0)[1]', 
+                           ['epsilonr', 'E'])
+            add_expression(v, 'Jpz', suffix, ind_vars,
+                           '(-1j*(dot(epsilonr, E) - E)*freq*2*pi*e0)[2]', 
+                           ['epsilonr', 'E'])
             
             
         elif name.startswith('psi'):

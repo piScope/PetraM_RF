@@ -1,8 +1,5 @@
 '''
    anistropic region:
-      However, can have arbitrary matrix epsilon_r, mu_r, sigma
-
-
 '''
 from petram.model import Domain
 from petram.phys.phys_model  import Phys, MatrixPhysCoefficient
