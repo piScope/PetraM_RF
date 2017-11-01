@@ -1,4 +1,4 @@
-from petram.phys.em3d.em3d_base import EM3D_Bdry, EM3D_Domain
+from petram.phys.em2da.em2da_base import EM2Da_Bdry, EM2Da_Domain
 
 from petram.phys.vtable import VtableElement, Vtable   
 data =  (('label1', VtableElement(None, 
@@ -6,7 +6,7 @@ data =  (('label1', VtableElement(None,
                                   default =   "Ht = 0",
                                   tip = "this is a natural BC" )),)
 
-class EM3D_PMC(EM3D_Bdry):
+class EM2Da_PMC(EM2Da_Bdry):
     is_essential = False
     nlterms = []
     vt  = Vtable(data)          
