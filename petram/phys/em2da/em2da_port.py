@@ -287,7 +287,7 @@ class EM2Da_Port(EM2Da_Bdry):
         if self.mode == 'TE':
            dprint1("E field pattern")           
            c1 = Ephi(self, real = True)
-           c2 = Hrz(2, 0.0, self, real = False)           
+           c2 = Hphi(0.0, self, real = False)           
            for p in vv:
                dprint1(p.__repr__() + ' : ' + c1.EvalValue(p).__repr__())
            dprint1("H field pattern")
