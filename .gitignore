@@ -10,4 +10,3 @@ dist
 *.egg-info
 petram/trash
 test
-Makefile

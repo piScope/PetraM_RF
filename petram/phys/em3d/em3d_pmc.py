@@ -1,13 +1,23 @@
-from petram.phys.em3d.em3d_base import EM3D_Bdry, EM3D_Domain
+from petram.model import Domain, Bdry, Pair
+from petram.phys.phys_model  import Phys
 
-from petram.phys.vtable import VtableElement, Vtable   
-data =  (('label1', VtableElement(None, 
-                                  guilabel = 'Perfect Magnetic Conductor',
-                                  default =   "Ht = 0",
-                                  tip = "this is a natural BC" )),)
-
-class EM3D_PMC(EM3D_Bdry):
+class EM3D_PMC(Bdry, Phys):
     is_essential = False
-    nlterms = []
-    vt  = Vtable(data)          
-    
+    def __init__(self, **kwargs):
+        super(EM3D_PMC, self).__init__( **kwargs)
+        Phys.__init__(self)
+        
+    def attribute_set(self, v):
+        super(EM3D_PMC, self).attribute_set(v)        
+        v['sel_readonly'] = False
+        v['sel_index'] = []
+        return v
+
+    def panel1_param(self):
+        return [['Pefect Magnetic Conductor',   "Ht = 0",  2, {}],]
+
+    def get_panel1_value(self):
+        return None
+
+    def import_panel1_value(self, v):
+        pass
