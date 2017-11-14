@@ -6,8 +6,8 @@ import numpy as np
 from petram.model import Bdry
 from petram.phys.phys_model  import Phys, VectorPhysCoefficient, PhysCoefficient
 from petram.phys.em2da.em2da_base import EM2Da_Bdry, EM2Da_Domain
-import petram.debug as debug
 
+import petram.debug as debug
 dprint1, dprint2, dprint3 = debug.init_dprints('EM2Da_E')
 
 from petram.mfem_config import use_parallel
@@ -45,11 +45,10 @@ class EM2Da_E(EM2Da_Bdry):
     vt  = Vtable(data)
     
     def get_essential_idx(self, kfes):
-        if kfes > 1: return
+        if kfes > 2: return
         return self._sel_index
 
     def apply_essential(self, engine, gf, real = False, kfes = 0):
-
         if kfes > 1: return
         if real:       
             dprint1("Apply Ess.(real)" + str(self._sel_index))

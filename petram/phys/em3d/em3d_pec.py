@@ -1,5 +1,14 @@
 from petram.phys.em3d.em3d_base import EM3D_Bdry, EM3D_Domain
 
+import petram.debug as debug
+dprint1, dprint2, dprint3 = debug.init_dprints('EM3D_PEC')
+
+from petram.mfem_config import use_parallel
+if use_parallel:
+   import mfem.par as mfem
+else:
+   import mfem.ser as mfem
+
 from petram.phys.vtable import VtableElement, Vtable   
 data =  (('label1', VtableElement(None, 
                                   guilabel = 'Perfect Electric Conductor',
@@ -22,7 +31,20 @@ class EM3D_PEC(EM3D_Bdry):
 
     def apply_essential(self, engine, gf, kfes, real = False,
                         **kwargs):
-        pass
+        
+        mesh = engine.get_mesh(mm = self)        
+        ibdr = mesh.bdr_attributes.ToList()
+        bdr_attr = [0]*mesh.bdr_attributes.Max()
+        for idx in self._sel_index:
+            bdr_attr[idx-1] = 1
+
+        if kfes == 0:
+           coeff1 = mfem.VectorArrayCoefficient(3)
+           coeff1.Set(0, mfem.ConstantCoefficient(0.0))
+           coeff1.Set(1, mfem.ConstantCoefficient(0.0))
+           coeff1.Set(2, mfem.ConstantCoefficient(0.0))                       
+           gf.ProjectBdrCoefficientTangent(coeff1,
+                                           mfem.intArray(bdr_attr))
         
 
 

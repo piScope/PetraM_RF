@@ -232,10 +232,10 @@ class EM2Da(PhysModule):
     def get_possible_domain(self):
         from em2da_anisotropic import EM2Da_Anisotropic
         from em2da_vac       import EM2Da_Vac
-        #from em3d_extj       import EM3D_ExtJ
+        from em2da_extj       import EM2Da_ExtJ
         #from em3d_div       import EM3D_Div        
 
-        return [EM2Da_Vac, EM2Da_Anisotropic]
+        return [EM2Da_Vac, EM2Da_Anisotropic, EM2Da_ExtJ]
 
     def get_possible_edge(self):
         return []                
