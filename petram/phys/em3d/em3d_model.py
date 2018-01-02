@@ -187,9 +187,10 @@ class EM3D(PhysModule):
         names  = ','.join([x+self.dep_vars_suffix for x in self.dep_vars])
         names2  = ','.join([x+self.dep_vars_suffix for x in EM3D.der_var_base])
         val =  super(EM3D, self).get_panel1_value()
-        return val.extend([self.freq_txt,
-                self.ind_vars, self.dep_vars_suffix,
-                names, names2, txt_predefined])
+        val.extend([self.freq_txt,
+                    self.ind_vars, self.dep_vars_suffix,
+                    names, names2, txt_predefined])
+        return val
     
     def get_panel2_value(self):
         return 'all'
