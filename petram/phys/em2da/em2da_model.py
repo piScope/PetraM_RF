@@ -182,9 +182,9 @@ class EM2Da(PhysModule):
         names  = ','.join([x+self.dep_vars_suffix for x in self.dep_vars])
         names2  = ','.join([x+self.dep_vars_suffix for x in EM2Da.der_var_base])
         val =  super(EM2Da, self).get_panel1_value()
-        return val.extend([self.freq_txt,
-                self.ind_vars, self.dep_vars_suffix,
-                names, names2, txt_predefined])
+        val.extend([self.freq_txt, self.ind_vars, self.dep_vars_suffix,
+                    names, names2, txt_predefined])
+        return val
     
     def get_panel2_value(self):
         return 'all'
@@ -232,10 +232,10 @@ class EM2Da(PhysModule):
     def get_possible_domain(self):
         from em2da_anisotropic import EM2Da_Anisotropic
         from em2da_vac       import EM2Da_Vac
-        #from em3d_extj       import EM3D_ExtJ
+        from em2da_extj       import EM2Da_ExtJ
         #from em3d_div       import EM3D_Div        
 
-        return [EM2Da_Vac, EM2Da_Anisotropic]
+        return [EM2Da_Vac, EM2Da_Anisotropic, EM2Da_ExtJ]
 
     def get_possible_edge(self):
         return []                

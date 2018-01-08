@@ -35,6 +35,7 @@ class Jext(VectorPhysCoefficient):
 
 class EM3D_ExtJ(EM3D_Domain):
     is_secondary_condition = True
+    has_3rd_panel = False    
     vt  = Vtable(data)
     
     def has_lf_contribution(self, kfes = 0):
