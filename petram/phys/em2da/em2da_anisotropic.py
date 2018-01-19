@@ -154,6 +154,12 @@ class Sigma_x_r_phi(M_PHI, sigma_x_r):
  
 class Epsilon_21(M_21, neg_eps):
     pass
+    '''
+    def EvalValue(self, x):
+        val = super(Epsilon_21, self).EvalValue(x)
+        print val
+        return val
+    '''
 class Epsilon_12(M_12, neg_eps):
     pass   
 class Sigma_12(M_12, neg_sigma):
@@ -319,7 +325,7 @@ class EM2Da_Anisotropic(EM2Da_Domain):
         from em2da_const import mu0, epsilon0
         freq, omega = self.get_root_phys().get_freq_omega()
         e, m, s, tmode = self.vt.make_value_or_expression(self)
-        if tmode == 0: return
+        #if tmode == 0: return
         if not isinstance(e, str): e = str(e)
         if not isinstance(m, str): m = str(m)
         if not isinstance(s, str): s = str(s)
