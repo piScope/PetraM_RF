@@ -500,7 +500,7 @@ class EM3D_Port(EM3D_Bdry):
         t4 = np.array([[self.inc_amp*np.exp(1j*self.inc_phase/180.*np.pi)]])
 
 
-        from mfem.common.chypre import LF2PyVec
+        from mfem.common.chypre import LF2PyVec, PyVec2PyMat, Array2PyVec, IdentityPyMat
 
         v1 = LF2PyVec(lf1, lf1i)
         v1 *= -1
@@ -514,7 +514,10 @@ class EM3D_Port(EM3D_Bdry):
         tmp = np.sum(v2.dot(x))
         v2 *= 1./tmp
 
-        t3 =  np.array(1).reshape(1,1)        
+        v1 = PyVec2PyMat(v1)
+        v2 = PyVec2PyMat(v2.transpose()).transpose()
+        t4 = Array2PyVec(t4)
+        t3 = IdentityPyMat(1)
         return (v1, v2, t3, t4, True)
 
         '''
