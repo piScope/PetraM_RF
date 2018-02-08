@@ -515,52 +515,19 @@ class EM3D_Port(EM3D_Bdry):
         v2 *= 1./tmp
 
         v1 = PyVec2PyMat(v1)
-        v2 = PyVec2PyMat(v2.transpose()).transpose()
+        v2 = PyVec2PyMat(v2.transpose())
         t4 = Array2PyVec(t4)
         t3 = IdentityPyMat(1)
-        return (v1, v2, t3, t4, True)
 
         '''
-        if use_parallel:
+        Format of extar   (t2 is returnd as vertical(transposed) matrix)
+        [M,  t1]   [  ]
+        [      ] = [  ]
+        [t2, t3]   [t4]
 
-            from petram.solver.solver_utils import gather_vector
-            from mfem.common.chypre import CHypreVec
-
-            lf1bv = lf1.ParallelAssemble()
-            lf1ibv =lf1i.ParallelAssemble()
-            lf2v = lf2.ParallelAssemble()
-            xbv   = x.ParallelAssemble()
-            
-            lf1bv  *= -1.0
-            lf1ibv *= -1.0
-
-            tmp = mfem.InnerProduct(lf2v, xbv)
-            lf2v *= 1./tmp
-            
-            v1 = CHypreVec(lf1bv, lf1ibv)
-            v2 = CHypreVec(lf2v,  None)
-
-            from petram.solver.mumps.hypre_to_mumps import PyZMatrix
-            if myid == 0:
-                t3  = PyZMatrix(1, 1, 1)
-                t3.set_rdata(1.0)
-            else:
-                t3 = None
-
-            return (v1, v2, t3, t4, True)
-         
-        else:
-
-            v1 = -(lf1.GetDataArray() + 1j*lf1i.GetDataArray())
-            v2 = lf2.GetDataArray()/np.sum(lf2.GetDataArray()*x.GetDataArray())
-            
-            dprint2("extra matrix nnz before elimination ", len(v1.nonzero()[0]), " ",  len(v2.nonzero()[0]))
-            return (v1.reshape(-1,1), v2.reshape(1,-1), np.array(1).reshape(1,1),
-                    t4, True)
-
-            return (v1, v2, t3,  t4, True)
-        '''             
-        #  (0,x), (x, 0), (x, x) , rhs, number of DoF
+        and it returns if Lagurangian will be saved.
+        '''
+        return (v1, v2, t3, t4, True)
   
 
         

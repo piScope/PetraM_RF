@@ -103,8 +103,6 @@ class EM3D_Floquet(Pair,Bdry, Phys):
             raise ValueError("Cannot evaluate dphase/tolerance to float number")
 
     def has_extra_DoF(self, kfes = 0):
-        #if kfes != 0: return False       
-        if self.use_multiplier: return True
         return False
 
     def has_interpolation_contribution(self, kfes = 0):
