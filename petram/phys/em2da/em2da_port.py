@@ -17,6 +17,7 @@ from petram.helper.geom import find_circle_center_radius
 
 import petram.debug as debug
 dprint1, dprint2, dprint3 = debug.init_dprints('EM3D_Port')
+from mfem.common.mpi_debug import nicePrint
 
 from .em2da_const import epsilon0, mu0
 
@@ -418,7 +419,8 @@ class EM2Da_Port(EM2Da_Bdry):
            lf1i.AddBoundaryIntegrator(intg)
            lf1i.Assemble()
 
-           from mfem.common.chypre import LF2PyVec
+           from mfem.common.chypre import LF2PyVec, PyVec2PyMat, Array2PyVec, IdentityPyMat
+
            v1 = LF2PyVec(lf1, lf1i)
            v1 *= -1
            
@@ -445,9 +447,15 @@ class EM2Da_Port(EM2Da_Bdry):
            tmp = np.sum(v2.dot(x))
            v2 *= -1/tmp/2.
            
-           t3 =  np.array(1).reshape(1,1)
            inc_amp, inc_phase = self.vt.make_value_or_expression(self)
            t4 = np.array([[inc_amp*np.exp(1j*inc_phase/180.*np.pi)]])
+
+           # convert to a matrix form
+           v1 = PyVec2PyMat(v1)
+           v2 = PyVec2PyMat(v2.transpose())
+           t4 = Array2PyVec(t4)
+           t3 = IdentityPyMat(1)
+           
            #return (None, v2, t3, t4, True)
            return (v1, v2, t3, t4, True)
 

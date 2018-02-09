@@ -255,6 +255,7 @@ class EM2Da_Vac(EM2Da_Domain):
         from em2da_const import mu0, epsilon0
         freq, omega = self.get_root_phys().get_freq_omega()
         e, m, s, tmode = self.vt.make_value_or_expression(self)
+
         if tmode == 0: return
         if not isinstance(e, str): e = str(e)
         if not isinstance(m, str): m = str(m)
@@ -271,6 +272,7 @@ class EM2Da_Vac(EM2Da_Domain):
             itg =  mfem.MixedVectorGradientIntegrator
         self.add_integrator(engine, 'mur', imv_o_r_3,
                                 mbf.AddDomainIntegrator, itg)
+        
 
     def add_domain_variables(self, v, n, suffix, ind_vars, solr, soli = None):
         from petram.helper.variables import add_expression, add_constant
