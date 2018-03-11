@@ -15,6 +15,7 @@ if use_parallel:
    from mpi4py import MPI
    num_proc = MPI.COMM_WORLD.size
    myid     = MPI.COMM_WORLD.rank
+   from mfem.common.mpi_debug import nicePrint
 else:
    import mfem.ser as mfem
    num_proc = 1
@@ -115,13 +116,21 @@ class EM3D_Floquet(Pair,Bdry, Phys):
         dprint1("kfes = ", str(kfes))        
         dprint1("dphase = ", str(self.dphase))        
 
-        from petram.helper.dof_mapping_matrix import dof_mapping_matrix
 
+
+        trans1= ['def trans1(xyz):',
+                 '    import numpy as np',
+                 '    x = xyz[0]; y=xyz[1]; z=xyz[2]',
+                 '    return np.array(['+self.map_to_u + ','+ self.map_to_v+'])']
+        
         lns = {}
         exec '\n'.join(self.func_u) in self._global_ns, lns # this defines map_to_u
         exec '\n'.join(self.func_v) in self._global_ns, lns # this defines map_to_v
+        exec '\n'.join(trans1) in self._global_ns, lns      # this defines trans1
+        
         map_to_u = lns['map_to_u']
         map_to_v = lns['map_to_v']
+        trans1 = lns['trans1']
         
         tdof = [] if ess_tdof is None else ess_tdof
         src = self._src_index
@@ -129,12 +138,22 @@ class EM3D_Floquet(Pair,Bdry, Phys):
 
         fes = engine.get_fes(self.get_root_phys(), kfes)
 
+        #old version
+        '''
+        from petram.helper.dof_mapping_matrix import dof_mapping_matrix
         M, r, c = dof_mapping_matrix(src,  dst,  fes, ess_tdof, 
                                      engine, self.dphase,
                                      map_to_u = map_to_u, map_to_v = map_to_v,
                                      smap_to_u = map_to_u, smap_to_v = map_to_v,
                                      tol = self.tol)
-
+        #nicePrint(M.GetRowPartArray())
+        #nicePrint(M.GetColPartArray())
+        #nicePrint(M.shape)
+        '''
+        from petram.helper.dof_map import projection_matrix
+        M, r, c = projection_matrix(src, dst, fes, ess_tdof,
+                                    trans1 = trans1, dphase = self.dphase,
+                                    tol = self.tol, mode = 'surface')
         return M, r, c
         
     '''

@@ -1,38 +1,20 @@
 
 '''
-EM3D : Frequency domain Maxwell equation.
+EC3D : Electric Circilt
 
    This module is meant to solve 
 
-    (curl v, curl u) + (v, e u) 
-           - (v, n x (1/mu curl u)_s = i w (jext, u) 
-
-    , where e = - epsion * w^2 - i * sigma * w, w is frequency,
-    and  mu, epislon, and simga is regular EM parameters.
-
-    ( , ) is volume integral and ( , )_s is surface intengral
-    on non-essential boundaries.
-
-    exp(-i w t) is assumed.
-
  *sigma
   Domain:   
-     EM3D_Anisotropic : tensor dielectric
-     EM3D_Vac         : scalar dielectric
-     EM3D_ExtJ        : external current
-     EM3D_Div         : div J = 0 constraints (add Lagrange multiplier)
+     EC3D_Conductor   : scalar dielectric
+     EC3D_ExtJ        : external current
 
   Boundary:
-     EM3D_PEC         : Perfect electric conductor
-     EM3D_PMC         : Perfect magnetic conductor
-     EM3D_H           : Mangetic field boundary
-     EM3D_SurfJ       : Surface current
-     EM3D_Port        : TE, TEM, Coax port
-     EM3D_E           : Electric field
-     EM3D_Continuity  : Continuitiy
+     EC3D_Insulation  : Insulation
+     EC3D_Potentail   : Potentai
+     EC3D_Ground      : Potentai = 0
+     EC3D_Continuity  : Continuitiy
 
-  Pair:
-     EM3D_Floquet     : Periodic boundary condition
 '''
 import numpy as np
 import traceback
@@ -118,82 +100,60 @@ class EM3D_DefPair(Pair, Phys):
     def get_possible_pair(self):
         return []
 
-class EM3D(PhysModule):
-    der_var_base = ['Bx' 'By', 'Bz']
+class EC3D(PhysModule):
+    der_var_base = ['Jx' 'Jy', 'Jz']
     geom_dim = 3
     def __init__(self, **kwargs):
-        super(EM3D, self).__init__()
+        super(EC3D, self).__init__()
         Phys.__init__(self)
-        self['Domain'] = EM3D_DefDomain()
-        self['Boundary'] = EM3D_DefBdry()
-        self['Pair'] = EM3D_DefPair()
+        self['Domain'] = EC3D_DefDomain()
+        self['Boundary'] = EC3D_DefBdry()
+        self['Pair'] = EC3D_DefPair()
         
     @property
     def dep_vars(self):
         '''
         list of dependent variables, for example.
-           [E]      
-           [E, psi]
+           [V]      
         '''
-        ret = ['E']
-        if self._has_div_constraint():
-            ret =['E', 'psi']
-        else:
-            ret = ['E']
+        ret = ['V']
         return [x + self.dep_vars_suffix for x in ret]            
     @property 
     def dep_vars_base(self):
-        ret = ['E']
-        if self._has_div_constraint():
-            ret =['E', 'psi']
-        else:
-            ret = ['E']
-        return ret
+        return  = ['V']
 
     def get_fec(self):
         v = self.dep_vars
-        if len(v) == 1:  # normal case
-            return [(v[0], 'ND_FECollection')]
-        else:            # with divergence constraints
-            return [(v[0], 'ND_FECollection'),
-                    (v[1], 'H1_FECollection'),]
+        return [(v[0], 'H1_FECollection')]
     
-    def _has_div_constraint(self):
-        from .em3d_div import EM3D_Div
-        for mm in self['Domain'].iter_enabled():
-            if isinstance(mm, EM3D_Div): return True
-        return False
-        
     def attribute_set(self, v):
-        v = super(EM3D, self).attribute_set(v)
-        v["element"] = 'ND_FECollection'
+        v = super(EC3D, self).attribute_set(v)
+        v["element"] = 'H1_FECollection'
         v["freq_txt"]    = 1.0e9
-        v["ndim"] = 3
         v["ind_vars"] = 'x, y, z'
         v["dep_vars_suffix"] = ''
         return v
     
     def panel1_param(self):
-        panels = super(EM3D, self).panel1_param()
-        panels.extend([self.make_param_panel('freq',  self.freq_txt),
+        panels = super(EC3D, self).panel1_param()
+        panels.extend([
                 ["indpendent vars.", self.ind_vars, 0, {}],
                 ["dep. vars. suffix", self.dep_vars_suffix, 0, {}],
                 ["dep. vars.", ','.join(self.dep_vars), 2, {}],
-                ["derived vars.", ','.join(EM3D.der_var_base), 2, {}],
+                ["derived vars.", ','.join(EC3D.der_var_base), 2, {}],
                 ["predefined ns vars.", txt_predefined , 2, {}]])
         return panels
       
     def get_panel1_value(self):
         names  = ','.join([x+self.dep_vars_suffix for x in self.dep_vars])
         names2  = ','.join([x+self.dep_vars_suffix for x in EM3D.der_var_base])
-        val =  super(EM3D, self).get_panel1_value()
-        val.extend([self.freq_txt,
-                    self.ind_vars, self.dep_vars_suffix,
+        val =  super(EC3D, self).get_panel1_value()
+        val.extend([self.ind_vars, self.dep_vars_suffix,
                     names, names2, txt_predefined])
-        return val   
+        return val
     
-    def attribute_expr(self):
-        return ["freq"], [float]
+    def get_panel2_value(self):
+        return 'all'
     
     def get_default_ns(self):
         from em3d_const import mu0, epsilon0, q0
@@ -202,18 +162,18 @@ class EM3D(PhysModule):
                'q0': q0}
         return ns
     
-    def attribute_mirror_ns(self):
-        return ['freq']
-    
     def import_panel1_value(self, v):
-        v = super(EM3D, self).import_panel1_value(v)
+        v = super(EC3D, self).import_panel1_value(v)
         self.freq_txt =  str(v[0])
-        self.ind_vars =  str(v[1])
+        self.ind_vars =  str(v[0])
         self.dep_vars_suffix =  str(v[2])                
         from em3d_const import mu0, epsilon0
         self._global_ns['mu0'] = mu0
         self._global_ns['epsilon0'] = epsilon0
             
+    def import_panel2_value(self, v):
+        self.sel_index = 'all'
+      
     def get_possible_bdry(self):
         from em3d_pec       import EM3D_PEC
         from em3d_pmc       import EM3D_PMC
@@ -226,30 +186,21 @@ class EM3D(PhysModule):
                 EM3D_H, EM3D_PMC, EM3D_Continuity]
     
     def get_possible_domain(self):
-        from em3d_anisotropic import EM3D_Anisotropic
-        from em3d_vac       import EM3D_Vac
-        from em3d_extj       import EM3D_ExtJ
-        from em3d_div       import EM3D_Div        
+        from ec3d_domains   import EC3D_Conductor, EC3D_ExtJ
 
-        return [EM3D_Vac, EM3D_Anisotropic, EM3D_ExtJ, EM3D_Div]
+        return [EC3D_Conductor, EM3D_ExtJ]
 
     def get_possible_edge(self):
         return []                
 
     def get_possible_pair(self):
-
-        from em3d_floquet       import EM3D_Floquet
-
-        return [EM3D_Floquet]
+        return []
 
     def get_possible_point(self):
         return []
 
     def is_complex(self):
         return True
-
-    def get_freq_omega(self):
-        return self._global_ns['freq'], 2.*np.pi*self._global_ns['freq']
 
     def add_variables(self, v, name, solr, soli = None):
         from petram.helper.variables import add_coordinates
@@ -259,13 +210,6 @@ class EM3D(PhysModule):
         from petram.helper.variables import add_surf_normals
         from petram.helper.variables import add_constant      
         
-        from .eval_deriv import eval_curl        
-        def evalB(gfr, gfi = None):
-            gfr, gfi, extra = eval_curl(gfr, gfi)
-            gfi /= (2*self.freq*np.pi)   # real B
-            gfr /= -(2*self.freq*np.pi)  # imag B
-            return gfi, gfr, extra
-
         ind_vars = [x.strip() for x in self.ind_vars.split(',')]
         suffix = self.dep_vars_suffix
 
