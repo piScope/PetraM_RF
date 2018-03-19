@@ -119,7 +119,7 @@ class EM3D_DefPair(Pair, Phys):
         return []
 
 class EM3D(PhysModule):
-    der_var_base = ['Bx' 'By', 'Bz']
+    der_var_base = ['Bx', 'By', 'Bz']
     geom_dim = 3
     def __init__(self, **kwargs):
         super(EM3D, self).__init__()
@@ -175,16 +175,17 @@ class EM3D(PhysModule):
     
     def panel1_param(self):
         panels = super(EM3D, self).panel1_param()
+        a, b = self.get_var_suffix_var_name_panel()        
         panels.extend([self.make_param_panel('freq',  self.freq_txt),
                 ["indpendent vars.", self.ind_vars, 0, {}],
-                ["dep. vars. suffix", self.dep_vars_suffix, 0, {}],
+                a,
                 ["dep. vars.", ','.join(self.dep_vars), 2, {}],
                 ["derived vars.", ','.join(EM3D.der_var_base), 2, {}],
                 ["predefined ns vars.", txt_predefined , 2, {}]])
         return panels
       
     def get_panel1_value(self):
-        names  = ','.join([x+self.dep_vars_suffix for x in self.dep_vars])
+        names  = ','.join(self.dep_vars)
         names2  = ','.join([x+self.dep_vars_suffix for x in EM3D.der_var_base])
         val =  super(EM3D, self).get_panel1_value()
         val.extend([self.freq_txt,

@@ -163,7 +163,7 @@ class EM2Da(PhysModule):
         v = super(EM2Da, self).attribute_set(v)
         v["element"] = 'ND_FECollection, H1_FECollection'
         v["freq_txt"]    = 1.0e9
-        v["dim"] = 2
+        v["ndim"] = 2
         v["ind_vars"] = 'r, z'
         v["dep_vars_suffix"] = ''
         return v
@@ -185,9 +185,6 @@ class EM2Da(PhysModule):
         val.extend([self.freq_txt, self.ind_vars, self.dep_vars_suffix,
                     names, names2, txt_predefined])
         return val
-    
-    def get_panel2_value(self):
-        return 'all'
     
     def attribute_expr(self):
         return ["freq"], [float]
@@ -212,9 +209,6 @@ class EM2Da(PhysModule):
         self._global_ns['mu0'] = mu0
         self._global_ns['epsilon0'] = epsilon0
             
-    def import_panel2_value(self, v):
-        self.sel_index = 'all'
-      
     def get_possible_bdry(self):
         from em2da_pec       import EM2Da_PEC
         from em2da_pmc       import EM2Da_PMC
