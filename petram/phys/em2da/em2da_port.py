@@ -455,6 +455,8 @@ class EM2Da_Port(EM2Da_Bdry):
            v2 = PyVec2PyMat(v2.transpose())
            t4 = Array2PyVec(t4)
            t3 = IdentityPyMat(1)
+
+           v2 = v2.transpose()
            
            #return (None, v2, t3, t4, True)
            return (v1, v2, t3, t4, True)

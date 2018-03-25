@@ -222,6 +222,9 @@ class EM3D_Port(EM3D_Bdry):
                                         port_idx = port_idx)
         Phys.__init__(self)
         
+    def extra_DoF_name(self):
+        return self.get_root_phys().dep_vars[0]+"_port_"+str(self.port_idx)
+        
     def attribute_set(self, v):
         super(EM3D_Port, self).attribute_set(v)
         v['port_idx'] = 1
@@ -282,7 +285,7 @@ class EM3D_Port(EM3D_Bdry):
     def preprocess_params(self, engine):
         ### find normal (outward) vector...
         mesh = engine.get_mesh(mm = self)
-        fespace = engine.fespaces[self.get_root_phys()][0][1]
+        fespace = engine.fespaces[self.get_root_phys().dep_vars[0]]
         nbe = mesh.GetNBE()
         ibe = np.array([i for i in range(nbe)
                          if mesh.GetBdrElement(i).GetAttribute() == 
@@ -518,6 +521,8 @@ class EM3D_Port(EM3D_Bdry):
         v2 = PyVec2PyMat(v2.transpose())
         t4 = Array2PyVec(t4)
         t3 = IdentityPyMat(1)
+
+        v2 = v2.transpose()
 
         '''
         Format of extar   (t2 is returnd as vertical(transposed) matrix)
