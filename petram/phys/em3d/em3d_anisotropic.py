@@ -127,7 +127,7 @@ class EM3D_Anisotropic(EM3D_Domain):
             coeff2 = self.restrict_coeff(coeff2, engine)
             a.AddDomainIntegrator(mfem.CurlCurlIntegrator(coeff2))
         else:
-            dprint1("No cotrinbution from curlcurl")
+            dprint1("No contrinbution from curlcurl")
         self.add_integrator(engine, 'sigma', coeff3,
                             a.AddDomainIntegrator,
                             mfem.VectorFEMassIntegrator)

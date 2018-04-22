@@ -104,7 +104,6 @@ class EM3D_DefBdry(EM3D_Bdry):
 class EM3D_DefPair(Pair, Phys):
     can_delete = False
     is_essential = False
-    is_complex = True
     def __init__(self, **kwargs):
         super(EM3D_DefPair, self).__init__(**kwargs)
         Phys.__init__(self)

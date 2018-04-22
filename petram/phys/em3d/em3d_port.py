@@ -82,6 +82,7 @@ class C_Et_TE(mfem.VectorPyCoefficient):
             return -E.real
        else:
             return -E.imag
+         
 class C_jwHt_TE(mfem.VectorPyCoefficient):
    def __init__(self, sdim, phase, bdry, real = True, amp = 1.0):
        self.real = real
@@ -284,7 +285,8 @@ class EM3D_Port(EM3D_Bdry):
 
     def preprocess_params(self, engine):
         ### find normal (outward) vector...
-        mesh = engine.get_mesh(mm = self)
+        mesh = engine.get_mesh(mm = self) ### 
+        
         fespace = engine.fespaces[self.get_root_phys().dep_vars[0]]
         nbe = mesh.GetNBE()
         ibe = np.array([i for i in range(nbe)
@@ -436,7 +438,7 @@ class EM3D_Port(EM3D_Bdry):
        
         C_Et, C_jwHt = self.get_coeff_cls()
 
-        inc_wave = self.inc_amp*np.exp(-1j*self.inc_phase/180.*np.pi)
+        inc_wave = self.inc_amp*np.exp(1j*self.inc_phase/180.*np.pi)
 
         phase = np.angle(inc_wave)*180/np.pi
         amp   = np.abs(inc_wave)

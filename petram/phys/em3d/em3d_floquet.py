@@ -151,7 +151,7 @@ class EM3D_Floquet(Pair,Bdry, Phys):
         #nicePrint(M.shape)
         '''
         from petram.helper.dof_map import projection_matrix
-        M, r, c = projection_matrix(src, dst, fes, ess_tdof,
+        M, r, c = projection_matrix(src, dst, fes, ess_tdof, fes2=fes,
                                     trans1 = trans1, dphase = self.dphase,
                                     tol = self.tol, mode = 'surface')
         return M, r, c

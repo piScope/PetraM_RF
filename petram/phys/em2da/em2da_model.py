@@ -179,7 +179,7 @@ class EM2Da(PhysModule):
         return panels
       
     def get_panel1_value(self):
-        names  = ','.join([x+self.dep_vars_suffix for x in self.dep_vars])
+        names  = ','.join([x for x in self.dep_vars])
         names2  = ','.join([x+self.dep_vars_suffix for x in EM2Da.der_var_base])
         val =  super(EM2Da, self).get_panel1_value()
         val.extend([self.freq_txt, self.ind_vars, self.dep_vars_suffix,

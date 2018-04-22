@@ -333,7 +333,9 @@ class EM2Da_Port(EM2Da_Bdry):
         inc_amp, inc_phase = self.vt.make_value_or_expression(self)
 
         Hrz, Hphi = self.get_h_coeff_cls()
-        inc_wave = inc_amp * np.exp(-1j*inc_phase/180.*np.pi)
+        inc_wave = inc_amp * np.exp(1j*inc_phase/180.*np.pi)
+        #inc_wave = inc_amp * np.exp(-1j*inc_phase/180.*np.pi)  # original...
+        assert False, "when you use for the first time, the sign must be checked...)"
         phase = np.angle(inc_wave)*180/np.pi
         amp   = np.abs(inc_wave)
 
