@@ -133,6 +133,15 @@ class EM2Da(PhysModule):
            [Et, rEf, psi]
         '''
         ret = self.dep_vars_base
+        return [x + self.dep_vars_suffix for x in ret]
+    @property
+    def dep_vars0(self):
+        '''
+        list of dependent variables, for example.
+           [Et, rEf]      
+           [Et, rEf, psi]
+        '''
+        ret = self.dep_vars_base
         return [x + self.dep_vars_suffix for x in ret]            
     @property 
     def dep_vars_base(self):

@@ -139,7 +139,22 @@ class EM3D(PhysModule):
             ret =['E', 'psi']
         else:
             ret = ['E']
-        return [x + self.dep_vars_suffix for x in ret]            
+        return [x + self.dep_vars_suffix for x in ret]
+    
+    @property
+    def dep_vars0(self):
+        '''
+        list of dependent variables, for example.
+           [E]      
+           [E, psi]
+        '''
+        ret = ['E']
+        if self._has_div_constraint():
+            ret =['E', 'psi']
+        else:
+            ret = ['E']
+        return [x + self.dep_vars_suffix for x in ret]
+    
     @property 
     def dep_vars_base(self):
         ret = ['E']
