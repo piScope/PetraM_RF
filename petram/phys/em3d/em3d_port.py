@@ -230,7 +230,7 @@ class EM3D_Port(EM3D_Bdry):
         super(EM3D_Port, self).attribute_set(v)
         v['port_idx'] = 1
         v['mode'] = 'TE'
-        v['mn'] = ['1, 0']
+        v['mn'] = [1, 0]
         v['inc_amp_txt'] = '1.0'
         v['inc_phase_txt'] = '0.0'
         v['inc_amp'] = 1.0
