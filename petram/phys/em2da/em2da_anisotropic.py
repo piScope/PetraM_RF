@@ -244,7 +244,7 @@ class EM2Da_Anisotropic(EM2Da_Domain):
            flag1 : take transpose
            flag2 : take conj
         '''
-        return [(0, 1, 1, 1), (1, 0, 1, 1),(0, 1, -1, 1)]
+        return [(0, 1, 1, 1), (1, 0, 1, 1),]#(0, 1, -1, 1)]
 
     def add_bf_contribution(self, engine, a, real = True, kfes=0):
         from em2da_const import mu0, epsilon0
@@ -287,7 +287,7 @@ class EM2Da_Anisotropic(EM2Da_Domain):
                                     a.AddDomainIntegrator,
                                     mfem.VectorFEMassIntegrator)
                 
-        elif kfes == 1: ## ND element (Epoloidal)
+        elif kfes == 1: ## H1 element (Etoroidal)
             if real:
                 dprint1("Add H1 contribution(real)" + str(self._sel_index))
             else:
@@ -348,29 +348,33 @@ class EM2Da_Anisotropic(EM2Da_Domain):
             self.add_integrator(engine, 'sigma', s,
                                 mbf.AddDomainIntegrator, itg)
             # (-a u_vec, div v_scalar)            
-            itg =  mfem.MixedVectorWeakDivergenceIntegrator 
+            itg =  mfem.MixedVectorWeakDivergenceIntegrator
             self.add_integrator(engine, 'mur', imv_o_r_3,
                                 mbf.AddDomainIntegrator, itg)
+            #print r, c, mbf
         else:
-            if is_trans == -1:
-                e = Epsilon_12(2, e, self.get_root_phys().ind_vars,
-                                self._local_ns, self._global_ns,
-                                real = real, omega = omega)
-                s = Sigma_12(2, s,  self.get_root_phys().ind_vars,
-                              self._local_ns, self._global_ns,
-                              real = real, omega = omega)
-               
-                itg = mfem.MixedDotProductIntegrator
-                self.add_integrator(engine, 'epsilon', e,
-                                mbf.AddDomainIntegrator, itg)
-                self.add_integrator(engine, 'sigma', s,
-                                mbf.AddDomainIntegrator, itg)
-            else:
-                # (a grad u_scalar, v_vec)
-                itg =  mfem.MixedVectorGradientIntegrator
-                self.add_integrator(engine, 'mur', imv_o_r_3,
-                                mbf.AddDomainIntegrator, itg)
-            
+            #if is_trans:
+            #    pass
+            #else:               
+            e = Epsilon_12(2, e, self.get_root_phys().ind_vars,
+                             self._local_ns, self._global_ns,
+                             real = real, omega = omega)
+            s = Sigma_12(2, s,  self.get_root_phys().ind_vars,
+                           self._local_ns, self._global_ns,
+                           real = real, omega = omega)
+
+             #itg = mfem.MixedDotProductIntegrator
+            itg = mfem.MixedVectorProductIntegrator
+            self.add_integrator(engine, 'epsilon', e,
+                             mbf.AddDomainIntegrator, itg)
+            self.add_integrator(engine, 'sigma', s,
+                             mbf.AddDomainIntegrator, itg)
+            # (a grad u_scalar, v_vec)
+
+            itg =  mfem.MixedVectorGradientIntegrator
+            self.add_integrator(engine, 'mur', imv_o_r_3,
+                             mbf.AddDomainIntegrator, itg)
+
     def add_domain_variables(self, v, n, suffix, ind_vars, solr, soli = None):
         from petram.helper.variables import add_expression, add_constant
         pass
