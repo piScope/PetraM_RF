@@ -240,12 +240,13 @@ class EM2Da_Port(EM2Da_Bdry):
 
     def preprocess_params(self, engine):
         ### find normal (outward) vector...
-        mesh = engine.get_mesh(mm = self)
-        fespace = engine.fespaces[self.get_root_phys()][0][1]
+        mesh = engine.get_emesh(mm = self)
+        fespace = engine.fespaces[self.get_root_phys().dep_vars[0]]
         nbe = mesh.GetNBE()
         ibe = np.array([i for i in range(nbe)
                          if mesh.GetBdrElement(i).GetAttribute() == 
                             self._sel_index[0]])
+        dprint1("idb",  ibe)        
         el = mesh.GetBdrElement(ibe[0])
         Tr = fespace.GetBdrElementTransformation(ibe[0])
         rules = mfem.IntegrationRules()
@@ -335,7 +336,7 @@ class EM2Da_Port(EM2Da_Bdry):
         Hrz, Hphi = self.get_h_coeff_cls()
         inc_wave = inc_amp * np.exp(1j*inc_phase/180.*np.pi)
         #inc_wave = inc_amp * np.exp(-1j*inc_phase/180.*np.pi)  # original...
-        assert False, "when you use for the first time, the sign must be checked...)"
+        #assert False, "when you use for the first time, the sign must be checked...)"
         phase = np.angle(inc_wave)*180/np.pi
         amp   = np.abs(inc_wave)
 
@@ -449,6 +450,7 @@ class EM2Da_Port(EM2Da_Bdry):
            tmp = np.sum(v2.dot(x))
            v2 *= -1/tmp/2.
            
+           self.vt.preprocess_params(self)           
            inc_amp, inc_phase = self.vt.make_value_or_expression(self)
            t4 = np.array([[inc_amp*np.exp(1j*inc_phase/180.*np.pi)]])
 
