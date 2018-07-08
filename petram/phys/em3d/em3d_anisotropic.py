@@ -5,7 +5,7 @@
 '''
 import numpy as np
 
-from petram.phys.phys_model  import MatrixPhysCoefficient, PhysCoefficient, PhysConstant
+from petram.phys.phys_model  import MatrixPhysCoefficient, PhysCoefficient, PhysConstant, PhysMatrixConstant
 from petram.phys.em3d.em3d_base import EM3D_Bdry, EM3D_Domain
 
 import petram.debug as debug
@@ -84,9 +84,19 @@ class EM3D_Anisotropic(EM3D_Domain):
         freq, omega = self.get_root_phys().get_freq_omega()
         e, m, s = self.vt.make_value_or_expression(self)
 
-        coeff1 = Epsilon(3, e,  self.get_root_phys().ind_vars,
+        print e, s
+        if any([isinstance(ee, str) for ee in e]):
+            coeff1 = Epsilon(3, e,  self.get_root_phys().ind_vars,
                             self._local_ns, self._global_ns,
                             real = real, omega = omega)
+        else:
+            eps = np.array(e).reshape(3,3)
+            eps =  - eps*epsilon0*omega*omega
+            eps = eps.real if real else eps.imag
+            if np.all(eps == 0.0):
+                coeff1 = None
+            else:
+                coeff1 = PhysMatrixConstant(eps)
         
         if isinstance(m[0], str):
            coeff2 = InvMu(m,  self.get_root_phys().ind_vars,
@@ -99,10 +109,18 @@ class EM3D_Anisotropic(EM3D_Domain):
                coeff2 = None
            else:
                coeff2 = PhysConstant(mur)
-     
-        coeff3 = Sigma(3, s,  self.get_root_phys().ind_vars,
+
+        if any([isinstance(ss, str) for ss in s]):               
+            coeff3 = Sigma(3, s,  self.get_root_phys().ind_vars,
                        self._local_ns, self._global_ns,
                        real = real, omega = omega)
+        else:
+           sigma = -1j *omega * np.array(s).reshape(3,3)
+           sigma = sigma.real if real else sigma.imag           
+           if np.all(sigma == 0.0):
+              coeff3 = None
+           else:
+              coeff3 = PhysMatrixConstant(sigma)
               
         dprint1("epsr, mur, sigma " + str(coeff1) + " " + str(coeff2) + " " + str(coeff3))
 
@@ -120,9 +138,11 @@ class EM3D_Anisotropic(EM3D_Domain):
 
         coeff1, coeff2, coeff3 = self.get_coeffs(real = real)        
 
-        self.add_integrator(engine, 'epsilonr', coeff1,
-                            a.AddDomainIntegrator,
-                            mfem.VectorFEMassIntegrator)
+        if coeff1 is not None:                  
+            self.add_integrator(engine, 'epsilonr', coeff1,
+                                a.AddDomainIntegrator,
+                                mfem.VectorFEMassIntegrator)
+                  
         if coeff2 is not None:
             coeff2 = self.restrict_coeff(coeff2, engine)
             a.AddDomainIntegrator(mfem.CurlCurlIntegrator(coeff2))
