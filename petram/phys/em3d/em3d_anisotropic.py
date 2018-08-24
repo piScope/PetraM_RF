@@ -84,7 +84,6 @@ class EM3D_Anisotropic(EM3D_Domain):
         freq, omega = self.get_root_phys().get_freq_omega()
         e, m, s = self.vt.make_value_or_expression(self)
 
-        print e, s
         if any([isinstance(ee, str) for ee in e]):
             coeff1 = Epsilon(3, e,  self.get_root_phys().ind_vars,
                             self._local_ns, self._global_ns,

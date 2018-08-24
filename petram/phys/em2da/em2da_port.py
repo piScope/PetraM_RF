@@ -42,6 +42,7 @@ else:
 
 
 '''
+
 from petram.phys.vtable import VtableElement, Vtable   
 data =  (('inc_amp', VtableElement('inc_amp', type='complex',
                                      guilabel = 'incoming amp',
@@ -50,7 +51,15 @@ data =  (('inc_amp', VtableElement('inc_amp', type='complex',
          ('inc_phase', VtableElement('inc_phase', type='float',
                                      guilabel = 'incoming phase (deg)',
                                      default = 0.0, 
-                                     tip = "phase of incoming wave" )),)
+                                     tip = "phase of incoming wave" )),
+         ('epsilonr', VtableElement('epsilonr', type='complex',
+                                     guilabel = 'epsilonr',
+                                     default = 1.0, 
+                                     tip = "relative permittivity" )),
+         ('mur', VtableElement('mur', type='complex',
+                                     guilabel = 'mur',
+                                     default = 1.0, 
+                                     tip = "relative permeability" )),)
 
 '''
    E_(name)_rz  :
@@ -64,7 +73,7 @@ data =  (('inc_amp', VtableElement('inc_amp', type='complex',
    rectangular wg TE 
 '''
 class E_TE_phi(mfem.PyCoefficient):
-   def __init__(self, bdry, real = True, amp = 1.0):
+   def __init__(self, bdry, real = True, amp = 1.0, eps=1.0, mur=1.0):
       
        self.real = real
        freq, omega = bdry.get_root_phys().get_freq_omega()        
@@ -85,7 +94,7 @@ class E_TE_phi(mfem.PyCoefficient):
             return -Ephi.imag
 
 class H_TE_rz(mfem.VectorPyCoefficient):
-   def __init__(self, sdim, phase, bdry, real = True, amp = 1.0):
+   def __init__(self, sdim, phase, bdry, real = True, amp = 1.0, eps=1.0, mur=1.0):
        mfem.VectorPyCoefficient.__init__(self, sdim)
        
        self.real = real
@@ -97,14 +106,14 @@ class H_TE_rz(mfem.VectorPyCoefficient):
        self.a_vec = bdry.a_vec
        self.m, self.n = bdry.mn[0], bdry.mn[1]
 
-       k = omega*np.sqrt(bdry.epsilonr*epsilon0 * bdry.mur*mu0)
+       k = omega*np.sqrt(eps*epsilon0 * mur*mu0)
        kc = np.abs(bdry.mn[0]*np.pi/bdry.a)
        if kc > k:
           raise ValueError('Mode does not propagate')
        beta = np.sqrt(k**2 - kc**2)
        dprint1("propagation constant:" + str(beta))
        
-       AA = omega*bdry.mur*mu0*np.pi/kc/kc
+       AA = omega*mur*mu0*np.pi/kc/kc
        self.AA = omega*beta*np.pi/kc/kc/AA*amp
 
    def EvalValue(self, x):
@@ -121,7 +130,7 @@ class H_TE_rz(mfem.VectorPyCoefficient):
             return H.imag
          
 class H_TE_phi(mfem.PyCoefficient):
-   def __init__(self, phase, bdry, real = True, amp = 1.0):
+   def __init__(self, phase, bdry, real = True, amp = 1.0, eps=1.0, mur=1.0):
        mfem.PyCoefficient.__init__(self)
        
        self.real = real
@@ -133,17 +142,17 @@ class H_TE_phi(mfem.PyCoefficient):
        self.a_vec = bdry.a_vec
        self.m, self.n = bdry.mn[0], bdry.mn[1]
 
-       k = omega*np.sqrt(bdry.epsilonr*epsilon0 * bdry.mur*mu0)
+       k = omega*np.sqrt(eps*epsilon0 * mur*mu0)
        kc = np.abs(bdry.mn[0]*np.pi/bdry.a)
        if kc > k:
           raise ValueError('Mode does not propagate')
        beta = np.sqrt(k**2 - kc**2)
        dprint1("propagation constant:" + str(beta))
        
-       AA = omega*bdry.mur*mu0*np.pi/kc/kc*amp
+       AA = omega*mur*mu0*np.pi/kc/kc*amp
        self.AA = omega*beta*np.pi/kc/kc/AA
        self.beta = beta
-       self.fac = 1/mu0/bdry.mur*amp
+       self.fac = 1/mu0/mur*amp
        '''
         AA = beta/amp/mu
        '''
@@ -203,23 +212,18 @@ class EM2Da_Port(EM2Da_Bdry):
                 ["mode (n=0 only)",   self.mode,  4, {"readonly": True,
                  "choices": ["TE", ]}],
                 ["m/n",    ','.join(str(x) for x in self.mn)  ,  0, {}],] +
-                self.vt.panel_param(self) +
-                [["epsilon_r",    self.epsilonr ,  300, {}],
-                 ["mu_r",    self.mur ,  300, {}]])
+                self.vt.panel_param(self))
                  
     def get_panel1_value(self):
         return ([str(self.port_idx), 
                  self.mode, ','.join(str(x) for x in self.mn)] +
-                 self.vt.get_panel_value(self) +
-                [self.epsilonr, self.mur])
+                 self.vt.get_panel_value(self))
 
     def import_panel1_value(self, v):
         self.port_idx = v[0]       
         self.mode = v[1]
         self.mn = [long(x) for x in v[2].split(',')]
-        self.epsilonr = float(v[5])
-        self.mur = float(v[6])
-        self.vt.import_panel_value(self, v[3:5])         
+        self.vt.import_panel_value(self, v[3:])                         
 
     def get_exter_NDoF(self):
         return 1  
@@ -311,7 +315,7 @@ class EM2Da_Port(EM2Da_Bdry):
      
     def has_lf_contribution(self, kfes):
         self.vt.preprocess_params(self)
-        inc_amp, inc_phase = self.vt.make_value_or_expression(self)
+        inc_amp, inc_phase, eps, mur = self.vt.make_value_or_expression(self)
         if kfes == 1:
             if self.mode == 'TE':
                 return inc_amp != 0               
@@ -331,7 +335,8 @@ class EM2Da_Port(EM2Da_Bdry):
         else:
             dprint1("Add LF contribution(imag)" + str(self._sel_index))
        
-        inc_amp, inc_phase = self.vt.make_value_or_expression(self)
+        self.vt.preprocess_params(self)           
+        inc_amp, inc_phase, eps, mu = self.vt.make_value_or_expression(self)
 
         Hrz, Hphi = self.get_h_coeff_cls()
         inc_wave = inc_amp * np.exp(1j*inc_phase/180.*np.pi)
@@ -347,7 +352,7 @@ class EM2Da_Port(EM2Da_Bdry):
 #                                mfem.VectorFEDomainLFIntegrator)
 #                                mfem.VectorFEBoundaryTangentLFIntegrator)
         if (kfes == 1 and self.mode == 'TE'):  # E~phi B ~rz
-            coeff = Hphi(phase, self, real = real, amp = amp) 
+            coeff = Hphi(phase, self, real = real, amp = amp, eps=eps, mur=mur) 
             self.add_integrator(engine, 'inc_amp', coeff,
                                 b.AddBoundaryIntegrator,
                                 mfem.BoundaryLFIntegrator)
@@ -376,6 +381,10 @@ class EM2Da_Port(EM2Da_Bdry):
         
         kfes = kwargs.pop('kfes', 0)
         dprint1("Add Extra contribution" + str(self._sel_index))
+
+        self.vt.preprocess_params(self)           
+        inc_amp, inc_phase, eps, mu = self.vt.make_value_or_expression(self)
+
         Erz, Ephi = self.get_e_coeff_cls()
         Hrz, Hphi = self.get_h_coeff_cls()
         fes = engine.get_fes(self.get_root_phys(), kfes)
@@ -409,14 +418,14 @@ class EM2Da_Port(EM2Da_Bdry):
         if (kfes == 1 and self.mode == 'TE'):
            
            lf1 = engine.new_lf(fes)
-           Ht = Hphi(0.0, self, real = True)
+           Ht = Hphi(0.0, self, real = True, eps=eps, mur=mur)
            Ht = self.restrict_coeff(Ht, engine)
            intg = mfem.BoundaryLFIntegrator(Ht)
            lf1.AddBoundaryIntegrator(intg)
            lf1.Assemble()
            
            lf1i = engine.new_lf(fes)
-           Ht = Hphi(0.0, self, real = False)           
+           Ht = Hphi(0.0, self, real = False, eps=eps, mur=mur)           
            Ht = self.restrict_coeff(Ht, engine)
            intg = mfem.BoundaryLFIntegrator(Ht)
            lf1i.AddBoundaryIntegrator(intg)
@@ -428,7 +437,7 @@ class EM2Da_Port(EM2Da_Bdry):
            v1 *= -1
            
            lf2 = engine.new_lf(fes)
-           Et = Ephi(self, real = True)
+           Et = Ephi(self, real = True, eps=eps, mur=mur)
            Et = self.restrict_coeff(Et, engine)
            intg = mfem.DomainLFIntegrator(Et)
            lf2.AddBoundaryIntegrator(intg)
@@ -450,8 +459,6 @@ class EM2Da_Port(EM2Da_Bdry):
            tmp = np.sum(v2.dot(x))
            v2 *= -1/tmp/2.
            
-           self.vt.preprocess_params(self)           
-           inc_amp, inc_phase = self.vt.make_value_or_expression(self)
            t4 = np.array([[inc_amp*np.exp(1j*inc_phase/180.*np.pi)]])
 
            # convert to a matrix form
