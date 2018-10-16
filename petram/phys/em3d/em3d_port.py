@@ -480,6 +480,8 @@ class EM3D_Port(EM3D_Bdry):
 
         self.vt.preprocess_params(self)           
         inc_amp, inc_phase, eps, mur = self.vt.make_value_or_expression(self)
+        
+        dprint1("Power, Phase: ", inc_amp, inc_phase)
             
         C_Et, C_jwHt = self.get_coeff_cls()
 
@@ -509,6 +511,9 @@ class EM3D_Port(EM3D_Bdry):
      
     def get_exter_NDoF(self):
         return 1
+     
+    def is_extra_RHSonly(self):
+        return True
      
     def postprocess_extra(self, sol, flag, sol_extra):
         name = self.name()+'_' + str(self.port_idx)
