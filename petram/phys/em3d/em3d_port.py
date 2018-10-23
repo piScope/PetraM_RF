@@ -236,7 +236,7 @@ class C_jwHt_CoaxTEM(mfem.VectorPyCoefficient):
        self.b = bdry.b
        self.ctr = bdry.ctr
        self.phase = phase  # phase !=0 for incoming wave
-       self.AA = omega*np.sqrt(epsilon0*bdry.eps/mu0/mur)
+       self.AA = omega*np.sqrt(epsilon0*eps/mu0/mur)
        
    def EvalValue(self, x):
        r = (x - self.ctr)
