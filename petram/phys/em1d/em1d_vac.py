@@ -1,0 +1,259 @@
+'''
+   Vacuum region:
+      However, can have arbitrary scalar epsilon_r, mu_r, sigma
+
+
+'''
+import numpy as np
+
+from petram.phys.phys_model  import PhysCoefficient, PhysConstant
+from petram.phys.em1d.em1d_base import EM1D_Bdry, EM1D_Domain
+
+import petram.debug as debug
+dprint1, dprint2, dprint3 = debug.init_dprints('EM1D_Vac')
+
+from petram.mfem_config import use_parallel
+if use_parallel:
+   import mfem.par as mfem
+else:
+   import mfem.ser as mfem
+   
+from petram.phys.vtable import VtableElement, Vtable   
+data =  (('epsilonr', VtableElement('epsilonr', type='complex',
+                                     guilabel = 'epsilonr',
+                                     default = 1.0, 
+                                     tip = "relative permittivity" )),
+         ('mur', VtableElement('mur', type='complex',
+                                     guilabel = 'mur',
+                                     default = 1.0, 
+                                     tip = "relative permeability" )),
+         ('sigma', VtableElement('sigma', type='complex',
+                                     guilabel = 'sigma',
+                                     default = 0.0, 
+                                     tip = "contuctivity" )),
+         ('ky', VtableElement('ky', type='float',
+                                     guilabel = 'ky',
+                                     default = 0. ,
+                                     no_func = True,
+                                     tip = "wave number` in the y direction" )),
+         ('kz', VtableElement('kz', type='float',
+                                     guilabel = 'kz',
+                                     default = 0.0,
+                                     no_func = True,                              
+                                     tip = "wave number in the z direction" )),)
+
+from petram.phys.em1d.em1d_const import mu0, epsilon0
+
+class Epsilon(PhysCoefficient):
+   '''
+    - omega^2 * epsilon0 * epsilonr
+   '''
+   def __init__(self, *args, **kwargs):
+       self.omega = kwargs.pop('omega', 1.0)
+       super(Epsilon, self).__init__(*args, **kwargs)
+
+   def EvalValue(self, x):
+       v = super(Epsilon, self).EvalValue(x)
+       v = - v * epsilon0 * self.omega * self.omega
+       if self.real:  return v.real
+       else: return v.imag
+       
+class Sigma(PhysCoefficient):
+   '''
+    -1j * omega * sigma
+   '''
+   def __init__(self, *args, **kwargs):
+       self.omega = kwargs.pop('omega', 1.0)
+       super(Sigma, self).__init__(*args, **kwargs)
+
+   def EvalValue(self, x):
+       v = super(Sigma, self).EvalValue(x)
+       v = -1j * self.omega * v
+       if self.real:  return v.real
+       else: return v.imag
+       
+class InvMu(PhysCoefficient):
+   '''
+      1/mu0/mur*(factor)
+   '''
+   def __init__(self, *args, **kwargs):
+       self._extra_fac = kwargs.pop("factor", 1.)
+       super(InvMu, self).__init__(*args, **kwargs)
+
+   def EvalValue(self, x):
+       v = super(InvMu, self).EvalValue(x)
+       v = 1/mu0/v*self._extra_fac
+
+       if self.real:  return v.real
+       else: return v.imag
+       
+class EM1D_Vac(EM1D_Domain):
+    vt  = Vtable(data)
+    #nlterms = ['epsilonr']
+    
+    def has_bf_contribution(self, kfes):
+        if kfes == 0: return True
+        elif kfes == 1: return True
+        elif kfes == 2: return True                
+        else: return False
+        
+    def has_mixed_contribution(self):
+        return True
+
+    def get_mixedbf_loc(self):
+        '''
+        r, c, and flag1, flag2 of MixedBilinearForm
+           flag1 : take transpose
+           flag2 : take conj
+        '''
+        return [(0, 1, 0, 0),
+                (1, 0, 0, 0),
+                (1, 2, 0, 0),
+                (2, 1, 0, 0),
+                (0, 2, 0, 0),
+                (2, 0, 0, 0),]
+     
+    def add_bf_contribution(self, engine, a, real = True, kfes=0,
+                            ecsc = None):
+        freq, omega = self.get_root_phys().get_freq_omega()
+        e, m, s, ky, kz = self.vt.make_value_or_expression(self)
+        if not isinstance(e, str): e = str(e)
+        if not isinstance(m, str): m = str(m)
+        if not isinstance(s, str): s = str(s)
+
+        txt = ["Ex in ", "Ey in ", "Ez in "][kfes]
+        if real:       
+            dprint1("Add BF contribution(real) " + txt + str(self._sel_index))
+        else:
+            dprint1("Add BF contribution(imag)" + txt + str(self._sel_index))
+        print "ky, kz", ky, kz
+        if ecsc is None:
+            sc = Sigma(s,  self.get_root_phys().ind_vars,
+                              self._local_ns, self._global_ns,
+                              real = real, omega = omega)
+            ec = Epsilon(e, self.get_root_phys().ind_vars,
+                                self._local_ns, self._global_ns,
+                                real = real, omega = omega)
+        else:
+            # anistropic case...
+            ec, sc = ecsc
+
+        self.add_integrator(engine, 'epsilonr', sc, a.AddDomainIntegrator,
+                            mfem.MassIntegrator)
+        self.add_integrator(engine, 'sigma', ec, a.AddDomainIntegrator,
+                                mfem.MassIntegrator)
+        if kfes == 0: # Ex
+            imu = InvMu(m,  self.get_root_phys().ind_vars,
+                            self._local_ns, self._global_ns,
+                            real = real, factor = ky**2 + kz**2)
+            
+            self.add_integrator(engine, 'mur', imu, a.AddDomainIntegrator,
+                                mfem.MassIntegrator)
+            
+        elif kfes == 1 or kfes == 2: # Ey and Ez
+            imu = InvMu(m,  self.get_root_phys().ind_vars,
+                            self._local_ns, self._global_ns,
+                            real = real)
+            self.add_integrator(engine, 'mur', imu, a.AddDomainIntegrator,
+                                mfem.DiffusionIntegrator)
+
+            if kfes == 1: fac = kz*kz
+            if kfes == 2: fac = ky*ky            
+            
+            imu = InvMu(m,  self.get_root_phys().ind_vars,
+                            self._local_ns, self._global_ns,
+                            real = real, factor = fac)
+
+            self.add_integrator(engine, 'mur', imu, a.AddDomainIntegrator,
+                                mfem.MassIntegrator)
+
+        
+    def add_mix_contribution(self, engine, mbf, r, c, is_trans, real = True):
+        if real:
+            dprint1("Add mixed contribution(real)" + "(" + str(r) + "," + str(c) +')'
+                    +str(self._sel_index))
+        else:
+            dprint1("Add mixed contribution(imag)" + "(" + str(r) + "," + str(c) +')'
+                    +str(self._sel_index))
+       
+        freq, omega = self.get_root_phys().get_freq_omega()
+        e, m, s, ky, kz = self.vt.make_value_or_expression(self)
+
+        if not isinstance(e, str): e = str(e)
+        if not isinstance(m, str): m = str(m)
+        if not isinstance(s, str): s = str(s)
+
+        if r == 0 and c == 1:
+            imu = InvMu(m,  self.get_root_phys().ind_vars,
+                        self._local_ns, self._global_ns,
+                        real = real, factor=1j*ky)
+            itg = mfem.MixedScalarDerivativeIntegrator
+        elif r == 0 and c == 2:
+            imu = InvMu(m,  self.get_root_phys().ind_vars,
+                        self._local_ns, self._global_ns,
+                        real = real, factor=1j*kz)
+            itg = mfem.MixedScalarDerivativeIntegrator
+        elif r == 1 and c == 0:
+            imu = InvMu(m,  self.get_root_phys().ind_vars,
+                        self._local_ns, self._global_ns,
+                        real = real, factor=1j*ky)
+            itg = mfem.MixedScalarWeakDerivativeIntegrator
+        elif r == 1 and c == 2:
+            imu = InvMu(m,  self.get_root_phys().ind_vars,
+                        self._local_ns, self._global_ns,
+                        real = real, factor=-ky*kz)
+            itg = mfem.MixedScalarMassIntegrator
+        elif r == 2 and c == 0:
+            imu = InvMu(m,  self.get_root_phys().ind_vars,
+                        self._local_ns, self._global_ns,
+                        real = real, factor=1j*kz)
+            itg = mfem.MixedScalarWeakDerivativeIntegrator
+        elif r == 2 and c == 1:
+            imu = InvMu(m,  self.get_root_phys().ind_vars,
+                        self._local_ns, self._global_ns,
+                        real = real, factor=-ky*kz)
+            itg = mfem.MixedScalarMassIntegrator
+        else:
+            assert False, "Something is wrong..if it comes here;D"
+
+           
+        self.add_integrator(engine, 'mur', imu,
+                            mbf.AddDomainIntegrator, itg)
+        
+
+    def add_domain_variables(self, v, n, suffix, ind_vars, solr, soli = None):
+        from petram.helper.variables import add_expression, add_constant
+
+        if len(self._sel_index) == 0: return
+        var, f_name = self.eval_phys_expr(self.epsilonr, 'epsilonr')
+        if callable(var):
+            add_expression(v, 'epsilonr', suffix, ind_vars, f_name,
+                           [], domains = self._sel_index, 
+                           gdomain = self._global_ns)            
+        else:
+            add_constant(v, 'epsilonr', suffix, var,
+                         domains = self._sel_index,
+                         gdomain = self._global_ns)
+
+        var, f_name = self.eval_phys_expr(self.mur, 'mur')
+        if callable(var):
+            add_expression(v, 'mur', suffix, ind_vars, f_name,
+                           [], domains = self._sel_index,
+                           gdomain = self._global_ns)            
+        else:
+            add_constant(v, 'mur', suffix, var,
+                         domains = self._sel_index,
+                         gdomain = self._global_ns)                        
+
+        var, f_name = self.eval_phys_expr(self.sigma, 'sigma')
+        if callable(var):
+            add_expression(v, 'sigma', suffix, ind_vars, f_name,
+                           [], domains = self._sel_index, 
+                           gdomain = self._global_ns)            
+        else:
+            add_constant(v, 'sigma', suffix, var,
+                         domains = self._sel_index,
+                         gdomain = self._global_ns)
+
+
+    

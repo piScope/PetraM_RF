@@ -34,7 +34,7 @@ data =  (('epsilonr', VtableElement('epsilonr', type='complex',
 
 class Epsilon(PhysCoefficient):
    '''
-    -1j * omega^2 * epsilon0 * epsilonr
+    - omega^2 * epsilon0 * epsilonr
    '''
    def __init__(self, *args, **kwargs):
        self.omega = kwargs.pop('omega', 1.0)
