@@ -383,7 +383,7 @@ class EM2Da_Port(EM2Da_Bdry):
         dprint1("Add Extra contribution" + str(self._sel_index))
 
         self.vt.preprocess_params(self)           
-        inc_amp, inc_phase, eps, mu = self.vt.make_value_or_expression(self)
+        inc_amp, inc_phase, eps, mur = self.vt.make_value_or_expression(self)
 
         Erz, Ephi = self.get_e_coeff_cls()
         Hrz, Hphi = self.get_h_coeff_cls()

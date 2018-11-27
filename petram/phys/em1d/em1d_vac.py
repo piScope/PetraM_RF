@@ -126,7 +126,7 @@ class EM1D_Vac(EM1D_Domain):
             dprint1("Add BF contribution(real) " + txt + str(self._sel_index))
         else:
             dprint1("Add BF contribution(imag)" + txt + str(self._sel_index))
-        print "ky, kz", ky, kz
+
         if ecsc is None:
             sc = Sigma(s,  self.get_root_phys().ind_vars,
                               self._local_ns, self._global_ns,
