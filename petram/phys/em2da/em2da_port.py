@@ -336,7 +336,7 @@ class EM2Da_Port(EM2Da_Bdry):
             dprint1("Add LF contribution(imag)" + str(self._sel_index))
        
         self.vt.preprocess_params(self)           
-        inc_amp, inc_phase, eps, mu = self.vt.make_value_or_expression(self)
+        inc_amp, inc_phase, eps, mur = self.vt.make_value_or_expression(self)
 
         Hrz, Hphi = self.get_h_coeff_cls()
         inc_wave = inc_amp * np.exp(1j*inc_phase/180.*np.pi)
