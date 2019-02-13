@@ -274,7 +274,7 @@ class EM3D(PhysModule):
         from petram.helper.variables import add_surf_normals
         from petram.helper.variables import add_constant      
         
-        from .eval_deriv import eval_curl        
+        from petram.helper.eval_deriv import eval_curl        
         def evalB(gfr, gfi = None):
             gfr, gfi, extra = eval_curl(gfr, gfi)
             gfi /= (2*self.freq*np.pi)   # real B
