@@ -281,7 +281,8 @@ class EM3D(PhysModule):
             gfr /= -(2*self.freq*np.pi)  # imag B
             return gfi, gfr, extra
 
-        ind_vars = [x.strip() for x in self.ind_vars.split(',')]
+        ind_vars = [x.strip() for x in self.ind_vars.split(',') if x.strip() != '']
+        
         suffix = self.dep_vars_suffix
 
         from petram.helper.variables import TestVariable
@@ -301,6 +302,7 @@ class EM3D(PhysModule):
             add_expression(v, 'normE', suffix, ind_vars,
                            '(conj(Ex)*Ex + conj(Ey)*Ey +conj(Ez)*Ez)**(0.5)',
                            ['E'])
+            
             add_expression(v, 'normB', suffix, ind_vars,
                            '(conj(Bx)*Bx + conj(By)*By + conj(Bz)*Bz)**(0.5)',
                            ['B'])
