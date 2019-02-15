@@ -212,8 +212,8 @@ def interp3D(values, X, Y, Z, mask, vdim=1, complex = False, mask_start=0,
            res[ii, idx] = griddata(ptx, ret[:, ii].flatten(),
                                    (X[idx], Y[idx], Z[idx]))
            
-       if logfile is not None:
-          logfile.write("done\n")
+        if logfile is not None:
+           logfile.write("done\n")
 
     if vdim == 1: res = res.flatten()       
     return res
