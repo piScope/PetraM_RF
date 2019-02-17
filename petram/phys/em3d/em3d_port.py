@@ -205,6 +205,9 @@ class C_jwHt_TEM(mfem.VectorPyCoefficient):
 '''
    coax port TEM
 '''
+def coax_norm(a, b, mur, eps):
+    return np.sqrt(1/np.pi/np.sqrt(epsilon0*eps/mu0/mur)/np.log(b/a))
+    
 class C_Et_CoaxTEM(mfem.VectorPyCoefficient):
    def __init__(self, sdim, bdry, real = True, eps=1.0, mur=1.0):
        mfem.VectorPyCoefficient.__init__(self, sdim)
@@ -214,13 +217,16 @@ class C_Et_CoaxTEM(mfem.VectorPyCoefficient):
        self.a = bdry.a
        self.b = bdry.b
        self.ctr = bdry.ctr
+       self.AA = coax_norm(self.a, self.b, mur, eps)
        
    def EvalValue(self, x):
        r = (x - self.ctr)
        rho = np.sqrt(np.sum(r**2))
        nr = r/rho
+
 #       E = nr*np.log(self.b/rho)/np.log(self.b/self.a)
-       E = nr/np.log(self.b/self.a)/rho
+#       E = nr/np.log(self.b/self.a)/rho
+       E = nr/rho*self.AA
        if self.real:
             return -E.real
        else:
@@ -236,7 +242,8 @@ class C_jwHt_CoaxTEM(mfem.VectorPyCoefficient):
        self.b = bdry.b
        self.ctr = bdry.ctr
        self.phase = phase  # phase !=0 for incoming wave
-       self.AA = omega*np.sqrt(epsilon0*eps/mu0/mur)
+       #self.AA = omega*np.sqrt(epsilon0*eps/mu0/mur)
+       self.AA = coax_norm(self.a, self.b, mur, eps)*omega*np.sqrt(epsilon0*eps/mu0/mur)
        
    def EvalValue(self, x):
        r = (x - self.ctr)
@@ -244,8 +251,9 @@ class C_jwHt_CoaxTEM(mfem.VectorPyCoefficient):
        nr = r/rho
        nr = np.cross(nr, self.norm)
 #       H = nr*np.log(self.b/rho)/np.log(self.b/self.a)       
-       H = nr/np.log(self.b/self.a)/rho       
-       H = 1j*self.AA*H
+#       H = nr/np.log(self.b/self.a)/rho
+       H = 1j*nr/rho*self.AA     
+       #H = 1j*self.AA*H
        H = H * np.exp(1j*self.phase*np.pi/180.)
        if self.real:
             return H.real

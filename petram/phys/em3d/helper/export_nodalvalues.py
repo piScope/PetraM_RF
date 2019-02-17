@@ -178,7 +178,7 @@ def make_mask(values, X, Y, Z, mask_start = 0, logfile = None):
        ii = np.where(ii)[0][np.array(elem_ids.ToList()) !=-1 ]
        mask[ii] = kk + mask_start
        if logfile is not None:
-          logfile.write("done\n")
+           logfile.write("done\n")
             
     return mask
 
@@ -213,7 +213,7 @@ def interp3D(values, X, Y, Z, mask, vdim=1, complex = False, mask_start=0,
                                    (X[idx], Y[idx], Z[idx]))
            
         if logfile is not None:
-           logfile.write("done\n")
+            logfile.write("done\n")
 
     if vdim == 1: res = res.flatten()       
     return res
