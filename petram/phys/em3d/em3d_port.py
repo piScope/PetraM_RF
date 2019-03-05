@@ -161,7 +161,6 @@ class C_jwHt_TE(mfem.VectorPyCoefficient):
        H = Hx*self.a_vec + Hy*self.b_vec
 
        H = H * np.exp(1j*self.phase/180.*np.pi)
-   
        if self.real:
             return H.real
        else:
@@ -529,6 +528,7 @@ class EM3D_Port(EM3D_Bdry):
         
     def add_extra_contribution(self, engine, **kwargs):
         dprint1("Add Extra contribution" + str(self._sel_index))
+        from mfem.common.chypre import LF2PyVec, PyVec2PyMat, Array2PyVec, IdentityPyMat
         
         self.vt.preprocess_params(self)           
         inc_amp, inc_phase, eps, mur = self.vt.make_value_or_expression(self)
@@ -538,19 +538,18 @@ class EM3D_Port(EM3D_Bdry):
         fes = engine.get_fes(self.get_root_phys(), 0)
         
         lf1 = engine.new_lf(fes)
-        Ht = C_jwHt(3, 0.0, self, real = True, eps=eps, mur=mur)
-        Ht = self.restrict_coeff(Ht, engine, vec=True)
-        intg = mfem.VectorFEBoundaryTangentLFIntegrator(Ht)
+        Ht1 = C_jwHt(3, 0.0, self, real = True, eps=eps, mur=mur)
+        Ht2 = self.restrict_coeff(Ht1, engine, vec=True)
+        intg = mfem.VectorFEBoundaryTangentLFIntegrator(Ht2)
         lf1.AddBoundaryIntegrator(intg)
         lf1.Assemble()
         lf1i = engine.new_lf(fes)
-        Ht = C_jwHt(3, 0.0, self, real = False, eps=eps, mur=mur)
-        Ht = self.restrict_coeff(Ht, engine, vec=True)
-        intg = mfem.VectorFEBoundaryTangentLFIntegrator(Ht)
+        Ht3 = C_jwHt(3, 0.0, self, real = False, eps=eps, mur=mur)
+        Ht4 = self.restrict_coeff(Ht3, engine, vec=True)
+        intg = mfem.VectorFEBoundaryTangentLFIntegrator(Ht4)
         lf1i.AddBoundaryIntegrator(intg)
         lf1i.Assemble()
         
-
         lf2 = engine.new_lf(fes)
         Et = C_Et(3, self, real = True, eps=eps, mur=mur)
         Et = self.restrict_coeff(Et, engine, vec=True)
@@ -565,14 +564,13 @@ class EM3D_Port(EM3D_Bdry):
 
         t4 = np.array([[np.sqrt(inc_amp)*np.exp(1j*inc_phase/180.*np.pi)]])
 
-
-        from mfem.common.chypre import LF2PyVec, PyVec2PyMat, Array2PyVec, IdentityPyMat
-
+        #
+        #
+        #
         v1 = LF2PyVec(lf1, lf1i)
         v1 *= -1
         v2 = LF2PyVec(lf2, None, horizontal = True)
         x  = LF2PyVec(x, None)
-        
         # output formats of InnerProduct
         # are slightly different in parallel and serial
         # in serial numpy returns (1,1) array, while in parallel
