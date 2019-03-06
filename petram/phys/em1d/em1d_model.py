@@ -99,7 +99,14 @@ class EM1D_DefPair(Pair, Phys):
 
 class EM1D(PhysModule):
     der_vars_base = ['B']
-    geom_dim = 1    
+    geom_dim = 1
+    def __init__(self, **kwargs):
+        super(EM1D, self).__init__()
+        Phys.__init__(self)
+        self['Domain'] = EM1D_DefDomain()
+        self['Boundary'] = EM1D_DefBdry()
+        self['Pair'] = EM1D_DefPair()
+    
     @property
     def dep_vars(self):
         '''
