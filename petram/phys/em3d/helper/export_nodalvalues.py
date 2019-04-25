@@ -27,7 +27,7 @@
 
      #save E
      exporter.export_interpolated_data(path, X, Y, Z, 'E',
-                          # dim = 3, complex = True,
+                          # vdim = 3, complex = True,
                           nproc = 1, ncfile = 'data.nc')
      #save E and B
      exporter.export_interpolated_data2(path, X, Y, Z, 
@@ -381,10 +381,10 @@ def export_interpolated_data2(path, X, Y, Z, freq, fesvar='E',
                               nproc = 8,  ncfile= 'EBdata.nc'):
 
     Edata, mask = export_interpolated_data(path, X, Y, Z, fesvar,
-                                           dim = 3, complex = True,
+                                           vdim = 3, complex = True,
                                            nproc = nproc, return_mask = True)
     Bdata, mask = export_interpolated_data(path, X, Y, Z, fesvar,
-                                           dim = 3, complex = True, curl=True,
+                                           vdim = 3, complex = True, curl=True,
                                            nproc = nproc, return_mask = True)
     
 
@@ -445,7 +445,7 @@ y = np.linspace(0, 0.2, 50)
 z = np.linspace(0, 0.06, 10)
 X, Y, Z = np.meshgrid(x, y, z)
 data = exporter.export_interpolated_data(path, X, Y, Z, 'E',
-                          dim = 3, complex = True,
+                          vdim = 3, complex = True,
                           nproc = 1, ncfile = 'data.nc')
 
 '''
