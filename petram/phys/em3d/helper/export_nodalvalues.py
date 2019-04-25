@@ -380,12 +380,12 @@ def export_interpolated_data(path, X, Y, Z, fesvar,
 def export_interpolated_data2(path, X, Y, Z, freq, fesvar='E',
                               nproc = 8,  ncfile= 'EBdata.nc'):
 
-    Edata, mask = exporter.export_interpolated_data(path, X, Y, Z, fesvar,
-                                              dim = 3, complex = True,
-                                              nproc = n, return_mask = True)
-    Bdata, mask = exporter.export_interpolated_data(path, X, Y, Z, fesvar,
-                                              dim = 3, complex = True, curl=True,
-                                              nproc = n, return_mask = True)
+    Edata, mask = export_interpolated_data(path, X, Y, Z, fesvar,
+                                           dim = 3, complex = True,
+                                           nproc = n, return_mask = True)
+    Bdata, mask = export_interpolated_data(path, X, Y, Z, fesvar,
+                                           dim = 3, complex = True, curl=True,
+                                           nproc = n, return_mask = True)
     
 
     fesvar = ''.join([x for x in fesvar if not x.isdigit()])
