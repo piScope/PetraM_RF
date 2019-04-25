@@ -380,6 +380,8 @@ def export_interpolated_data(path, X, Y, Z, fesvar,
 def export_interpolated_data2(path, X, Y, Z, freq, fesvar='E',
                               nproc = 8,  ncfile= 'EBdata.nc'):
 
+    from netCDF4 import Dataset
+    
     Edata, mask = export_interpolated_data(path, X, Y, Z, fesvar,
                                            vdim = 3, complex = True,
                                            nproc = nproc, return_mask = True)
