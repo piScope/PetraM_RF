@@ -382,10 +382,10 @@ def export_interpolated_data2(path, X, Y, Z, freq, fesvar='E',
 
     Edata, mask = export_interpolated_data(path, X, Y, Z, fesvar,
                                            dim = 3, complex = True,
-                                           nproc = n, return_mask = True)
+                                           nproc = nproc, return_mask = True)
     Bdata, mask = export_interpolated_data(path, X, Y, Z, fesvar,
                                            dim = 3, complex = True, curl=True,
-                                           nproc = n, return_mask = True)
+                                           nproc = nproc, return_mask = True)
     
 
     fesvar = ''.join([x for x in fesvar if not x.isdigit()])
