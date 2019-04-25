@@ -410,11 +410,11 @@ def export_interpolated_data2(path, X, Y, Z, freq, fesvar='E',
             
             a_real = nc.createVariable('B_real', np.dtype('double'),
                                    ('vdim', 'dim_0', 'dim_1', 'dim_2'))
-            a_real[:] = Bdata.real/1j/omega
+            a_real[:] = (Bdata/1j).real/1/omega
 
             a_imag = nc.createVariable('B_imag', np.dtype('double'),
                                    ('vdim', 'dim_0', 'dim_1', 'dim_2'))
-            a_imag[:] = Bdata.imag/1j/omega
+            a_imag[:] = (Bdata/1j).imag/omega
             
         else:
             a_real = nc.createVariable(fesvar, np.dtype('double'),
@@ -422,7 +422,7 @@ def export_interpolated_data2(path, X, Y, Z, freq, fesvar='E',
             a_real[:] = Edata
             a_real = nc.createVariable('B', np.dtype('double'),
                                    ('vdim', 'dim_0', 'dim_1', 'dim_2'))
-            a_real[:] = Bdata/1j/omega
+            a_real[:] = Bdata/omega
             
         xx = nc.createVariable('X', np.dtype('double'),
                                ('dim_0', 'dim_1', 'dim_2'))
