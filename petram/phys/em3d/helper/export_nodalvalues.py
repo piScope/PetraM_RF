@@ -148,7 +148,7 @@ def get_nodalvalues(solset,
                 values.StealData()
 
             ret = ret + 1j*ret2
-            nodalvalues[name].append((ptx, ret, gfr))
+            nodalvalues[name].append((ptx, ret, gfro))
 
             
     nodalvalues.default_factory = None
