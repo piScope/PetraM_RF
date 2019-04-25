@@ -378,7 +378,7 @@ def export_interpolated_data(path, X, Y, Z, fesvar,
 
 
 def export_interpolated_data2(path, X, Y, Z, freq, fesvar='E',
-                              nproc = n.  ncdata= 'EBdata.nc'):
+                              nproc = n,  ncdata= 'EBdata.nc'):
 
     Edata, mask = exporter.export_interpolated_data(path, X, Y, Z, fesvar,
                                               dim = 3, complex = True,
