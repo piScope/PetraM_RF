@@ -170,6 +170,7 @@ class EM1D_Port(EM1D_Bdry):
         set parameter
         '''
         try:
+            self.vt.preprocess_params(self)           
             inc_amp, inc_phase, eps, mur, ky, kz = self.vt.make_value_or_expression(self)           
             self.inc_amp = inc_amp
             self.inc_phase = inc_phase

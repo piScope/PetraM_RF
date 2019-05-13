@@ -18,6 +18,24 @@
      >>>  Z =   np.arange(-1.,  1., 100)
      >>>  Phi = np.arange(0, 2*np.pi., 100)
 
+  sample script
+
+     x = np.linspace(0, 0.007, 5)
+     y = np.linspace(0, 0.2, 50)
+     z = np.linspace(0, 0.06, 10)
+     X, Y, Z = np.meshgrid(x, y, z)
+
+     #save E
+     exporter.export_interpolated_data(path, X, Y, Z, 'E',
+                          # vdim = 3, complex = True,
+                          nproc = 1, ncfile = 'data.nc')
+     #save E and B
+     exporter.export_interpolated_data2(path, X, Y, Z, 
+                                        1e8, 'E',
+                                        nproc = 1, ncfile = 'data.nc')
+
+
+
 
   Author: S. Shiraiwa
 
@@ -102,6 +120,7 @@ def get_nodalvalues(solset,
 
             ptx = np.vstack([m.GetVertexArray(i) for i in range(size)])
             
+            gfro, gfio = gfr, gfi
             if curl:
                 gfr, gfi, extra = eval_deriv.eval_curl(gfr, gfi)            
             dim = gfr.VectorDim()
@@ -129,7 +148,7 @@ def get_nodalvalues(solset,
                 values.StealData()
 
             ret = ret + 1j*ret2
-            nodalvalues[name].append((ptx, ret, gfr))
+            nodalvalues[name].append((ptx, ret, gfro))
 
             
     nodalvalues.default_factory = None
@@ -275,7 +294,7 @@ class exporter_child(mp.Process):
 def export_interpolated_data(path, X, Y, Z, fesvar,
                              vdim = 1, complex = False, nproc = 1,
                              ncfile = 'data.nc',
-                             curl = False):
+                             curl = False, return_mask = False):
     
     from netCDF4 import Dataset
     
@@ -353,8 +372,75 @@ def export_interpolated_data(path, X, Y, Z, fesvar,
         rank[:] = mask
 
         nc.close()
+
+    if return_mask:
+        return ans, mask
+    else:
+        return ans
+
+
+def export_interpolated_data2(path, X, Y, Z, freq, fesvar='E',
+                              vdim = 3, complex = True,                              
+                              nproc = 8,  ncfile= 'EBdata.nc'):
+
+    from netCDF4 import Dataset
     
-    return ans
+    Edata, mask = export_interpolated_data(path, X, Y, Z, fesvar,
+                                           vdim = vdim, complex = True,
+                                           nproc = nproc, return_mask = True)
+    Bdata, mask = export_interpolated_data(path, X, Y, Z, fesvar,
+                                           vdim = vdim, complex = True, curl=True,
+                                           nproc = nproc, return_mask = True)
+    
+
+    fesvar = ''.join([x for x in fesvar if not x.isdigit()])
+    omega = 2*np.pi*freq
+    if ncfile != '':
+        nc = Dataset(ncfile, "w", format='NETCDF4')
+        nc.createDimension('vdim', vdim)
+        nc.createDimension('dim_0', X.shape[0])
+        nc.createDimension('dim_1', X.shape[1])
+        nc.createDimension('dim_2', X.shape[2])
+        if complex:        
+            a_real = nc.createVariable(fesvar+'_real', np.dtype('double'),
+                                   ('vdim', 'dim_0', 'dim_1', 'dim_2'))
+            a_real[:] = Edata.real
+
+            a_imag = nc.createVariable(fesvar+'_imag', np.dtype('double'),
+                                   ('vdim', 'dim_0', 'dim_1', 'dim_2'))
+            a_imag[:] = Edata.imag
+            
+            a_real = nc.createVariable('B_real', np.dtype('double'),
+                                   ('vdim', 'dim_0', 'dim_1', 'dim_2'))
+            a_real[:] = (Bdata/1j).real/1/omega
+
+            a_imag = nc.createVariable('B_imag', np.dtype('double'),
+                                   ('vdim', 'dim_0', 'dim_1', 'dim_2'))
+            a_imag[:] = (Bdata/1j).imag/omega
+            
+        else:
+            a_real = nc.createVariable(fesvar, np.dtype('double'),
+                                   ('vdim', 'dim_0', 'dim_1', 'dim_2'))
+            a_real[:] = Edata
+            a_real = nc.createVariable('B', np.dtype('double'),
+                                   ('vdim', 'dim_0', 'dim_1', 'dim_2'))
+            a_real[:] = Bdata/omega
+            
+        xx = nc.createVariable('X', np.dtype('double'),
+                               ('dim_0', 'dim_1', 'dim_2'))
+        yy = nc.createVariable('Y', np.dtype('double'),
+                               ('dim_0', 'dim_1', 'dim_2'))
+        zz = nc.createVariable('Z', np.dtype('double'),
+                               ('dim_0', 'dim_1', 'dim_2'))
+        rank = nc.createVariable('rank', np.dtype('double'),
+                               ('dim_0', 'dim_1', 'dim_2'))
+
+        xx[:] = X
+        yy[:] = Y
+        zz[:] = Z
+        rank[:] = mask
+
+        nc.close()
 
 '''
 sample usage
@@ -364,7 +450,7 @@ y = np.linspace(0, 0.2, 50)
 z = np.linspace(0, 0.06, 10)
 X, Y, Z = np.meshgrid(x, y, z)
 data = exporter.export_interpolated_data(path, X, Y, Z, 'E',
-                          dim = 3, complex = True,
+                          vdim = 3, complex = True,
                           nproc = 1, ncfile = 'data.nc')
 
 '''
