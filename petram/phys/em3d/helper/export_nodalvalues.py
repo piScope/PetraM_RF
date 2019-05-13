@@ -308,6 +308,8 @@ def export_interpolated_data(path, X, Y, Z, fesvar,
             print(dd)
             assert False, "Child Process Failed"
         else:
+            if idx.size == 0: continue
+            print("here", idx.shape, dd.shape)
             if vdim == 1:
                 ans[idx] = dd
             else:
