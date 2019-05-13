@@ -78,7 +78,7 @@ class EM3D_Div(Domain, Phys):
            flag1 : take transpose
            flag2 : take conj
         '''
-        return [(0, 1, -1, -1), (1, 0, 1, 1)]
+        return [(1, 0, -1, -1), (1, 0, 1, 1)]
 
     ''' 
     def postprocess_extra(self, sol, flag, sol_extra):
@@ -87,6 +87,7 @@ class EM3D_Div(Domain, Phys):
     '''
 
     def add_mix_contribution(self, engine, mbf, r, c, is_trans, real = True):
+        dprint1("Add Mixed contribution: " + str((r, c, is_trans, real)))
         itg =  mfem.MixedVectorWeakDivergenceIntegrator
         domains = [engine.find_domain_by_index(self.get_root_phys(), x,
                                                check_enabled = True)
@@ -96,10 +97,10 @@ class EM3D_Div(Domain, Phys):
             coeff1, coeff2, coeff3 = dom.get_coeffs(real = real)           
             self.add_integrator(engine, 'epsilonr', coeff1,
                                 mbf.AddDomainIntegrator,
-                                itg, idx=[idx], vt  = dom.vt)
+                                itg, idx=[idx], vt  = dom.vt, transpose=is_trans)
             self.add_integrator(engine, 'sigma', coeff3,
                                 mbf.AddDomainIntegrator,
-                                itg, idx=[idx], vt  = dom.vt)
+                                itg, idx=[idx], vt  = dom.vt, transpose=is_trans)
             '''
             if coeff2 is not None:        
                 coeff2 = self.restrict_coeff(coeff2, engine, idx = [idx])
