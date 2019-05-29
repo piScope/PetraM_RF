@@ -448,16 +448,18 @@ class EM2Da_Port(EM2Da_Bdry):
            arr = self.get_restriction_array(engine)
            x.ProjectBdrCoefficient(Et,  arr)
 
-
+           weight = mfem.InnerProduct(engine.x2X(x), engine.b2B(lf2))
            v2 = LF2PyVec(lf2, None, horizontal = True)
-           x  = LF2PyVec(x, None)
+           v2 *= -1/weight/2.0
 
+           
+           #x  = LF2PyVec(x, None)
            # output formats of InnerProduct
            # are slightly different in parallel and serial
            # in serial numpy returns (1,1) array, while in parallel
            # MFEM returns a number. np.sum takes care of this.
-           tmp = np.sum(v2.dot(x))
-           v2 *= -1/tmp/2.
+           #tmp = np.sum(v2.dot(x))
+           #v2 *= -1/tmp/2.
            
            t4 = np.array([[inc_amp*np.exp(1j*inc_phase/180.*np.pi)]])
 

@@ -23,6 +23,7 @@ from .em3d_const import epsilon0, mu0
 from petram.mfem_config import use_parallel
 if use_parallel:
    import mfem.par as mfem
+   from mfem.common.mpi_debug import nicePrint   
    '''
    from mpi4py import MPI
    num_proc = MPI.COMM_WORLD.size
@@ -30,6 +31,7 @@ if use_parallel:
    '''
 else:
    import mfem.ser as mfem
+   nicePrint = dprint1   
 
 '''
   TE Mode
@@ -559,27 +561,31 @@ class EM3D_Port(EM3D_Bdry):
         
         x = engine.new_gf(fes)
         x.Assign(0.0)
-        arr = self.get_restriction_array(engine)
+        arr = self.get_restriction_array(engine)           
         x.ProjectBdrCoefficientTangent(Et,  arr)
 
+        
         t4 = np.array([[np.sqrt(inc_amp)*np.exp(1j*inc_phase/180.*np.pi)]])
-
+        weight = mfem.InnerProduct(engine.x2X(x), engine.b2B(lf2))
+        
         #
         #
         #
         v1 = LF2PyVec(lf1, lf1i)
         v1 *= -1
         v2 = LF2PyVec(lf2, None, horizontal = True)
-        x  = LF2PyVec(x, None)
-        # output formats of InnerProduct
-        # are slightly different in parallel and serial
-        # in serial numpy returns (1,1) array, while in parallel
-        # MFEM returns a number. np.sum takes care of this.
-        tmp = np.sum(v2.dot(x))
-        v2 *= 1./tmp
+        #x  = LF2PyVec(x, None)
+        #
+        # transfer x and lf2 to True DoF space to operate InnerProduct
+        #
+        # here lf2 and x is assume to be real value.
+        #
+        v2 *= 1./weight
 
+        
         v1 = PyVec2PyMat(v1)
         v2 = PyVec2PyMat(v2.transpose())
+
         t4 = Array2PyVec(t4)
         t3 = IdentityPyMat(1)
 
