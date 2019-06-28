@@ -173,7 +173,7 @@ class EM3D(PhysModule):
                     (v[1], 'H1_FECollection'),]
     
     def _has_div_constraint(self):
-        from .em3d_div import EM3D_Div
+        from petram.phys.em3d.em3d_div import EM3D_Div
         for mm in self['Domain'].iter_enabled():
             if isinstance(mm, EM3D_Div): return True
         return False
@@ -211,7 +211,7 @@ class EM3D(PhysModule):
         return ["freq"], [float]
     
     def get_default_ns(self):
-        from em3d_const import mu0, epsilon0, q0
+        from petram.phys.em3d.em3d_const import mu0, epsilon0, q0
         ns =  {'mu0': mu0,
                'e0': epsilon0,
                'q0': q0}
@@ -230,21 +230,21 @@ class EM3D(PhysModule):
         self._global_ns['epsilon0'] = epsilon0
             
     def get_possible_bdry(self):
-        from em3d_pec       import EM3D_PEC
-        from em3d_pmc       import EM3D_PMC
-        from em3d_h       import EM3D_H
-        from em3d_surfj       import EM3D_SurfJ
-        from em3d_port       import EM3D_Port
-        from em3d_e       import EM3D_E
-        from em3d_cont       import EM3D_Continuity
+        from .em3d_pec       import EM3D_PEC
+        from .em3d_pmc       import EM3D_PMC
+        from .em3d_h       import EM3D_H
+        from .em3d_surfj       import EM3D_SurfJ
+        from .em3d_port       import EM3D_Port
+        from .em3d_e       import EM3D_E
+        from .em3d_cont       import EM3D_Continuity
         return [EM3D_PEC, EM3D_Port, EM3D_E, EM3D_SurfJ, 
                 EM3D_H, EM3D_PMC, EM3D_Continuity]
     
     def get_possible_domain(self):
-        from em3d_anisotropic import EM3D_Anisotropic
-        from em3d_vac       import EM3D_Vac
-        from em3d_extj       import EM3D_ExtJ
-        from em3d_div       import EM3D_Div        
+        from .em3d_anisotropic import EM3D_Anisotropic
+        from .em3d_vac       import EM3D_Vac
+        from .em3d_extj       import EM3D_ExtJ
+        from .em3d_div       import EM3D_Div        
 
         return [EM3D_Vac, EM3D_Anisotropic, EM3D_ExtJ, EM3D_Div]
 

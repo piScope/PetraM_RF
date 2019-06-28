@@ -199,7 +199,7 @@ class EM2Da(PhysModule):
         return ["freq"], [float]
     
     def get_default_ns(self):
-        from em2da_const import mu0, epsilon0, q0
+        from .em2da_const import mu0, epsilon0, q0
         ns =  {'mu0': mu0,
                'e0': epsilon0,
                'q0': q0}
@@ -214,18 +214,18 @@ class EM2Da(PhysModule):
         self.ind_vars =  str(v[1])
         self.dep_vars_suffix =  str(v[2])
         
-        from em2da_const import mu0, epsilon0
+        from .em2da_const import mu0, epsilon0
         self._global_ns['mu0'] = mu0
         self._global_ns['epsilon0'] = epsilon0
             
     def get_possible_bdry(self):
-        from em2da_pec       import EM2Da_PEC
-        from em2da_pmc       import EM2Da_PMC
+        from .em2da_pec       import EM2Da_PEC
+        from .em2da_pmc       import EM2Da_PMC
         #from em2da_h       import EM2Da_H
         #from em2da_surfj       import EM2Da_SurfJ
-        from em2da_port      import EM2Da_Port
-        from em2da_e         import EM2Da_E
-        from em2da_cont      import EM2Da_Continuity
+        from .em2da_port      import EM2Da_Port
+        from .em2da_e         import EM2Da_E
+        from .em2da_cont      import EM2Da_Continuity
         return [EM2Da_PEC,
                 EM2Da_Port,
                 EM2Da_E,                                
@@ -233,9 +233,9 @@ class EM2Da(PhysModule):
                 EM2Da_Continuity]
     
     def get_possible_domain(self):
-        from em2da_anisotropic import EM2Da_Anisotropic
-        from em2da_vac       import EM2Da_Vac
-        from em2da_extj       import EM2Da_ExtJ
+        from .em2da_anisotropic import EM2Da_Anisotropic
+        from .em2da_vac       import EM2Da_Vac
+        from .em2da_extj       import EM2Da_ExtJ
         #from em3d_div       import EM3D_Div        
 
         return [EM2Da_Vac, EM2Da_Anisotropic, EM2Da_ExtJ]
