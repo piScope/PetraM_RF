@@ -39,12 +39,12 @@ data =  (('H', VtableElement('H', type='complex',
 class Ht(VectorPhysCoefficient):
    def __init__(self, *args, **kwargs):
        omega = kwargs.pop('omega', 1.0)
-       from em3d_const import mu0, epsilon0, c
+       from .em3d_const import mu0, epsilon0, c
        self.fac = 1j*omega #/mur
        super(Ht, self).__init__(*args, **kwargs)
 
    def EvalValue(self, x):
-       from em3d_const import mu0, epsilon0      
+       from .em3d_const import mu0, epsilon0      
        v = super(Ht, self).EvalValue(x)
        v = self.fac * v
        #dprint1("H ", v , "at", x)
@@ -66,7 +66,7 @@ class EM3D_H(EM3D_Bdry):
         else:
             dprint1("Add LF contribution(imag)" + str(self._sel_index))
             
-        from em3d_const import mu0, epsilon0
+        from .em3d_const import mu0, epsilon0
         freq, omega = self.get_root_phys().get_freq_omega()        
 
         h = self.vt.make_value_or_expression(self)
