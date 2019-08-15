@@ -306,7 +306,7 @@ class EM3D_Port(EM3D_Bdry):
     def import_panel1_value(self, v):
         self.port_idx = v[0]       
         self.mode = v[1]
-        self.mn = [long(x) for x in v[2].split(',')]
+        self.mn = [int(x) for x in v[2].split(',')]
         self.vt.import_panel_value(self, v[3:])                 
 
     def get_exter_NDoF(self):
