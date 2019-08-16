@@ -225,7 +225,7 @@ class EM3D(PhysModule):
         self.freq_txt =  str(v[0])
         self.ind_vars =  str(v[1])
         self.dep_vars_suffix =  str(v[2])                
-        from em3d_const import mu0, epsilon0
+        from petram.phys.em3d.em3d_const import mu0, epsilon0
         self._global_ns['mu0'] = mu0
         self._global_ns['epsilon0'] = epsilon0
             
@@ -253,7 +253,7 @@ class EM3D(PhysModule):
 
     def get_possible_pair(self):
 
-        from em3d_floquet       import EM3D_Floquet
+        from .em3d_floquet       import EM3D_Floquet
 
         return [EM3D_Floquet]
 
