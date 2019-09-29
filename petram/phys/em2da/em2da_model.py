@@ -260,6 +260,7 @@ class EM2Da(PhysModule):
         from petram.helper.variables import add_coordinates
         from petram.helper.variables import add_scalar
         from petram.helper.variables import add_components
+        from petram.helper.variables import add_elements        
         from petram.helper.variables import add_expression
         from petram.helper.variables import add_surf_normals
         from petram.helper.variables import add_constant      
@@ -281,7 +282,7 @@ class EM2Da(PhysModule):
         add_surf_normals(v, ind_vars)
         
         if name.startswith('Et'):
-            add_components(v, 'E', suffix, ind_vars, solr, soli)
+            add_elements(v, 'E', suffix, ind_vars, solr, soli, elements=[0,1])
             
         elif name.startswith('rEf'):
             add_scalar(v, 'rEf', suffix, ind_vars, solr, soli)
@@ -291,6 +292,9 @@ class EM2Da(PhysModule):
         elif name.startswith('psi'):
             add_scalar(v, 'psi', suffix, ind_vars, solr, soli)
 
+        add_expression(v, 'E', suffix, ind_vars, 'array([Er, Ephi, Ez])',
+                      ['Er', 'Ephi', 'Ez'])
+            
         # collect all definition from children
         #for mm in self.walk():
         #    if not mm.enabled: continue
