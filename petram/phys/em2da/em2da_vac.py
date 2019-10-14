@@ -45,7 +45,7 @@ class Epsilon_o_r(PhysCoefficient):
        super(Epsilon_o_r, self).__init__(*args, **kwargs)
 
    def EvalValue(self, x):
-       from em2da_const import mu0, epsilon0
+       from .em2da_const import mu0, epsilon0
        v = super(Epsilon_o_r, self).EvalValue(x)
        v = - v * epsilon0 * self.omega * self.omega /x[0]
        if self.real:  return v.real
@@ -60,7 +60,7 @@ class Epsilon_x_r(PhysCoefficient):
        super(Epsilon_x_r, self).__init__(*args, **kwargs)
 
    def EvalValue(self, x):
-       from em2da_const import mu0, epsilon0
+       from .em2da_const import mu0, epsilon0
        v = super(Epsilon_x_r, self).EvalValue(x)
        v = - v * epsilon0 * self.omega * self.omega * x[0]
        if self.real:  return v.real
@@ -75,7 +75,7 @@ class Sigma_o_r(PhysCoefficient):
        super(Sigma_o_r, self).__init__(*args, **kwargs)
 
    def EvalValue(self, x):
-       from em2da_const import mu0, epsilon0
+       from .em2da_const import mu0, epsilon0
        v = super(Sigma_o_r, self).EvalValue(x)
        v = -1j * self.omega * v/x[0]
        if self.real:  return v.real
@@ -90,7 +90,7 @@ class Sigma_x_r(PhysCoefficient):
        super(Sigma_x_r, self).__init__(*args, **kwargs)
 
    def EvalValue(self, x):
-       from em2da_const import mu0, epsilon0
+       from .em2da_const import mu0, epsilon0
        v = super(Sigma_x_r, self).EvalValue(x)
        v = -1j * self.omega * v * x[0]
        if self.real:  return v.real
@@ -104,7 +104,7 @@ class InvMu_x_r(PhysCoefficient):
        super(InvMu_x_r, self).__init__(*args, **kwargs)
 
    def EvalValue(self, x):
-       from em2da_const import mu0, epsilon0      
+       from .em2da_const import mu0, epsilon0      
        v = super(InvMu_x_r, self).EvalValue(x)
        v = 1/mu0/v*x[0]
        if self.real:  return v.real
@@ -119,7 +119,7 @@ class InvMu_o_r(PhysCoefficient):
        super(InvMu_o_r, self).__init__(*args, **kwargs)
   
    def EvalValue(self, x):
-       from em2da_const import mu0, epsilon0      
+       from .em2da_const import mu0, epsilon0      
        v = super(InvMu_o_r, self).EvalValue(x)
        v = 1/mu0/v/x[0]
        if self.real:  return v.real
@@ -134,7 +134,7 @@ class iInvMu_m_o_r(PhysCoefficient):
        super(iInvMu_m_o_r, self).__init__(*args, **kwargs)
   
    def EvalValue(self, x):
-       from em2da_const import mu0, epsilon0      
+       from .em2da_const import mu0, epsilon0      
        v = super(iInvMu_m_o_r, self).EvalValue(x)
        v = 1j/mu0/v/x[0]*self.tmode
        if self.real:  return v.real
@@ -149,7 +149,7 @@ class InvMu_m2_o_r(PhysCoefficient):
        super(InvMu_m2_o_r, self).__init__(*args, **kwargs)
   
    def EvalValue(self, x):
-       from em2da_const import mu0, epsilon0      
+       from .em2da_const import mu0, epsilon0      
        v = super(InvMu_m2_o_r, self).EvalValue(x)
        v = 1/mu0/v/x[0]*self.tmode*self.tmode
        if self.real:  return v.real
@@ -177,7 +177,7 @@ class EM2Da_Vac(EM2Da_Domain):
         return [(0, 1, 1, 1), (1, 0, 1, 1)]
 
     def add_bf_contribution(self, engine, a, real = True, kfes=0):
-        from em2da_const import mu0, epsilon0
+        from .em2da_const import mu0, epsilon0
         freq, omega = self.get_root_phys().get_freq_omega()
         e, m, s, tmode = self.vt.make_value_or_expression(self)
         if not isinstance(e, str): e = str(e)
@@ -252,7 +252,7 @@ class EM2Da_Vac(EM2Da_Domain):
             dprint1("Add mixed contribution(imag)" + "(" + str(r) + "," + str(c) +')'
                     +str(self._sel_index))
        
-        from em2da_const import mu0, epsilon0
+        from .em2da_const import mu0, epsilon0
         freq, omega = self.get_root_phys().get_freq_omega()
         e, m, s, tmode = self.vt.make_value_or_expression(self)
 

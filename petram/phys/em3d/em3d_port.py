@@ -1,3 +1,4 @@
+from __future__ import print_function
 '''
 
    3D port boundary condition
@@ -305,7 +306,7 @@ class EM3D_Port(EM3D_Bdry):
     def import_panel1_value(self, v):
         self.port_idx = v[0]       
         self.mode = v[1]
-        self.mn = [long(x) for x in v[2].split(',')]
+        self.mn = [int(x) for x in v[2].split(',')]
         self.vt.import_panel_value(self, v[3:])                 
 
     def get_exter_NDoF(self):
@@ -357,7 +358,8 @@ class EM3D_Port(EM3D_Bdry):
         if str(self.mode).upper().strip() in ['TE', 'TM', 'TEM']:
            edges = np.array([mesh.GetBdrElementEdges(i)[0] for i in ibe]).flatten()
            d = {}
-           for x in edges:d[x] = d.has_key(x)
+           for x in edges:
+              d[x] = x in d
            edges = [x for x in d.keys() if not d[x]]
            ivert = [mesh.GetEdgeVertices(x) for x in edges]
            ivert = connect_pairs(ivert)
@@ -434,7 +436,8 @@ class EM3D_Port(EM3D_Bdry):
         elif self.mode == 'Coax(TEM)':
            edges = np.array([mesh.GetBdrElementEdges(i)[0] for i in ibe]).flatten()
            d = {}
-           for x in edges:d[x] = d.has_key(x)
+           for x in edges:
+              d[x] = x in d
            edges = [x for x in d.keys() if not d[x]]
            ivert = [mesh.GetEdgeVertices(x) for x in edges]
            iv1, iv2 = connect_pairs(ivert) # index of outer/inner circles

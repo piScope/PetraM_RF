@@ -41,7 +41,7 @@ class Epsilon(PhysCoefficient):
        super(Epsilon, self).__init__(*args, **kwargs)
 
    def EvalValue(self, x):
-       from em3d_const import mu0, epsilon0
+       from .em3d_const import mu0, epsilon0
        v = super(Epsilon, self).EvalValue(x)
        v = - v * epsilon0 * self.omega * self.omega
        if self.real:  return v.real
@@ -56,7 +56,7 @@ class Sigma(PhysCoefficient):
        super(Sigma, self).__init__(*args, **kwargs)
 
    def EvalValue(self, x):
-       from em3d_const import mu0, epsilon0
+       from .em3d_const import mu0, epsilon0
        v = super(Sigma, self).EvalValue(x)
        v = - 1j * self.omega * v
        if self.real:  return v.real
@@ -71,7 +71,7 @@ class InvMu(PhysCoefficient):
        super(InvMu, self).__init__(*args, **kwargs)
 
    def EvalValue(self, x):
-       from em3d_const import mu0, epsilon0      
+       from .em3d_const import mu0, epsilon0      
        v = super(InvMu, self).EvalValue(x)
        v = 1/mu0/v
        if self.real:  return v.real
@@ -85,7 +85,7 @@ class EM3D_Vac(EM3D_Domain):
         else: return False
 
     def get_coeffs(self, real = True):
-        from em3d_const import mu0, epsilon0
+        from .em3d_const import mu0, epsilon0
         freq, omega = self.get_root_phys().get_freq_omega()
         e, m, s = self.vt.make_value_or_expression(self)
 

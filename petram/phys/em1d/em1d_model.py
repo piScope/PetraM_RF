@@ -1,4 +1,4 @@
-
+from __future__ import print_function
 '''
 EM1d : 1D Frequency domain Maxwell equation.
 
@@ -198,13 +198,13 @@ class EM1D(PhysModule):
         self._global_ns['epsilon0'] = epsilon0
             
     def get_possible_bdry(self):
-        from em1d_pec       import EM1D_PEC
-        from em1d_pmc       import EM1D_PMC
+        from .em1d_pec       import EM1D_PEC
+        from .em1d_pmc       import EM1D_PMC
         #from em1d_h       import EM1D_H
         #from em1d_surfj       import EM1D_SurfJ
-        from em1d_port      import EM1D_Port
-        from em1d_e         import EM1D_E
-        from em1d_cont      import EM1D_Continuity
+        from .em1d_port      import EM1D_Port
+        from .em1d_e         import EM1D_E
+        from .em1d_cont      import EM1D_Continuity
         return [EM1D_PEC,
                 EM1D_Port,
                 EM1D_E,                                
@@ -212,8 +212,8 @@ class EM1D(PhysModule):
                 EM1D_Continuity]
     
     def get_possible_domain(self):
-        from em1d_anisotropic import EM1D_Anisotropic
-        from em1d_vac       import EM1D_Vac
+        from .em1d_anisotropic import EM1D_Anisotropic
+        from .em1d_vac       import EM1D_Vac
         #from em1d_extj       import EM1D_ExtJ
         #from em3d_div       import EM3D_Div        
 
@@ -280,7 +280,7 @@ class EM1D(PhysModule):
     def get_fes_for_dep(self, unknown_name, soldict):
         keys = soldict.keys()
         
-        print unknown_name, soldict.keys()
+        print(unknown_name, soldict.keys())
         assert False,  "check if this is called"
         k = unknown_name
         sol = soldict[k]

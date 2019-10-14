@@ -39,7 +39,7 @@ class Epsilon(MatrixPhysCoefficient):
        self.omega = kwargs.pop('omega', 1.0)
        super(Epsilon, self).__init__(*args, **kwargs)
    def EvalValue(self, x):
-       from em3d_const import mu0, epsilon0      
+       from .em3d_const import mu0, epsilon0      
        v = super(Epsilon, self).EvalValue(x)
        v = - v * epsilon0 * self.omega * self.omega
        if self.real:  return v.real
@@ -50,7 +50,7 @@ class Sigma(MatrixPhysCoefficient):
        self.omega = kwargs.pop('omega', 1.0)
        super(Sigma, self).__init__(*args, **kwargs)
    def EvalValue(self, x):
-       from em3d_const import mu0, epsilon0      
+       from .em3d_const import mu0, epsilon0      
        v = super(Sigma, self).EvalValue(x)
        v =  - 1j*self.omega * v       
        if self.real:  return v.real
@@ -65,7 +65,7 @@ class InvMu(PhysCoefficient):
        super(InvMu, self).__init__(*args, **kwargs)
 
    def EvalValue(self, x):
-       from em3d_const import mu0, epsilon0      
+       from .em3d_const import mu0, epsilon0      
        v = super(InvMu, self).EvalValue(x)
        v = 1/mu0/v
        if self.real:  return v.real
@@ -80,7 +80,7 @@ class EM3D_Anisotropic(EM3D_Domain):
         else: return False
         
     def get_coeffs(self, real = True):
-        from em3d_const import mu0, epsilon0
+        from .em3d_const import mu0, epsilon0
         freq, omega = self.get_root_phys().get_freq_omega()
         e, m, s = self.vt.make_value_or_expression(self)
 
@@ -132,7 +132,7 @@ class EM3D_Anisotropic(EM3D_Domain):
         else:
             dprint1("Add BF contribution(imag)" + str(self._sel_index))
        
-        from em3d_const import mu0, epsilon0
+        from .em3d_const import mu0, epsilon0
         freq, omega = self.get_root_phys().get_freq_omega()
 
         coeff1, coeff2, coeff3 = self.get_coeffs(real = real)        

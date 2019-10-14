@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import numpy as np
 from scipy.sparse import csr_matrix, coo_matrix, lil_matrix
 
@@ -90,8 +92,8 @@ class EM3D_Floquet(Pair,Bdry, Phys):
         dprint1("v(x, y, z)") 
         dprint1(self.func_v)
         try:
-            exec '\n'.join(self.func_u)
-            exec '\n'.join(self.func_v)
+            exec('\n'.join(self.func_u))
+            exec('\n'.join(self.func_v))
         except:
             raise ValueError("Cannot complie mappling rule")
 
@@ -124,9 +126,9 @@ class EM3D_Floquet(Pair,Bdry, Phys):
                  '    return np.array(['+self.map_to_u + ','+ self.map_to_v+'])']
         
         lns = {}
-        exec '\n'.join(self.func_u) in self._global_ns, lns # this defines map_to_u
-        exec '\n'.join(self.func_v) in self._global_ns, lns # this defines map_to_v
-        exec '\n'.join(trans1) in self._global_ns, lns      # this defines trans1
+        exec('\n'.join(self.func_u), self._global_ns, lns) # this defines map_to_u
+        exec('\n'.join(self.func_v), self._global_ns, lns) # this defines map_to_v
+        exec('\n'.join(trans1), self._global_ns, lns)      # this defines trans1
         
         map_to_u = lns['map_to_u']
         map_to_v = lns['map_to_v']

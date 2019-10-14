@@ -50,7 +50,6 @@ def create_cdf(filename, solsets, battrs):
     rootgrp = Dataset(filename, 'w', format='NETCDF3_64BIT')
     v  = eval_solset(solsets, battrs, eval_sol,  1)
     xy   = concatenate([concatenate([x[0] for x in v[i][:]]) for i in battrs])
-    print xy.shape
     nele = rootgrp.createDimension('nele', xy.shape[0])
     ndim = rootgrp.createDimension('ndim', xy.shape[-1])
     npts = rootgrp.createDimension('npts', xy.shape[1])
@@ -71,7 +70,6 @@ def add_sol_variable(filename, solsets, battrs, curl=False):
     Eya  = concatenate([concatenate([x[1] for x in Ey[i][:]]) for i in battrs])
     Eza  = concatenate([concatenate([x[1] for x in Ez[i][:]]) for i in battrs])
 
-    print Exa.shape
     write_complex(rootgrp, "Ex", Exa)
     write_complex(rootgrp, "Ey", Eya)
     write_complex(rootgrp, "Ez", Eza)
