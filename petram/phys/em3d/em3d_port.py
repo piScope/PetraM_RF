@@ -330,7 +330,7 @@ class EM3D_Port(EM3D_Bdry):
     def preprocess_params(self, engine):
         ### find normal (outward) vector...
         mesh = engine.get_emesh(mm = self) ### 
-        dprint1(engine.fespaces)
+        
         fespace = engine.fespaces[self.get_root_phys().dep_vars[0]]
 
         nbe = mesh.GetNBE()

@@ -32,10 +32,32 @@ data =  (('epsilonr', VtableElement('epsilonr', type='complex',
                                      default = 0.0, 
                                      tip = "contuctivity" )),)
 
+from petram.phys.weakform import SCoeff
+from .em3d_const import mu0, epsilon0
+
+def Epsilon_Coeff(exprs, ind_vars, l, g, omega, real):
+    # - omega^2 * epsilon0 * epsilonr
+    fac = -epsilon0 * omega * omega       
+    coeff = SCoeff(exprs, ind_vars, l, g, real=real, scale=fac)
+    return coeff
+
+def Sigma_Coeff(exprs, ind_vars, l, g, omega, real): 
+    # v = - 1j * self.omega * v
+    fac = - 1j * omega
+    coeff = SCoeff(exprs, ind_vars, l, g, real=real, scale=fac)
+    return coeff
+
+def InvMu_Coeff(exprs, ind_vars, l, g, omega, real):
+    # v = - 1j * self.omega * v
+    fac = mu0
+    coeff = SCoeff(exprs, ind_vars, l, g, real=real, scale=fac)
+    if coeff is None: return None
+
+    c2 = mfem.PowerCoefficient(coeff, -1)
+    c2._coeff = coeff
+    return c2
+   
 class Epsilon(PhysCoefficient):
-   '''
-    - omega^2 * epsilon0 * epsilonr
-   '''
    def __init__(self, *args, **kwargs):
        self.omega = kwargs.pop('omega', 1.0)
        super(Epsilon, self).__init__(*args, **kwargs)
@@ -48,9 +70,6 @@ class Epsilon(PhysCoefficient):
        else: return v.imag
        
 class Sigma(PhysCoefficient):
-   '''
-    -1j * omega * sigma
-   '''
    def __init__(self, *args, **kwargs):
        self.omega = kwargs.pop('omega', 1.0)
        super(Sigma, self).__init__(*args, **kwargs)
@@ -85,10 +104,17 @@ class EM3D_Vac(EM3D_Domain):
         else: return False
 
     def get_coeffs(self, real = True):
-        from .em3d_const import mu0, epsilon0
         freq, omega = self.get_root_phys().get_freq_omega()
         e, m, s = self.vt.make_value_or_expression(self)
 
+        ind_vars = self.get_root_phys().ind_vars
+        l = self._local_ns
+        g = self._global_ns
+        coeff1 = Epsilon_Coeff([e], ind_vars, l, g, omega, real)
+        coeff2 = InvMu_Coeff([m], ind_vars, l, g, omega, real)                
+        coeff3 = Sigma_Coeff([s], ind_vars, l, g, omega, real)
+
+        '''
         if isinstance(e, str):
            coeff1 = Epsilon(e,  self.get_root_phys().ind_vars,
                             self._local_ns, self._global_ns,
@@ -124,7 +150,7 @@ class EM3D_Vac(EM3D_Domain):
               coeff3 = None
            else:
               coeff3 = PhysConstant(sigma)
-              
+        '''       
         dprint1("epsr, mur, sigma " + str(coeff1) + " " + str(coeff2) + " " + str(coeff3))
 
         return coeff1, coeff2, coeff3
