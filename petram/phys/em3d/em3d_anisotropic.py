@@ -33,7 +33,32 @@ data =  (('epsilonr', VtableElement('epsilonr', type='complex',
                                      suffix =[('x', 'y', 'z'), ('x', 'y', 'z')],
                                      default = np.zeros((3, 3)),
                                      tip = "contuctivity" )),)
-   
+
+from petram.phys.coefficient import MCoeff
+from petram.phys.em3d.em3d_const import mu0, epsilon0
+
+def Epsilon_Coeff(exprs, ind_vars, l, g, omega, real):
+    # - omega^2 * epsilon0 * epsilonr
+    fac = -epsilon0 * omega * omega       
+    coeff = MCoeff(3, exprs, ind_vars, l, g, real=real, scale=fac)
+    return coeff
+
+def Sigma_Coeff(exprs, ind_vars, l, g, omega, real): 
+    # v = - 1j * self.omega * v
+    fac = - 1j * omega
+    coeff = MCoeff(3, exprs, ind_vars, l, g, real=real, scale=fac)
+    return coeff
+
+def InvMu_Coeff(exprs, ind_vars, l, g, omega, real):
+    fac = mu0
+    coeff = MCoeff(3, exprs, ind_vars, l, g, real=real, scale=fac)
+    if coeff is None: return None
+
+    c2 = mfem.InverseMatrixCoefficient(coeff)
+    c2._coeff = coeff
+    return c2
+
+'''
 class Epsilon(MatrixPhysCoefficient):
    def __init__(self, *args, **kwargs):
        self.omega = kwargs.pop('omega', 1.0)
@@ -57,9 +82,7 @@ class Sigma(MatrixPhysCoefficient):
        else: return v.imag
 
 class InvMu(PhysCoefficient):
-   '''
-      1./mu0/mur
-   '''
+   #   1./mu0/mur
    def __init__(self, *args, **kwargs):
        self.omega = kwargs.pop('omega', 1.0)      
        super(InvMu, self).__init__(*args, **kwargs)
@@ -70,7 +93,7 @@ class InvMu(PhysCoefficient):
        v = 1/mu0/v
        if self.real:  return v.real
        else: return v.imag
-       
+'''
 
 class EM3D_Anisotropic(EM3D_Domain):
     vt  = Vtable(data)
@@ -83,7 +106,15 @@ class EM3D_Anisotropic(EM3D_Domain):
         from .em3d_const import mu0, epsilon0
         freq, omega = self.get_root_phys().get_freq_omega()
         e, m, s = self.vt.make_value_or_expression(self)
+        
+        ind_vars = self.get_root_phys().ind_vars
+        l = self._local_ns
+        g = self._global_ns
+        coeff1 = Epsilon_Coeff(e, ind_vars, l, g, omega, real)
+        coeff2 = InvMu_Coeff(m, ind_vars, l, g, omega, real)                
+        coeff3 = Sigma_Coeff(s, ind_vars, l, g, omega, real)
 
+        '''
         if any([isinstance(ee, str) for ee in e]):
             coeff1 = Epsilon(3, e,  self.get_root_phys().ind_vars,
                             self._local_ns, self._global_ns,
@@ -96,7 +127,7 @@ class EM3D_Anisotropic(EM3D_Domain):
                 coeff1 = None
             else:
                 coeff1 = PhysMatrixConstant(eps)
-        
+
         if isinstance(m[0], str):
            coeff2 = InvMu(m,  self.get_root_phys().ind_vars,
                             self._local_ns, self._global_ns,
@@ -120,9 +151,9 @@ class EM3D_Anisotropic(EM3D_Domain):
               coeff3 = None
            else:
               coeff3 = PhysMatrixConstant(sigma)
-              
-        dprint1("epsr, mur, sigma " + str(coeff1) + " " + str(coeff2) + " " + str(coeff3))
 
+        dprint1("epsr, mur, sigma " + str(coeff1) + " " + str(coeff2) + " " + str(coeff3))
+        '''
         return coeff1, coeff2, coeff3
                  
     def add_bf_contribution(self, engine, a, real = True, kfes = 0):
@@ -132,57 +163,51 @@ class EM3D_Anisotropic(EM3D_Domain):
         else:
             dprint1("Add BF contribution(imag)" + str(self._sel_index))
        
-        from .em3d_const import mu0, epsilon0
         freq, omega = self.get_root_phys().get_freq_omega()
 
         coeff1, coeff2, coeff3 = self.get_coeffs(real = real)        
 
-        if coeff1 is not None:                  
-            self.add_integrator(engine, 'epsilonr', coeff1,
+        self.add_integrator(engine, 'epsilonr', coeff1,
                                 a.AddDomainIntegrator,
                                 mfem.VectorFEMassIntegrator)
                   
         if coeff2 is not None:
-            coeff2 = self.restrict_coeff(coeff2, engine)
-            a.AddDomainIntegrator(mfem.CurlCurlIntegrator(coeff2))
+            self.add_integrator(engine, 'mur', coeff2,
+                                a.AddDomainIntegrator,
+                                mfem.CurlCurlIntegrator)
+            #coeff2 = self.restrict_coeff(coeff2, engine)
+            #a.AddDomainIntegrator(mfem.CurlCurlIntegrator(coeff2))
         else:
             dprint1("No contrinbution from curlcurl")
+
         self.add_integrator(engine, 'sigma', coeff3,
                             a.AddDomainIntegrator,
                             mfem.VectorFEMassIntegrator)
-        '''
-        coeff1 = self.restrict_coeff(coeff1, engine, matrix = True)
-        a.AddDomainIntegrator(mfem.VectorFEMassIntegrator(coeff1))
-        
-        if coeff2 is not None:
-            coeff2 = self.restrict_coeff(coeff2, engine)
-            a.AddDomainIntegrator(mfem.CurlCurlIntegrator(coeff2))
-        else:
-            dprint1("No cotrinbution from curlcurl")
-
-        coeff3 = self.restrict_coeff(coeff3, engine, matrix = True)
-        a.AddDomainIntegrator(mfem.VectorFEMassIntegrator(coeff3))
-        '''
         
     def add_domain_variables(self, v, n, suffix, ind_vars, solr, soli = None):
         from petram.helper.variables import add_expression, add_constant
+        from petram.helper.variables import NativeCoefficientGenBase
+        
         if len(self._sel_index) == 0: return
 
-        e, m, s = self.vt.make_value_or_expression(self)        
+        e, m, s = self.vt.make_value_or_expression(self)
+        
         def add_sigma_epsilonr_mur(name, f_name):
-           if len(f_name) == 1:
-               if not isinstance(f_name[0], str): expr  = f_name[0].__repr__()
-               else: expr = f_name[0]
-               add_expression(v, name, suffix, ind_vars, expr, 
+            if isinstance(f_name, NativeCoefficientGenBase):
+                pass   
+            elif len(f_name) == 1:
+                if not isinstance(f_name[0], str): expr  = f_name[0].__repr__()
+                else: expr = f_name[0]
+                add_expression(v, name, suffix, ind_vars, expr, 
                               [], domains = self._sel_index,
                               gdomain = self._global_ns)
-           else:  # elemental format
-               expr_txt = [x.__repr__() if not isinstance(x, str) else x for x in f_name]
-               a = '['+','.join(expr_txt[:3]) +']'
-               b = '['+','.join(expr_txt[3:6])+']'
-               c = '['+','.join(expr_txt[6:]) +']'
-               expr = '[' + ','.join((a,b,c)) + ']'
-               add_expression(v, name, suffix, ind_vars, expr, 
+            else:  # elemental format
+                expr_txt = [x.__repr__() if not isinstance(x, str) else x for x in f_name]
+                a = '['+','.join(expr_txt[:3]) +']'
+                b = '['+','.join(expr_txt[3:6])+']'
+                c = '['+','.join(expr_txt[6:]) +']'
+                expr = '[' + ','.join((a,b,c)) + ']'
+                add_expression(v, name, suffix, ind_vars, expr, 
                               [], domains = self._sel_index,
                               gdomain = self._global_ns)
 

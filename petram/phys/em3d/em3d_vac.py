@@ -32,8 +32,8 @@ data =  (('epsilonr', VtableElement('epsilonr', type='complex',
                                      default = 0.0, 
                                      tip = "contuctivity" )),)
 
-from petram.phys.weakform import SCoeff
-from .em3d_const import mu0, epsilon0
+from petram.phys.coefficient import SCoeff
+from petram.phys.em3d.em3d_const import mu0, epsilon0
 
 def Epsilon_Coeff(exprs, ind_vars, l, g, omega, real):
     # - omega^2 * epsilon0 * epsilonr
@@ -56,7 +56,8 @@ def InvMu_Coeff(exprs, ind_vars, l, g, omega, real):
     c2 = mfem.PowerCoefficient(coeff, -1)
     c2._coeff = coeff
     return c2
-   
+
+''' 
 class Epsilon(PhysCoefficient):
    def __init__(self, *args, **kwargs):
        self.omega = kwargs.pop('omega', 1.0)
@@ -82,9 +83,7 @@ class Sigma(PhysCoefficient):
        else: return v.imag
 
 class InvMu(PhysCoefficient):
-   '''
-      1./mu0/mur
-   '''
+   #   1./mu0/mur
    def __init__(self, *args, **kwargs):
        self.omega = kwargs.pop('omega', 1.0)      
        super(InvMu, self).__init__(*args, **kwargs)
@@ -95,7 +94,7 @@ class InvMu(PhysCoefficient):
        v = 1/mu0/v
        if self.real:  return v.real
        else: return v.imag
-       
+'''       
 class EM3D_Vac(EM3D_Domain):
     vt  = Vtable(data)
     #nlterms = ['epsilonr']    
@@ -174,25 +173,37 @@ class EM3D_Vac(EM3D_Domain):
         self.add_integrator(engine, 'sigma', coeff3,
                             a.AddDomainIntegrator,
                             mfem.VectorFEMassIntegrator)
-        '''
-        if coeff1 is not None:    
-            coeff1 = self.restrict_coeff(coeff1, engine)           
-            a.AddDomainIntegrator(mfem.VectorFEMassIntegrator(coeff1))
-        if coeff2 is not None:
-            coeff2 = self.restrict_coeff(coeff2, engine)
-            a.AddDomainIntegrator(mfem.CurlCurlIntegrator(coeff2))
-        else:
-            dprint1("No cotrinbution from curlcurl")
-        if coeff3 is not None:
-            coeff3 = self.restrict_coeff(coeff3, engine)        
-            a.AddDomainIntegrator(mfem.VectorFEMassIntegrator(coeff3))
-        '''
+        
     def add_domain_variables(self, v, n, suffix, ind_vars, solr, soli = None):
         from petram.helper.variables import add_expression, add_constant
-
+        from petram.helper.variables import NativeCoefficientGenBase
+        
         if len(self._sel_index) == 0: return
+        
+        e, m, s = self.vt.make_value_or_expression(self)
+
+        def add_sigma_epsilonr_mur(name, f_name):
+            if isinstance(f_name, NativeCoefficientGenBase):
+                pass   
+            elif isinstance(f_name, str):      
+                add_expression(v, 'epsilonr', suffix, ind_vars, f_name,
+                           [], domains = self._sel_index, 
+                           gdomain = self._global_ns)            
+            else:
+                add_constant(v, 'epsilonr', suffix, f_name,
+                         domains = self._sel_index,
+                         gdomain = self._global_ns)
+
+        add_sigma_epsilonr_mur('epsilonr', e)
+        add_sigma_epsilonr_mur('mur', m)
+        add_sigma_epsilonr_mur('sigma', s)                           
+
+        '''
+
         var, f_name = self.eval_phys_expr(self.epsilonr, 'epsilonr')
-        if callable(var):
+        if isinstance(var, NativeCoefficientGenBase):
+            pass   
+        elif callable(var):      
             add_expression(v, 'epsilonr', suffix, ind_vars, f_name,
                            [], domains = self._sel_index, 
                            gdomain = self._global_ns)            
@@ -202,7 +213,9 @@ class EM3D_Vac(EM3D_Domain):
                          gdomain = self._global_ns)
 
         var, f_name = self.eval_phys_expr(self.mur, 'mur')
-        if callable(var):
+        if isinstance(var, NativeCoefficientGenBase):
+            pass   
+        elif callable(var):
             add_expression(v, 'mur', suffix, ind_vars, f_name,
                            [], domains = self._sel_index,
                            gdomain = self._global_ns)            
@@ -212,7 +225,9 @@ class EM3D_Vac(EM3D_Domain):
                          gdomain = self._global_ns)                        
 
         var, f_name = self.eval_phys_expr(self.sigma, 'sigma')
-        if callable(var):
+        if isinstance(var, NativeCoefficientGenBase):
+            pass   
+        elif callable(var):
             add_expression(v, 'sigma', suffix, ind_vars, f_name,
                            [], domains = self._sel_index, 
                            gdomain = self._global_ns)            
@@ -223,3 +238,4 @@ class EM3D_Vac(EM3D_Domain):
 
 
     
+        '''
