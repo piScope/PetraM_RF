@@ -81,7 +81,7 @@ class Sigma(PhysCoefficient):
        v = - 1j * self.omega * v
        if self.real:  return v.real
        else: return v.imag
-
+'''
 class InvMu(PhysCoefficient):
    #   1./mu0/mur
    def __init__(self, *args, **kwargs):
@@ -94,7 +94,7 @@ class InvMu(PhysCoefficient):
        v = 1/mu0/v
        if self.real:  return v.real
        else: return v.imag
-'''       
+
 class EM3D_Vac(EM3D_Domain):
     vt  = Vtable(data)
     #nlterms = ['epsilonr']    
@@ -110,7 +110,7 @@ class EM3D_Vac(EM3D_Domain):
         l = self._local_ns
         g = self._global_ns
         coeff1 = Epsilon_Coeff([e], ind_vars, l, g, omega, real)
-        coeff2 = InvMu_Coeff([m], ind_vars, l, g, omega, real)                
+        #coeff2 = InvMu_Coeff([m], ind_vars, l, g, omega, real)                
         coeff3 = Sigma_Coeff([s], ind_vars, l, g, omega, real)
 
         '''
@@ -125,7 +125,7 @@ class EM3D_Vac(EM3D_Domain):
               coeff1 = None
            else:
               coeff1 = PhysConstant(eps)
-
+        '''
         if isinstance(m, str):
            coeff2 = InvMu(m,  self.get_root_phys().ind_vars,
                             self._local_ns, self._global_ns,
@@ -137,7 +137,7 @@ class EM3D_Vac(EM3D_Domain):
                coeff2 = None
            else:
                coeff2 = PhysConstant(mur)
-     
+        '''
         if isinstance(s, str):
            coeff3 = Sigma(s,  self.get_root_phys().ind_vars,
                             self._local_ns, self._global_ns,

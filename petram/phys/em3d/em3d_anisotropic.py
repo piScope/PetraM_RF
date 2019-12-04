@@ -4,7 +4,7 @@
    for curl-curl. Needs next update.
 '''
 import numpy as np
-
+from scipy.linalg import inv
 from petram.phys.phys_model  import MatrixPhysCoefficient, PhysCoefficient, PhysConstant, PhysMatrixConstant
 from petram.phys.em3d.em3d_base import EM3D_Bdry, EM3D_Domain
 
@@ -80,8 +80,8 @@ class Sigma(MatrixPhysCoefficient):
        v =  - 1j*self.omega * v       
        if self.real:  return v.real
        else: return v.imag
-
-class InvMu(PhysCoefficient):
+'''
+class InvMu(MatrixPhysCoefficient):
    #   1./mu0/mur
    def __init__(self, *args, **kwargs):
        self.omega = kwargs.pop('omega', 1.0)      
@@ -90,10 +90,10 @@ class InvMu(PhysCoefficient):
    def EvalValue(self, x):
        from .em3d_const import mu0, epsilon0      
        v = super(InvMu, self).EvalValue(x)
-       v = 1/mu0/v
+       v = 1/mu0*inv(v)
        if self.real:  return v.real
        else: return v.imag
-'''
+
 
 class EM3D_Anisotropic(EM3D_Domain):
     vt  = Vtable(data)
@@ -111,7 +111,7 @@ class EM3D_Anisotropic(EM3D_Domain):
         l = self._local_ns
         g = self._global_ns
         coeff1 = Epsilon_Coeff(e, ind_vars, l, g, omega, real)
-        coeff2 = InvMu_Coeff(m, ind_vars, l, g, omega, real)                
+        #coeff2 = InvMu_Coeff(m, ind_vars, l, g, omega, real)                
         coeff3 = Sigma_Coeff(s, ind_vars, l, g, omega, real)
 
         '''
@@ -127,19 +127,20 @@ class EM3D_Anisotropic(EM3D_Domain):
                 coeff1 = None
             else:
                 coeff1 = PhysMatrixConstant(eps)
-
+        '''
         if isinstance(m[0], str):
            coeff2 = InvMu(m,  self.get_root_phys().ind_vars,
                             self._local_ns, self._global_ns,
                             real = real, omega = omega)
         else:
-           mur = 1./mu0/m[0]
+           mur = np.array(m).reshape(3,3)           
+           mur = 1./mu0*inv(mur)
            mur = mur.real if real else mur.imag
-           if mur == 0:
+           if np.all(mur == 0):
                coeff2 = None
            else:
-               coeff2 = PhysConstant(mur)
-
+               coeff2 = PhysMatrixConstant(mur)
+        '''
         if any([isinstance(ss, str) for ss in s]):               
             coeff3 = Sigma(3, s,  self.get_root_phys().ind_vars,
                        self._local_ns, self._global_ns,
