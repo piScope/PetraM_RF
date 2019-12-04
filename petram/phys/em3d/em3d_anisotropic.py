@@ -53,7 +53,7 @@ def InvMu_Coeff(exprs, ind_vars, l, g, omega, real):
     fac = mu0
     coeff = MCoeff(3, exprs, ind_vars, l, g, real=real, scale=fac)
     if coeff is None: return None
-
+    if not real: return None
     c2 = mfem.InverseMatrixCoefficient(coeff)
     c2._coeff = coeff
     return c2
