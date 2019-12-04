@@ -129,7 +129,7 @@ class EM3D_Anisotropic(EM3D_Domain):
                 coeff1 = PhysMatrixConstant(eps)
         '''
         if isinstance(m[0], str):
-           coeff2 = InvMu(m,  self.get_root_phys().ind_vars,
+           coeff2 = InvMu(3, m,  self.get_root_phys().ind_vars,
                             self._local_ns, self._global_ns,
                             real = real, omega = omega)
         else:
