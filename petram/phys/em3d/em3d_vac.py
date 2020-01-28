@@ -186,11 +186,11 @@ class EM3D_Vac(EM3D_Domain):
             if isinstance(f_name, NativeCoefficientGenBase):
                 pass   
             elif isinstance(f_name, str):      
-                add_expression(v, 'epsilonr', suffix, ind_vars, f_name,
+                add_expression(v, name, suffix, ind_vars, f_name,
                            [], domains = self._sel_index, 
                            gdomain = self._global_ns)            
             else:
-                add_constant(v, 'epsilonr', suffix, f_name,
+                add_constant(v, name, suffix, f_name,
                          domains = self._sel_index,
                          gdomain = self._global_ns)
 
