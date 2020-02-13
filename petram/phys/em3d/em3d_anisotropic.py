@@ -57,7 +57,11 @@ def InvMu_Coeff(exprs, ind_vars, l, g, omega, real):
     c2 = mfem.InverseMatrixCoefficient(coeff)
     c2._coeff = coeff
     return c2
-
+ 
+def Mu_Coeff(exprs, ind_vars, l, g, omega, real):
+    fac = mu0
+    coeff = MCoeff(3, exprs, ind_vars, l, g, real=real, scale=fac)
+    return coeff
 '''
 class Epsilon(MatrixPhysCoefficient):
    def __init__(self, *args, **kwargs):
@@ -94,10 +98,29 @@ class InvMu(MatrixPhysCoefficient):
        if self.real:  return v.real
        else: return v.imag
 
+class ComplexMatrixInv(PhysCoefficient):
+   def __init__(self, coeff1, coeff2, real):
+       self.coeff1 = coeff1
+       self.coeff2 = coeff2
+   
+   def Eval(self, K, T, ip):
+       M = self.coeff1.Eval(K, T, ip).GetDataArray().astype(complex)
+       if self.coeff2 is not None:
+           M += 1j*self.coeff2.Eval(K, T, ip).GetDataArray()
+
+       M = np.linalg.inv(M)
+       if real:
+           return K.Assign(M.real)
+       else:
+           return K.Assign(M.imag)          
 
 class EM3D_Anisotropic(EM3D_Domain):
     vt  = Vtable(data)
-    #nlterms = ['epsilonr']    
+    #nlterms = ['epsilonr']
+    def get_possible_child(self):
+        from .em3d_pml      import EM3D_LinearPML
+        return [EM3D_LinearPML]
+    
     def has_bf_contribution(self, kfes):
         if kfes == 0: return True
         else: return False
@@ -111,7 +134,8 @@ class EM3D_Anisotropic(EM3D_Domain):
         l = self._local_ns
         g = self._global_ns
         coeff1 = Epsilon_Coeff(e, ind_vars, l, g, omega, real)
-        #coeff2 = InvMu_Coeff(m, ind_vars, l, g, omega, real)                
+        #coeff2 = InvMu_Coeff(m, ind_vars, l, g, omega, real)
+        coeff2 = Mu_Coeff(m, ind_vars, l, g, omega, real)                        
         coeff3 = Sigma_Coeff(s, ind_vars, l, g, omega, real)
 
         '''
@@ -128,6 +152,7 @@ class EM3D_Anisotropic(EM3D_Domain):
             else:
                 coeff1 = PhysMatrixConstant(eps)
         '''
+        '''
         if isinstance(m[0], str):
            coeff2 = InvMu(3, m,  self.get_root_phys().ind_vars,
                             self._local_ns, self._global_ns,
@@ -140,6 +165,7 @@ class EM3D_Anisotropic(EM3D_Domain):
                coeff2 = None
            else:
                coeff2 = PhysMatrixConstant(mur)
+        '''
         '''
         if any([isinstance(ss, str) for ss in s]):               
             coeff3 = Sigma(3, s,  self.get_root_phys().ind_vars,
@@ -166,7 +192,17 @@ class EM3D_Anisotropic(EM3D_Domain):
        
         freq, omega = self.get_root_phys().get_freq_omega()
 
-        coeff1, coeff2, coeff3 = self.get_coeffs(real = real)        
+        coeff1r, coeff2r, coeff3r = self.get_coeffs(real = True)
+        coeff1i, coeff2i, coeff3i = self.get_coeffs(real = False)
+
+        if self.has_pml():
+            coeff1 = self.make_PML_epsilon(coeff1r, coeff1i, real)
+            coeff2 = self.make_PML_invmu(coeff2r, coeff2i, real)
+            coeff3 = self.make_PML_sigma(coeff3r, coeff3i, real)            
+        else:
+            coeff1 = coeff1r if real else coeff1i
+            coeff2 = ComplexMatrixInv(coeff2r, coeff2i, real)
+            coeff3 = coeff3r if real else coeff3i            
 
         self.add_integrator(engine, 'epsilonr', coeff1,
                                 a.AddDomainIntegrator,

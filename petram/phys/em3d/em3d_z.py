@@ -48,7 +48,7 @@ from petram.phys.phys_model  import Phys, PhysCoefficient
 from petram.phys.em3d.em3d_base import EM3D_Bdry, EM3D_Domain
 
 import petram.debug as debug
-dprint1, dprint2, dprint3 = debug.init_dprints('EM3D_SurfJ')
+dprint1, dprint2, dprint3 = debug.init_dprints('EM3D_Z')
 
 from petram.mfem_config import use_parallel
 if use_parallel:

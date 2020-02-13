@@ -47,17 +47,27 @@ def Sigma_Coeff(exprs, ind_vars, l, g, omega, real):
     coeff = SCoeff(exprs, ind_vars, l, g, real=real, scale=fac)
     return coeff
 
-def InvMu_Coeff(exprs, ind_vars, l, g, omega, real):
-    # v = - 1j * self.omega * v
+def Mu_Coeff(exprs, ind_vars, l, g, omega, real):
+    # v = mu * v
     fac = mu0
     coeff = SCoeff(exprs, ind_vars, l, g, real=real, scale=fac)
-    if coeff is None: return None
+    return coeff
 
-    c2 = mfem.PowerCoefficient(coeff, -1)
-    c2._coeff = coeff
-    return c2
+class ComplexScalrInv(PhysCoefficient):
+   def __init__(self, coeff1, coeff2, real):
+       self.coeff1 = coeff1
+       self.coeff2 = coeff2
+   
+   def Eval(self, T, ip):
+       v = complex(self.coeff1.Eval(T, ip))
+       if self.coeff2 is not None:
+           v += 1j*self.coeff2.Eval(T, ip)
 
-''' 
+       if real:
+           return v.real
+       else:
+           return v.imag
+'''
 class Epsilon(PhysCoefficient):
    def __init__(self, *args, **kwargs):
        self.omega = kwargs.pop('omega', 1.0)
@@ -97,7 +107,12 @@ class InvMu(PhysCoefficient):
 
 class EM3D_Vac(EM3D_Domain):
     vt  = Vtable(data)
-    #nlterms = ['epsilonr']    
+    #nlterms = ['epsilonr']
+    
+    def get_possible_child(self):
+        from .em3d_pml      import EM3D_LinearPML
+        return [EM3D_LinearPML]
+     
     def has_bf_contribution(self, kfes):
         if kfes == 0: return True
         else: return False
@@ -110,7 +125,7 @@ class EM3D_Vac(EM3D_Domain):
         l = self._local_ns
         g = self._global_ns
         coeff1 = Epsilon_Coeff([e], ind_vars, l, g, omega, real)
-        #coeff2 = InvMu_Coeff([m], ind_vars, l, g, omega, real)                
+        coeff2 = Mu_Coeff([m], ind_vars, l, g, omega, real)                
         coeff3 = Sigma_Coeff([s], ind_vars, l, g, omega, real)
 
         '''
@@ -126,6 +141,7 @@ class EM3D_Vac(EM3D_Domain):
            else:
               coeff1 = PhysConstant(eps)
         '''
+        '''
         if isinstance(m, str):
            coeff2 = InvMu(m,  self.get_root_phys().ind_vars,
                             self._local_ns, self._global_ns,
@@ -137,6 +153,7 @@ class EM3D_Vac(EM3D_Domain):
                coeff2 = None
            else:
                coeff2 = PhysConstant(mur)
+        '''
         '''
         if isinstance(s, str):
            coeff3 = Sigma(s,  self.get_root_phys().ind_vars,
@@ -162,8 +179,18 @@ class EM3D_Vac(EM3D_Domain):
             dprint1("Add BF contribution(imag)" + str(self._sel_index))
 
         # e, m, s
-        coeff1, coeff2, coeff3 = self.get_coeffs(real = real)
-
+        coeff1r, coeff2r, coeff3r = self.get_coeffs(real = True)
+        coeff1i, coeff2i, coeff3i = self.get_coeffs(real = False)
+        
+        if self.has_pml():
+            coeff1 = self.make_PML_epsilon(coeff1r, coeff1i, real)
+            coeff2 = self.make_PML_invmu(coeff2r, coeff2i, real)
+            coeff3 = self.make_PML_sigma(coeff3r, coeff3i, real)            
+        else:
+            coeff1 = coeff1r if real else coeff1i
+            coeff2 = ComplexScalrInv(coeff2r, coeff2i, real)
+            coeff3 = coeff3r if real else coeff3i            
+        
         self.add_integrator(engine, 'epsilonr', coeff1,
                             a.AddDomainIntegrator,
                             mfem.VectorFEMassIntegrator)
