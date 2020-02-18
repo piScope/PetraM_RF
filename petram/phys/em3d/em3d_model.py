@@ -69,35 +69,6 @@ class EM3D_DefDomain(EM3D_Vac):
         return None
     def get_possible_domain(self):
         return []
-    def has_pml(self):
-        from .em3d_pml import EM3D_PML
-        for obj in self.walk():
-            if isinstance(obj, EM3D_PML):
-                return True
-    def get_pml(self):
-        from .em3d_pml import EM3D_PML
-        return [obj for obj in self.walk() if isinstance(obj, EM3D_PML)]
-    
-    def make_PML_epsilon(self, coeff1r, coeff1i, real):
-        pmls = self.get_pml()
-        if len(pml) > 2: assert False, "Multiple PML is set"
-        
-        coeff1 = pmls[0].make_PML_epsilon(coeff1r, coeff1i, real)
-        return coeff1
-    
-    def make_PML_mu(self, coeff1r, coeff1i, real):
-        pmls = self.get_pml()
-        if len(pml) > 2: assert False, "Multiple PML is set"
-        
-        coeff1 = pmls[0].make_PML_mu(coeff1r, coeff1i, real)
-        return coeff1
-    
-    def make_PML_sigma(self, coeff1r, coeff1i, real):
-        pmls = self.get_pml()
-        if len(pml) > 2: assert False, "Multiple PML is set"
-        
-        coeff1 = pmls[0].make_PML_sigma(coeff1r, coeff1i, real)
-        return coeff1          
         
 class EM3D_DefBdry(EM3D_Bdry):
     can_delete = False
