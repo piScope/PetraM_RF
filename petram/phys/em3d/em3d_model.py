@@ -69,7 +69,35 @@ class EM3D_DefDomain(EM3D_Vac):
         return None
     def get_possible_domain(self):
         return []
-          
+    def has_pml(self):
+        from .em3d_pml import EM3D_PML
+        for obj in self.walk():
+            if isinstance(obj, EM3D_PML):
+                return True
+    def get_pml(self):
+        from .em3d_pml import EM3D_PML
+        return [obj for obj in self.walk() if isinstance(obj, EM3D_PML)]
+    
+    def make_PML_epsilon(self, coeff1r, coeff1i, real):
+        pmls = self.get_pml()
+        if len(pml) > 2: assert False, "Multiple PML is set"
+        
+        coeff1 = pmls[0].make_PML_epsilon(coeff1r, coeff1i, real)
+        return coeff1
+    
+    def make_PML_mu(self, coeff1r, coeff1i, real):
+        pmls = self.get_pml()
+        if len(pml) > 2: assert False, "Multiple PML is set"
+        
+        coeff1 = pmls[0].make_PML_mu(coeff1r, coeff1i, real)
+        return coeff1
+    
+    def make_PML_sigma(self, coeff1r, coeff1i, real):
+        pmls = self.get_pml()
+        if len(pml) > 2: assert False, "Multiple PML is set"
+        
+        coeff1 = pmls[0].make_PML_sigma(coeff1r, coeff1i, real)
+        return coeff1          
         
 class EM3D_DefBdry(EM3D_Bdry):
     can_delete = False
@@ -230,21 +258,22 @@ class EM3D(PhysModule):
         self._global_ns['epsilon0'] = epsilon0
             
     def get_possible_bdry(self):
-        from .em3d_pec       import EM3D_PEC
-        from .em3d_pmc       import EM3D_PMC
-        from .em3d_h       import EM3D_H
+        from .em3d_pec         import EM3D_PEC
+        from .em3d_pmc         import EM3D_PMC
+        from .em3d_h           import EM3D_H
         from .em3d_surfj       import EM3D_SurfJ
-        from .em3d_port       import EM3D_Port
-        from .em3d_e       import EM3D_E
-        from .em3d_cont       import EM3D_Continuity
+        from .em3d_port        import EM3D_Port
+        from .em3d_e           import EM3D_E
+        from .em3d_cont        import EM3D_Continuity
+        from .em3d_z           import EM3D_Impedance
         return [EM3D_PEC, EM3D_Port, EM3D_E, EM3D_SurfJ, 
-                EM3D_H, EM3D_PMC, EM3D_Continuity]
+                EM3D_H, EM3D_PMC, EM3D_Impedance, EM3D_Continuity]
     
     def get_possible_domain(self):
         from .em3d_anisotropic import EM3D_Anisotropic
-        from .em3d_vac       import EM3D_Vac
-        from .em3d_extj       import EM3D_ExtJ
-        from .em3d_div       import EM3D_Div        
+        from .em3d_vac         import EM3D_Vac
+        from .em3d_extj        import EM3D_ExtJ
+        from .em3d_div         import EM3D_Div        
 
         return [EM3D_Vac, EM3D_Anisotropic, EM3D_ExtJ, EM3D_Div]
 
@@ -253,7 +282,7 @@ class EM3D(PhysModule):
 
     def get_possible_pair(self):
 
-        from .em3d_floquet       import EM3D_Floquet
+        from .em3d_floquet     import EM3D_Floquet
 
         return [EM3D_Floquet]
 

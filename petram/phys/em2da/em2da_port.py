@@ -268,7 +268,8 @@ class EM2Da_Port(EM2Da_Bdry):
 
         edges = np.array([mesh.GetBdrElementEdges(i)[0] for i in ibe]).flatten()
         d = {}
-        for x in edges:d[x] = d.has_key(x)
+        for x in edges:
+           d[x] = x in d
         edges = [x for x in d.keys() if not d[x]]
         ivert = [mesh.GetEdgeVertices(x) for x in edges]
         ivert = connect_pairs2(ivert)[0]
@@ -371,6 +372,9 @@ class EM2Da_Port(EM2Da_Bdry):
      
     def get_exter_NDoF(self):
         return 1
+     
+    #def get_probe(self):
+    #    return self.get_root_phys().dep_vars[0]+"_port_"+str(self.port_idx)
      
     def postprocess_extra(self, sol, flag, sol_extra):
         name = self.name()+'_' + str(self.port_idx)

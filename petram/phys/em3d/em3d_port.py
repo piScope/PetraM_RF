@@ -275,6 +275,9 @@ class EM3D_Port(EM3D_Bdry):
         
     def extra_DoF_name(self):
         return self.get_root_phys().dep_vars[0]+"_port_"+str(self.port_idx)
+     
+    def get_probe(self):
+        return self.get_root_phys().dep_vars[0]+"_port_"+str(self.port_idx)
         
     def attribute_set(self, v):
         super(EM3D_Port, self).attribute_set(v)
@@ -330,7 +333,7 @@ class EM3D_Port(EM3D_Bdry):
     def preprocess_params(self, engine):
         ### find normal (outward) vector...
         mesh = engine.get_emesh(mm = self) ### 
-        dprint1(engine.fespaces)
+        
         fespace = engine.fespaces[self.get_root_phys().dep_vars[0]]
 
         nbe = mesh.GetNBE()

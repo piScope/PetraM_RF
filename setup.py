@@ -16,7 +16,7 @@ with open(path.join(here, 'README.md')) as f:
 
 setup(
     name='PetraM_RF',
-    version='0.9.0',
+    version='0.9.2',
 
     description='PetraM RF package',
     long_description=long_description,
@@ -33,7 +33,7 @@ setup(
         'Intended Audience :: Developers',
         'Topic :: Scientific/Engineering :: Physics',
         'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
-        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3.6',
     ],
 
     keywords='MFEM physics',

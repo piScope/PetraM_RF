@@ -1,12 +1,14 @@
 '''
    Surface Current Boundary Condition
 
-   On external surface    n \times B = J_surf
-   On internal surface    n \times (B1 - B2) = J_surf (not tested)
+   On external surface    n \times H = J_surf
+   On internal surface    n \times (H1 - H2) = J_surf (not tested)
 
    (note)
     In MKSA,  1/mu curl E = -dB/dt 1/mu= i omega B / mu .
-      n \times 1/mu curl E = -dB/dt 1/mu= i omega B / mu = i omega /mu J_surf
+      n \times 1/mu curl E = n \times -dB/dt 1/mu
+                           = n \times i omega H 
+                           = i omega J_surf
     
  
     Therefore, surface integral 
