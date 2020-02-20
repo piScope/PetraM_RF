@@ -106,9 +106,11 @@ class ComplexMatrixInv(mfem.MatrixPyCoefficient):
        super(ComplexMatrixInv, self).__init__(3)
    
    def Eval(self, K, T, ip):
-       M = self.coeff1.Eval(K, T, ip).GetDataArray().astype(complex)
+       self.coeff1.Eval(K, T, ip)
+       M = K.GetDataArray().astype(complex)
        if self.coeff2 is not None:
-           M += 1j*self.coeff2.Eval(K, T, ip).GetDataArray()
+           self.coeff2.Eval(K, T, ip)
+           M += 1j*K.GetDataArray()           
 
        M = np.linalg.inv(M)
        if self.real:
