@@ -98,10 +98,12 @@ class InvMu(MatrixPhysCoefficient):
        if self.real:  return v.real
        else: return v.imag
 
-class ComplexMatrixInv(PhysCoefficient):
+class ComplexMatrixInv(mfem.MatrixPyCoefficient):
    def __init__(self, coeff1, coeff2, real):
        self.coeff1 = coeff1
        self.coeff2 = coeff2
+       self.real = real
+       super(ComplexMatrixInv, self).__init__(3)
    
    def Eval(self, K, T, ip):
        M = self.coeff1.Eval(K, T, ip).GetDataArray().astype(complex)
@@ -109,7 +111,7 @@ class ComplexMatrixInv(PhysCoefficient):
            M += 1j*self.coeff2.Eval(K, T, ip).GetDataArray()
 
        M = np.linalg.inv(M)
-       if real:
+       if self.real:
            return K.Assign(M.real)
        else:
            return K.Assign(M.imag)          

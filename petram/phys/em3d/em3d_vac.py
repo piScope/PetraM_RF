@@ -53,17 +53,19 @@ def Mu_Coeff(exprs, ind_vars, l, g, omega, real):
     coeff = SCoeff(exprs, ind_vars, l, g, real=real, scale=fac)
     return coeff
 
-class ComplexScalrInv(PhysCoefficient):
+class ComplexScalarInv(mfem.PyCoefficient):
    def __init__(self, coeff1, coeff2, real):
        self.coeff1 = coeff1
        self.coeff2 = coeff2
-   
+       self.real = real
+       super(ComplexScalarInv, self).__init__()
+       
    def Eval(self, T, ip):
        v = complex(self.coeff1.Eval(T, ip))
        if self.coeff2 is not None:
            v += 1j*self.coeff2.Eval(T, ip)
-
-       if real:
+       v = 1./v
+       if self.real:
            return v.real
        else:
            return v.imag
@@ -188,9 +190,9 @@ class EM3D_Vac(EM3D_Domain):
             coeff3 = self.make_PML_sigma(coeff3r, coeff3i, real)            
         else:
             coeff1 = coeff1r if real else coeff1i
-            coeff2 = ComplexScalrInv(coeff2r, coeff2i, real)
+            coeff2 = ComplexScalarInv(coeff2r, coeff2i, real)
             coeff3 = coeff3r if real else coeff3i            
-        
+
         self.add_integrator(engine, 'epsilonr', coeff1,
                             a.AddDomainIntegrator,
                             mfem.VectorFEMassIntegrator)
