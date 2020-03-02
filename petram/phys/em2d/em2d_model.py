@@ -199,7 +199,7 @@ class EM2D(PhysModule):
         return ["freq"], [float]
     
     def get_default_ns(self):
-        from .em2_const import mu0, epsilon0, q0
+        from petram.phys.phys_const import mu0, epsilon0, q0
         ns =  {'mu0': mu0,
                'e0': epsilon0,
                'q0': q0}
@@ -214,31 +214,31 @@ class EM2D(PhysModule):
         self.ind_vars =  str(v[1])
         self.dep_vars_suffix =  str(v[2])
         
-        from .em2d_const import mu0, epsilon0
+        from petram.phys.phys_const import mu0, epsilon0, q0        
         self._global_ns['mu0'] = mu0
         self._global_ns['epsilon0'] = epsilon0
             
     def get_possible_bdry(self):
-        #from .em2d_pec       import EM2D_PEC
+        from .em2d_pec       import EM2D_PEC
         #from .em2d_pmc       import EM2D_PMC
         #from em2d_h          import EM2D_H
         #from em2d_surfj      import EM2D_SurfJ
         #from .em2d_port      import EM2D_Port
-        #from .em2d_e         import EM2D_E
+        from .em2d_e         import EM2D_E
         from .em2d_cont      import EM2D_Continuity
-        return [#EM2D_PEC,
+        return [EM2D_PEC,
                 #EM2D_Port,
-                #EM2D_E,                                
+                EM2D_E,                                
                 #EM2D_PMC,
                 EM2D_Continuity]
 
     
     def get_possible_domain(self):
-        #from .em2d_anisotropic import EM2D_Anisotropic
-        from .em2d_vac       import EM2D_Vac
-        #from .em2d_extj       import EM2D_ExtJ
+        from .em2d_anisotropic  import EM2D_Anisotropic
+        from .em2d_vac          import EM2D_Vac
+        from .em2d_extj         import EM2D_ExtJ
 
-        return [EM2D_Vac,]# EM2D_Anisotropic, EM2D_ExtJ]
+        return [EM2D_Vac, EM2D_Anisotropic, EM2D_ExtJ]
 
     def get_possible_edge(self):
         return []                
