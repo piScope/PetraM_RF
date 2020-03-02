@@ -55,7 +55,7 @@ class EM2D_E(EM2D_Bdry):
         else:
             dprint1("Apply Ess.(imag)" + str(self._sel_index))
             
-        Erphiz = self.vt.make_value_or_expression(self)              
+        Exyz = self.vt.make_value_or_expression(self)              
         mesh = engine.get_mesh(mm = self)        
         ibdr = mesh.bdr_attributes.ToList()
         bdr_attr = [0]*mesh.bdr_attributes.Max()
@@ -63,14 +63,14 @@ class EM2D_E(EM2D_Bdry):
             bdr_attr[idx-1] = 1
 
         if kfes == 0:
-            coeff1 = Exy(2, Erphiz,
+            coeff1 = Exy(2, Exyz,
                         self.get_root_phys().ind_vars,
                         self._local_ns, self._global_ns,
                         real = real)
             gf.ProjectBdrCoefficientTangent(coeff1,
                                             mfem.intArray(bdr_attr))
         elif kfes == 1:
-            coeff1 = Ez(Erphiz, self.get_root_phys().ind_vars,
+            coeff1 = Ez(Exyz, self.get_root_phys().ind_vars,
                         self._local_ns, self._global_ns,
                         real = real)
             gf.ProjectBdrCoefficient(coeff1,

@@ -35,6 +35,7 @@ data =  (('epsilonr', VtableElement('epsilonr', type='complex',
                                      tip = "contuctivity" )),)
 
 from petram.phys.coefficient import MCoeff
+from petram.phys.coefficient import PyComplexMatrixInvCoefficient as ComplexMatrixInv
 from petram.phys.em3d.em3d_const import mu0, epsilon0
 
 def Epsilon_Coeff(exprs, ind_vars, l, g, omega, real):
@@ -49,6 +50,7 @@ def Sigma_Coeff(exprs, ind_vars, l, g, omega, real):
     coeff = MCoeff(3, exprs, ind_vars, l, g, real=real, scale=fac)
     return coeff
 
+''' 
 def InvMu_Coeff(exprs, ind_vars, l, g, omega, real):
     fac = mu0
     coeff = MCoeff(3, exprs, ind_vars, l, g, real=real, scale=fac)
@@ -57,11 +59,12 @@ def InvMu_Coeff(exprs, ind_vars, l, g, omega, real):
     c2 = mfem.InverseMatrixCoefficient(coeff)
     c2._coeff = coeff
     return c2
- 
+''' 
 def Mu_Coeff(exprs, ind_vars, l, g, omega, real):
     fac = mu0
     coeff = MCoeff(3, exprs, ind_vars, l, g, real=real, scale=fac)
     return coeff
+ 
 '''
 class Epsilon(MatrixPhysCoefficient):
    def __init__(self, *args, **kwargs):
@@ -84,7 +87,7 @@ class Sigma(MatrixPhysCoefficient):
        v =  - 1j*self.omega * v       
        if self.real:  return v.real
        else: return v.imag
-'''
+
 class InvMu(MatrixPhysCoefficient):
    #   1./mu0/mur
    def __init__(self, *args, **kwargs):
@@ -97,26 +100,7 @@ class InvMu(MatrixPhysCoefficient):
        v = 1/mu0*inv(v)
        if self.real:  return v.real
        else: return v.imag
-
-class ComplexMatrixInv(mfem.MatrixPyCoefficient):
-   def __init__(self, coeff1, coeff2, real):
-       self.coeff1 = coeff1
-       self.coeff2 = coeff2
-       self.real = real
-       super(ComplexMatrixInv, self).__init__(3)
-   
-   def Eval(self, K, T, ip):
-       self.coeff1.Eval(K, T, ip)
-       M = K.GetDataArray().astype(complex)
-       if self.coeff2 is not None:
-           self.coeff2.Eval(K, T, ip)
-           M += 1j*K.GetDataArray()           
-
-       M = np.linalg.inv(M)
-       if self.real:
-           return K.Assign(M.real)
-       else:
-           return K.Assign(M.imag)          
+'''
 
 class EM3D_Anisotropic(EM3D_Domain):
     vt  = Vtable(data)

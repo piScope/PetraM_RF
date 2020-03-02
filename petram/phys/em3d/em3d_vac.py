@@ -33,7 +33,9 @@ data =  (('epsilonr', VtableElement('epsilonr', type='complex',
                                      tip = "contuctivity" )),)
 
 from petram.phys.coefficient import SCoeff
-from petram.phys.em3d.em3d_const import mu0, epsilon0
+from petram.phys.coefficient import PyComplexScalarInvCoefficient as ComplexScalarInv
+
+from petram.phys.phys_const import mu0, epsilon0
 
 def Epsilon_Coeff(exprs, ind_vars, l, g, omega, real):
     # - omega^2 * epsilon0 * epsilonr
@@ -53,22 +55,7 @@ def Mu_Coeff(exprs, ind_vars, l, g, omega, real):
     coeff = SCoeff(exprs, ind_vars, l, g, real=real, scale=fac)
     return coeff
 
-class ComplexScalarInv(mfem.PyCoefficient):
-   def __init__(self, coeff1, coeff2, real):
-       self.coeff1 = coeff1
-       self.coeff2 = coeff2
-       self.real = real
-       super(ComplexScalarInv, self).__init__()
-       
-   def Eval(self, T, ip):
-       v = complex(self.coeff1.Eval(T, ip))
-       if self.coeff2 is not None:
-           v += 1j*self.coeff2.Eval(T, ip)
-       v = 1./v
-       if self.real:
-           return v.real
-       else:
-           return v.imag
+ 
 '''
 class Epsilon(PhysCoefficient):
    def __init__(self, *args, **kwargs):
@@ -183,7 +170,7 @@ class EM3D_Vac(EM3D_Domain):
         # e, m, s
         coeff1r, coeff2r, coeff3r = self.get_coeffs(real = True)
         coeff1i, coeff2i, coeff3i = self.get_coeffs(real = False)
-        
+
         if self.has_pml():
             coeff1 = self.make_PML_epsilon(coeff1r, coeff1i, real)
             coeff2 = self.make_PML_invmu(coeff2r, coeff2i, real)
