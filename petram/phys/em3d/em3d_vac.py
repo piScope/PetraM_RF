@@ -37,22 +37,22 @@ from petram.phys.coefficient import PyComplexScalarInvCoefficient as ComplexScal
 
 from petram.phys.phys_const import mu0, epsilon0
 
-def Epsilon_Coeff(exprs, ind_vars, l, g, omega, real):
+def Epsilon_Coeff(exprs, ind_vars, l, g, omega):
     # - omega^2 * epsilon0 * epsilonr
     fac = -epsilon0 * omega * omega       
-    coeff = SCoeff(exprs, ind_vars, l, g, real=real, scale=fac)
+    coeff = SCoeff(exprs, ind_vars, l, g, return_complex=True, scale=fac)
     return coeff
 
-def Sigma_Coeff(exprs, ind_vars, l, g, omega, real): 
+def Sigma_Coeff(exprs, ind_vars, l, g, omega):
     # v = - 1j * self.omega * v
     fac = - 1j * omega
-    coeff = SCoeff(exprs, ind_vars, l, g, real=real, scale=fac)
+    coeff = SCoeff(exprs, ind_vars, l, g, return_complex=True, scale=fac)
     return coeff
 
-def Mu_Coeff(exprs, ind_vars, l, g, omega, real):
+def Mu_Coeff(exprs, ind_vars, l, g, omega):
     # v = mu * v
     fac = mu0
-    coeff = SCoeff(exprs, ind_vars, l, g, real=real, scale=fac)
+    coeff = SCoeff(exprs, ind_vars, l, g, return_complex=True, scale=fac)
     return coeff
 
  
@@ -106,16 +106,16 @@ class EM3D_Vac(EM3D_Domain):
         if kfes == 0: return True
         else: return False
 
-    def get_coeffs(self, real = True):
+    def get_coeffs(self):
         freq, omega = self.get_root_phys().get_freq_omega()
         e, m, s = self.vt.make_value_or_expression(self)
 
         ind_vars = self.get_root_phys().ind_vars
         l = self._local_ns
         g = self._global_ns
-        coeff1 = Epsilon_Coeff([e], ind_vars, l, g, omega, real)
-        coeff2 = Mu_Coeff([m], ind_vars, l, g, omega, real)                
-        coeff3 = Sigma_Coeff([s], ind_vars, l, g, omega, real)
+        coeff1 = Epsilon_Coeff([e], ind_vars, l, g, omega)
+        coeff2 = Mu_Coeff([m], ind_vars, l, g, omega)
+        coeff3 = Sigma_Coeff([s], ind_vars, l, g, omega)
 
         '''
         if isinstance(e, str):
@@ -168,17 +168,15 @@ class EM3D_Vac(EM3D_Domain):
             dprint1("Add BF contribution(imag)" + str(self._sel_index))
 
         # e, m, s
-        coeff1r, coeff2r, coeff3r = self.get_coeffs(real = True)
-        coeff1i, coeff2i, coeff3i = self.get_coeffs(real = False)
-
+        coeff1, coeff2, coeff3 = self.get_coeffs()
+        self.set_integrator_realimag_mode(real)
+        
         if self.has_pml():
-            coeff1 = self.make_PML_epsilon(coeff1r, coeff1i, real)
-            coeff2 = self.make_PML_invmu(coeff2r, coeff2i, real)
-            coeff3 = self.make_PML_sigma(coeff3r, coeff3i, real)            
+            coeff1 = self.make_PML_epsilon(coeff1)
+            coeff2 = self.make_PML_invmu(coeff2)
+            coeff3 = self.make_PML_sigma(coeff3)
         else:
-            coeff1 = coeff1r if real else coeff1i
-            coeff2 = ComplexScalarInv(coeff2r, coeff2i, real)
-            coeff3 = coeff3r if real else coeff3i            
+            coeff2 = ComplexScalarInv(coeff2)
 
         self.add_integrator(engine, 'epsilonr', coeff1,
                             a.AddDomainIntegrator,
