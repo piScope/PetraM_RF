@@ -22,6 +22,9 @@
 ''' 
 import numpy as np
 
+import abc
+from abc import ABC, abstractmethod
+
 from petram.phys.phys_model  import Phys, PhysCoefficient, MatrixPhysCoefficient
 from petram.phys.em3d.em3d_base import EM3D_Bdry, EM3D_Domain
 
@@ -46,90 +49,84 @@ data =  (('stretch', VtableElement('stretch', type='complex',
                                      no_func=True,                                   
                                      tip = "streach order" )),)
 
-from petram.phys.coefficient import SCoeff
+from petram.phys.coefficient import CC_Matrix
 from petram.phys.em3d.em3d_const import mu0, epsilon0
 
-class EM3D_PML(EM3D_Domain):
-    def make_PML_epsilon(self, coeffr, coeffi, returnReal):
-        # update epsilon        
-        raise NotImplementedError(
-             "you must specify this method in subclass")
+class EM3D_PML(EM3D_Domain, ABC):
+    @abstractmethod
+    def make_PML_epsilon(self):
+        pass
+     
+    @abstractmethod
+    def make_PML_invmu(self):
+        pass
 
-    def make_PML_invmu(self, coeffr, coeffi, returnReal):
-        # update mu        
-        raise NotImplementedError(
-             "you must specify this method in subclass")
-
-    def make_PML_sigma(self, coeffr, coeffi, returnReal):
-        # update sigma
-        raise NotImplementedError(
-             "you must specify this method in subclass")
+    @abstractmethod     
+    def make_PML_sigma(self):
+        pass
 
     def get_parent_selection(self):
         return self.parent.sel_index
 
-class LinearPML(mfem.MatrixPyCoefficient):
-   def __init__(self, coeffr, coeffi, S, direction, ref_point, pml_width, order, real, inv):
-      self.coeffs = coeffr, coeffi
-      self.direction = direction
-      self.ref_p = ref_point
-      self.pml_width = pml_width
-      self.S = S
-      self.order = order
-      self.real = real
-      self.inv = inv
-      super(LinearPML, self).__init__(3)
+class LinearPML(CC_Matrix):
+    def __init__(self, coeff, S, direction, ref_point, pml_width, order, inv):
+        self.coeffs = coeff
+        self.direction = direction
+        self.ref_p = ref_point
+        self.pml_width = pml_width
+        self.S = S
+        self.order = order
+        self.inv = inv
+        super(LinearPML, self).__init__(coeff)
       
-   def Eval(self, K, T, ip):
-       K.SetSize(3,3)
-       ptx = T.Transform(ip)
+    def Eval(self, K, T, ip):
+        K.SetSize(3,3)
+        ptx = T.Transform(ip)
        
-       invS = self.Eval_invS(ptx)
-       detS = self.Eval_detS(ptx)       
+        invS = self.Eval_invS(ptx)
+        detS = self.Eval_detS(ptx)       
        
-       if isinstance(self.coeffs[0], mfem.MatrixCoefficient):
-           self.coeffs[0].Eval(K, T, ip)
-           K_m  = K.GetDataArray().copy()
-           if self.coeffs[1] is not None:
-               self.coeffs[1].Eval(K, T, ip)              
-               K_m += 1j * K.GetDataArray()
-       else:
-           K_m  = self.coeffs[0].Eval(T, ip)
-           if self.coeffs[1] is not None:
-               K_m += 1j * self.coeffs[1].Eval(T, ip)              
+        if self.coeffs.is_matrix():
+            K_m  = self.coeffs[0].Eval(K, T, ip)
+        else:
+            K_m  = self.coeffs.Eval(T, ip)
 
-       detS_inv_S_x_inv_S = (invS*detS).dot(K_m).dot(invS)
+        detS_inv_S_x_inv_S = (invS*detS).dot(K_m).dot(invS)
 
-       if self.inv:
-           detS_inv_S_x_inv_S = np.linalg.inv(detS_inv_S_x_inv_S)
+        if self.inv:
+            detS_inv_S_x_inv_S = np.linalg.inv(detS_inv_S_x_inv_S)
 
-       if self.real:
-          return K.Assign(detS_inv_S_x_inv_S.real)
-       else:
-          return K.Assign(detS_inv_S_x_inv_S.imag)          
-       
-   def Eval_invS(self, x):
-       ret = np.array([1+0j, 1., 1.])
+        return detS_inv_S_x_inv_S
+    
+    def Eval_invS(self, x):
+        ret = np.array([1+0j, 1., 1.])
 
-       if self.direction[0]:
-           ret[0] = 1 + self.S * ((x[0] - self.ref_p[0])/self.pml_width[0])**self.order
-       if self.direction[1]:
-           ret[1] = 1 + self.S * ((x[1] - self.ref_p[1])/self.pml_width[1])**self.order
-       if self.direction[2]:
-           ret[2] = 1 + self.S * ((x[2] - self.ref_p[2])/self.pml_width[2])**self.order
+        if self.direction[0]:
+            ret[0] = 1 + self.S * ((x[0] - self.ref_p[0])/self.pml_width[0])**self.order
+        if self.direction[1]:
+            ret[1] = 1 + self.S * ((x[1] - self.ref_p[1])/self.pml_width[1])**self.order
+        if self.direction[2]:
+            ret[2] = 1 + self.S * ((x[2] - self.ref_p[2])/self.pml_width[2])**self.order
 
-       return np.diag((1+0j)/ret)
+        return np.diag((1+0j)/ret)
 
-   def Eval_detS(self, x):
-       ret = np.array([1+0j, 1., 1.])
-       if self.direction[0]:
-           ret[0] = 1 + self.S * ((x[0] - self.ref_p[0])/self.pml_width[0])**self.order
-       if self.direction[1]:
-           ret[1] = 1 + self.S * ((x[1] - self.ref_p[1])/self.pml_width[1])**self.order
-       if self.direction[2]:          
-           ret[2] = 1 + self.S * ((x[2] - self.ref_p[2])/self.pml_width[2])**self.order
+    def Eval_detS(self, x):
+        ret = np.array([1+0j, 1., 1.])
+        if self.direction[0]:
+            ret[0] = 1 + self.S * ((x[0] - self.ref_p[0])/self.pml_width[0])**self.order
+        if self.direction[1]:
+            ret[1] = 1 + self.S * ((x[1] - self.ref_p[1])/self.pml_width[1])**self.order
+        if self.direction[2]:          
+            ret[2] = 1 + self.S * ((x[2] - self.ref_p[2])/self.pml_width[2])**self.order
 
-       return ret[0]*ret[1]*ret[2]
+        return ret[0]*ret[1]*ret[2]
+    
+    @property
+    def width(self):
+        return 3
+    @property
+    def height(self):
+        return 3
     
 class EM3D_LinearPML(EM3D_PML):
     has_2nd_panel = False
@@ -200,22 +197,22 @@ class EM3D_LinearPML(EM3D_PML):
         dprint1("PML width ", self.pml_width)
         
 
-    def make_PML_epsilon(self, coeffr, coeffi, returnReal):
-        coeff = LinearPML(coeffr, coeffi, self.stretch, self.stretch_dir,
+    def make_PML_epsilon(self, coeff):
+        coeff = LinearPML(coeff, self.stretch, self.stretch_dir,
                           self.ref_point_coord, self.pml_width, self.s_order,
-                          returnReal, False)
+                          False)
         return coeff
 
-    def make_PML_invmu(self, coeffr, coeffi, returnReal):
-        coeff = LinearPML(coeffr, coeffi, self.stretch, self.stretch_dir,
+    def make_PML_invmu(self, coeff):
+        coeff = LinearPML(coeff, self.stretch, self.stretch_dir,
                           self.ref_point_coord, self.pml_width, self.s_order,
-                          returnReal, True)
+                          True)
         return coeff
 
-    def make_PML_sigma(self, coeffr, coeffi, returnReal):
-        coeff = LinearPML(coeffr, coeffi, self.stretch, self.stretch_dir,
+    def make_PML_sigma(self, coeff):
+        coeff = LinearPML(coeff, self.stretch, self.stretch_dir,
                           self.ref_point_coord, self.pml_width, self.s_order,
-                          returnReal, False)
+                          False)
         return coeff
 
 

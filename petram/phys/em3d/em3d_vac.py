@@ -33,7 +33,7 @@ data =  (('epsilonr', VtableElement('epsilonr', type='complex',
                                      tip = "contuctivity" )),)
 
 from petram.phys.coefficient import SCoeff
-from petram.phys.coefficient import PyComplexScalarInvCoefficient as ComplexScalarInv
+from petram.phys.coefficient import PyComplexPowCoefficient as ComplexPow
 
 from petram.phys.phys_const import mu0, epsilon0
 
@@ -176,7 +176,7 @@ class EM3D_Vac(EM3D_Domain):
             coeff2 = self.make_PML_invmu(coeff2)
             coeff3 = self.make_PML_sigma(coeff3)
         else:
-            coeff2 = ComplexScalarInv(coeff2)
+            coeff2 = ComplexPow(coeff2, -1)
 
         self.add_integrator(engine, 'epsilonr', coeff1,
                             a.AddDomainIntegrator,

@@ -6,9 +6,6 @@
 '''
 import numpy as np
 
-from petram.phys.phys_model  import PhysCoefficient, PhysConstant
-from petram.phys.em2d.em2d_base import EM2D_Bdry, EM2D_Domain
-
 import petram.debug as debug
 dprint1, dprint2, dprint3 = debug.init_dprints('EM2D_Vac')
 
@@ -18,6 +15,16 @@ if use_parallel:
 else:
    import mfem.ser as mfem
    
+from petram.phys.coefficient import PyComplexPowCoefficient as ComplexPow
+from petram.phys.coefficient import PyComplexProductCoefficient as ComplexProduct
+from petram.phys.coefficient import PyComplexSumCoefficient as ComplexSum
+
+from petram.phys.coefficient import PyComplexMatrixSumCoefficient as ComplexMatrixSum
+from petram.phys.coefficient import PyComplexMatrixInvCoefficient as ComplexMatrixInv
+from petram.phys.coefficient import PyComplexMatrixSliceCoefficient as ComplexMatrixSlice
+from petram.phys.coefficient import PyComplexMatrixProductCoefficient as ComplexMatrixProduct
+from petram.phys.coefficient import PyComplexMatrixAdjCoefficient as ComplexMatrixAdj
+
 from petram.phys.vtable import VtableElement, Vtable   
 data =  (('epsilonr', VtableElement('epsilonr', type='complex',
                                      guilabel = 'epsilonr',
@@ -37,11 +44,8 @@ data =  (('epsilonr', VtableElement('epsilonr', type='complex',
                                      no_func=True,
                                      tip = "out-of-plane wave number" )),)
 
+
 from petram.phys.coefficient import SCoeff
-
-from petram.phys.coefficient import PyComplexScalarInvCoefficient as ComplexScalarInv
-from petram.phys.coefficient import PyComplexProductCoefficient as ComplexProduct
-
 from petram.phys.phys_const import mu0, epsilon0
 
 def Epsilon_Coeff(exprs, ind_vars, l, g, omega):
@@ -59,10 +63,15 @@ def Mu_Coeff(exprs, ind_vars, l, g, omega):
     # v = mu * v
     fac = mu0
     return SCoeff(exprs, ind_vars, l, g, return_complex=True, scale=fac)
-       
-class EM2D_Vac(EM2D_Domain):
+ 
+from petram.phys.em2d.em2d_base import EM2D_Bdry, EM2D_Domain, EM2D_Domain_helper
+
+class EM2D_Vac(EM2D_Domain, EM2D_Domain_helper):
     vt  = Vtable(data)
     #nlterms = ['epsilonr']
+    def get_possible_child(self):
+        from .em2d_pml      import EM2D_LinearPML
+        return [EM2D_LinearPML]
     
     def has_bf_contribution(self, kfes):
         if kfes == 0: return True
@@ -94,49 +103,71 @@ class EM2D_Vac(EM2D_Domain):
         #dprint1("epsr, mur, sigma " + str(coeff1) + " " + str(coeff2) + " " + str(coeff3))
         return coeff1, coeff2, coeff3, kz
 
-    def get_coeffs_2(self, real = True):
+    def get_coeffs_2(self):
         # e, m, s
         coeff1, coeff2, coeff3, kz = self.get_coeffs()
 
         if self.has_pml():
-            # not yet implemented!
-            assert False, "Not Yet Implemetned"
-            coeff1 = self.make_PML_epsilon(coeff1r, coeff1i, real)
-            coeff2 = self.make_PML_invmu(coeff2r, coeff2i, real)
-            coeff3 = self.make_PML_sigma(coeff3r, coeff3i, real)            
-        else:
-            neg_w2eps = coeff1
-            tmp = ComplexScalarInv(coeff2)
-            one_over_mu = tmp
-            k2_over_mu =   ComplexProduct(tmp, kz*kz)
-            ik_over_mu =   ComplexProduct(tmp, 1j*kz)
-            neg_iwsigma = coeff3
+            coeff2 = self.make_PML_coeff(coeff2)
             
-        return  neg_w2eps, one_over_mu, k2_over_mu, ik_over_mu, neg_iwsigma, kz
-            
-    def add_bf_contribution(self, engine, a, real = True, kfes=0):
-        neg_w2eps, one_over_mu, k2_over_mu, ik_over_mu, neg_iwsigma, kz= self.get_coeffs_2(real)
+            tmp = ComplexMatrixInv(coeff2)
+            mu11 = ComplexMatrixSlice(tmp, [0,1], [0,1])
+            mu11 = ComplexMatrixAdj(mu11)
+            #mu21 = ComplexMatrixSlice(tmp, [0,1], [2])
+            #mu12 = ComplexMatrixSlice(tmp, [2], [0,1])
+            mu22 = ComplexMatrixSlice(tmp, [2], [2])                        
+            k2_over_mu11 =   ComplexMatrixProduct(mu11, kz*kz)
+            ik_over_mu11 =   ComplexMatrixProduct(mu11, 1j*kz)
+            mu = [mu11, mu22, k2_over_mu11, ik_over_mu11]
 
+            coeff4 = ComplexSum(coeff1, coeff3)
+            coeff4 = self.make_PML_coeff(coeff4)
+            
+            eps11 = ComplexMatrixSlice(coeff4, [0,1], [0,1])
+            eps21 = ComplexMatrixSlice(coeff4, [0,1], [2])
+            eps12 = ComplexMatrixSlice(coeff4, [2], [0,1])
+            eps22 = ComplexMatrixSlice(coeff4, [2], [2])
+            eps = [eps11, eps12, eps21, eps22]
+            
+        else:
+            coeff2 = ComplexPow(coeff2, -1)
+            one_over_mu = coeff2            
+            k2_over_mu =   ComplexProduct(coeff2, kz*kz)
+            ik_over_mu =   ComplexProduct(coeff2, 1j*kz)
+
+            mu = [one_over_mu, one_over_mu, k2_over_mu, ik_over_mu]            
+
+            coeff4 = ComplexSum(coeff1, coeff3)
+
+            eps = [coeff4, None, None, coeff4]
+            
+        return eps, mu, kz
+
+    def add_bf_contribution(self, engine, a, real = True, kfes=0):
+        #neg_w2eps, one_over_mu, k2_over_mu, ik_over_mu, neg_iwsigma, kz= self.get_coeffs_2(real)
+        
+        eps, mu, kz =  self.get_coeffs_2()
+        
         self.set_integrator_realimag_mode(real)
-      
+        self.call_bf_add_integrator(eps,  mu, kz, engine, a, kfes)
+
+        '''
         if kfes == 0: ## ND element (Epoloidal)
             if real:       
                 dprint1("Add ND contribution(real)" + str(self._sel_index))
             else:
                 dprint1("Add ND contribution(imag)" + str(self._sel_index))
                 
-            self.add_integrator(engine, 'mur', one_over_mu,
+            self.add_integrator(engine, 'mur', mu[1],
                                 a.AddDomainIntegrator,
                                 mfem.CurlCurlIntegrator)
-            self.add_integrator(engine, 'epsilonr', neg_w2eps,
+            self.add_integrator(engine, 'epsilon_sigma', eps[0],
                                 a.AddDomainIntegrator,
                                 mfem.VectorFEMassIntegrator)
-            self.add_integrator(engine, 'sigma', neg_iwsigma,
-                                a.AddDomainIntegrator,
-                                mfem.VectorFEMassIntegrator)
+            
 
             if kz != 0:
-                self.add_integrator(engine, 'mur', k2_over_mu,
+                self.add_integrator(engine, 'mur', mu[2],
                                     a.AddDomainIntegrator,
                                     mfem.VectorFEMassIntegrator)
                 
@@ -146,18 +177,15 @@ class EM2D_Vac(EM2D_Domain):
             else:
                 dprint1("Add H1 contribution(imag)" + str(self._sel_index))
 
-            self.add_integrator(engine, 'mur_2', one_over_mu,
+            self.add_integrator(engine, 'mur_2', mu[0],
                                 a.AddDomainIntegrator,
                                 mfem.DiffusionIntegrator)
-            self.add_integrator(engine, 'epsilonr', neg_w2eps,
-                                a.AddDomainIntegrator,
-                                mfem.MassIntegrator)
-            self.add_integrator(engine, 'sigma', neg_iwsigma,
+            self.add_integrator(engine, 'epsilonr_sigma', esp[3]
                                 a.AddDomainIntegrator,
                                 mfem.MassIntegrator)
         else:
             pass
-        
+        '''
     def add_mix_contribution(self, engine, mbf, r, c, is_trans, real = True):
         if real:
             dprint1("Add mixed contribution(real)" + "(" + str(r) + "," + str(c) +')'
@@ -165,7 +193,12 @@ class EM2D_Vac(EM2D_Domain):
         else:
             dprint1("Add mixed contribution(imag)" + "(" + str(r) + "," + str(c) +')'
                     +str(self._sel_index))
-       
+        eps, mu, kz =  self.get_coeffs_2()
+
+        self.set_integrator_realimag_mode(real)        
+        self.call_mix_add_integrator(eps, mu, engine, mbf, r, c, is_trans)
+            
+        '''       
         neg_w2eps, one_over_mu, k2_over_mu, ik_over_mu, neg_iwsigma, kz = self.get_coeffs_2(real)
         
         self.set_integrator_realimag_mode(real)
@@ -178,6 +211,7 @@ class EM2D_Vac(EM2D_Domain):
 
         self.add_integrator(engine, 'mur', ik_over_mu,
                                 mbf.AddDomainIntegrator, itg)
+        '''
         
 
     def add_domain_variables(self, v, n, suffix, ind_vars, solr, soli = None):

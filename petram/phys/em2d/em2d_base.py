@@ -1,6 +1,15 @@
 import traceback
 import numpy as np
 
+import petram.debug as debug
+dprint1, dprint2, dprint3 = debug.init_dprints('EM2D_Base')
+
+from petram.mfem_config import use_parallel
+if use_parallel:
+   import mfem.par as mfem
+else:
+   import mfem.ser as mfem
+
 from petram.model import Domain, Bdry, Pair
 from petram.phys.phys_model import Phys, PhysModule, VectorPhysCoefficient, PhysCoefficient
 
@@ -29,6 +38,7 @@ class Einit_z(PhysCoefficient):
        else: val =  v.imag
        return val
 
+    
 class EM2D_Domain(Domain, Phys):
     has_3rd_panel = True    
     vt3  = Vtable(data)   
@@ -65,31 +75,64 @@ class EM2D_Domain(Domain, Phys):
         for obj in self.walk():
             if isinstance(obj, EM2D_PML) and obj.enabled:
                 return True
+             
     def get_pml(self):
         from .em2d_pml import EM2D_PML
-        return [obj for obj in self.walk() if isinstance(obj, EM3D_PML) and obj.enabled]
+        return [obj for obj in self.walk() if isinstance(obj, EM2D_PML) and obj.enabled]
     
-    def make_PML_epsilon(self, coeff1r, coeff1i, real):
+    def make_PML_coeff(self, coeff):
         pmls = self.get_pml()
         if len(pmls) > 2: assert False, "Multiple PML is set"
-        
-        coeff1 = pmls[0].make_PML_epsilon(coeff1r, coeff1i, real)
+        coeff1 = pmls[0].make_PML_coeff(coeff)
         return coeff1
     
-    def make_PML_invmu(self, coeff1r, coeff1i, real):
-        pmls = self.get_pml()
-        if len(pmls) > 2: assert False, "Multiple PML is set"
-        
-        coeff1 = pmls[0].make_PML_invmu(coeff1r, coeff1i, real)
-        return coeff1
-    
-    def make_PML_sigma(self, coeff1r, coeff1i, real):
-        pmls = self.get_pml()
-        if len(pmls) > 2: assert False, "Multiple PML is set"
-        
-        coeff1 = pmls[0].make_PML_sigma(coeff1r, coeff1i, real)
-        return coeff1          
-         
+class EM2D_Domain_helper(object): 
+   def call_bf_add_integrator(self, eps,  mu, kz, engine, a, kfes):
+       if kfes == 0: ## ND element (Exy)
+           self.add_integrator(engine, 'mur', mu[1],
+                              a.AddDomainIntegrator,
+                              mfem.CurlCurlIntegrator)
+           self.add_integrator(engine, 'epsilon_sigma', eps[0],
+                              a.AddDomainIntegrator,
+                              mfem.VectorFEMassIntegrator)
+
+           if kz != 0:
+               self.add_integrator(engine, 'mur', mu[2],
+                                  a.AddDomainIntegrator,
+                                  mfem.VectorFEMassIntegrator)
+
+       elif kfes == 1: ## H1 element (Ez)
+           self.add_integrator(engine, 'mur', mu[0],
+                               a.AddDomainIntegrator,
+                               mfem.DiffusionIntegrator)
+           self.add_integrator(engine, 'epsilon_sigma', eps[3],
+                               a.AddDomainIntegrator,
+                               mfem.MassIntegrator)
+       else:
+           pass
+
+   def call_mix_add_integrator(self, eps, mu, engine, mbf, r, c, is_trans):
+       if r == 1 and c == 0:        
+           #if  is_trans:
+           # (a_vec dot u_vec, v_scalar)                        
+           itg = mfem.MixedDotProductIntegrator
+           self.add_integrator(engine, 'epsilon', eps[1],
+                                   mbf.AddDomainIntegrator, itg)
+
+           # (-a u_vec, div v_scalar)            
+           itg =  mfem.MixedVectorWeakDivergenceIntegrator
+           self.add_integrator(engine, 'mur', mu[3],
+                                   mbf.AddDomainIntegrator, itg)
+       else:
+           # (a_vec dot u_scalar, v_vec)
+           itg = mfem.MixedVectorProductIntegrator
+           self.add_integrator(engine, 'epsilon', eps[2],
+                               mbf.AddDomainIntegrator, itg)
+
+           # (a grad u_scalar, v_vec)
+           itg =  mfem.MixedVectorGradientIntegrator
+           self.add_integrator(engine, 'mur', mu[3],
+                              mbf.AddDomainIntegrator, itg)
 
 
 class EM2D_Bdry(Bdry, Phys):
