@@ -93,23 +93,21 @@ class EM3D_Div(Domain, Phys):
                                                check_enabled = True)
                    for x in self._sel_index]
         
+        self.set_integrator_realimag_mode(real)        
         for dom, idx in zip(domains, self._sel_index):
-            coeff1, coeff2, coeff3 = dom.get_coeffs(real = real)           
+            coeff1, coeff2, coeff3 = dom.get_coeffs()
+            
+            if dom.has_pml():
+               coeff1 = dom.make_PML_epsilon(coeff1)
+               coeff3 = dom.make_PML_sigma(coeff3)
+           
             self.add_integrator(engine, 'epsilonr', coeff1,
                                 mbf.AddDomainIntegrator,
                                 itg, idx=[idx], vt  = dom.vt, transpose=is_trans)
             self.add_integrator(engine, 'sigma', coeff3,
                                 mbf.AddDomainIntegrator,
                                 itg, idx=[idx], vt  = dom.vt, transpose=is_trans)
-            '''
-            if coeff2 is not None:        
-                coeff2 = self.restrict_coeff(coeff2, engine, idx = [idx])
-                mbf.AddDomainIntegrator(itg(coeff2))
-            coeff3 = dom.get_sigma_coeff(real = real)
-            if coeff3 is not None:
-                coeff3 = self.restrict_coeff(coeff3, engine, idx = [idx])
-                mbf.AddDomainIntegrator(itg(coeff3))
-            '''
+            
     def apply_essential(self, engine, gf, real = False, kfes = 0):
         if kfes == 0: return
         if real:       

@@ -35,14 +35,13 @@ EM2D : 2D Frequency domain Maxwell equation.
      EM2D_Anisotropic : tensor dielectric
      EM2D_Vac         : scalar dielectric
      EM2D_ExtJ        : external current
-     EM2D_Div         : div J = 0 constraints (add Lagrange multiplier)
 
   Boundary:
      EM2D_PEC         : Perfect electric conductor
      EM2D_PMC         : Perfect magnetic conductor
-     EM2D_H           : Mangetic field boundary
-     EM2D_SurfJ       : Surface current
-     EM2D_Port        : TE, TEM, Coax port
+     EM2D_H           : Mangetic field boundary (N.I)
+     EM2D_SurfJ       : Surface current         (N.I)
+     EM2D_Port        : TE, TEM, Coax port      (N.I)
      EM2D_E           : Electric field
      EM2D_Continuity  : Continuitiy
 
