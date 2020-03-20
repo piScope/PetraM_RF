@@ -69,6 +69,8 @@ class EM3D_DefDomain(EM3D_Vac):
         return None
     def get_possible_domain(self):
         return []
+    def get_possible_child(self):
+        return self.parent.get_possible_domain()
         
 class EM3D_DefBdry(EM3D_Bdry):
     can_delete = False

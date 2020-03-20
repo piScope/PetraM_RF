@@ -11,7 +11,7 @@ from petram.phys.phys_model  import MatrixPhysCoefficient, Coefficient_Evaluator
 from petram.phys.em2da.em2da_base import EM2Da_Bdry, EM2Da_Domain
 
 import petram.debug as debug
-dprint1, dprint2, dprint3 = debug.init_dprints('EM2Da_Vac')
+dprint1, dprint2, dprint3 = debug.init_dprints('EM2Da_Anisotropic')
 
 from petram.mfem_config import use_parallel
 if use_parallel:

@@ -4,7 +4,6 @@
    * Linear PML
             [S(x)          ]
         S = [     S(y)     ]
-            [          S(z)]
 
         S  = 1 + (Sr + iSi)*((r -Lr)/Lpml)^p
 
@@ -21,15 +20,14 @@
       CopyRight (c) 2020-  S. Shiraiwa
 ''' 
 import numpy as np
-
 import abc
 from abc import ABC, abstractmethod
 
 from petram.phys.phys_model  import Phys, PhysCoefficient, MatrixPhysCoefficient
-from petram.phys.em3d.em3d_base import EM3D_Bdry, EM3D_Domain
+from petram.phys.em2d.em2d_base import EM2D_Bdry, EM2D_Domain
 
 import petram.debug as debug
-dprint1, dprint2, dprint3 = debug.init_dprints('EM3D_PML')
+dprint1, dprint2, dprint3 = debug.init_dprints('EM2D_PML')
 
 from petram.mfem_config import use_parallel
 if use_parallel:
@@ -50,21 +48,13 @@ data =  (('stretch', VtableElement('stretch', type='complex',
                                      tip = "streach order" )),)
 
 from petram.phys.coefficient import CC_Matrix
-from petram.phys.em3d.em3d_const import mu0, epsilon0
+from petram.phys.phys_const import mu0, epsilon0
 
-class EM3D_PML(EM3D_Domain, ABC):
+class EM2D_PML(EM2D_Domain, ABC):
     @abstractmethod
-    def make_PML_epsilon(self):
+    def make_PML_coeff(self):
         pass
      
-    @abstractmethod
-    def make_PML_invmu(self):
-        pass
-
-    @abstractmethod     
-    def make_PML_sigma(self):
-        pass
-
     def get_parent_selection(self):
         return self.parent.sel_index
 
@@ -77,19 +67,19 @@ class LinearPML(CC_Matrix):
         self.S = S
         self.order = order
         self.inv = inv
+        self.K = mfem.DenseMatrix(self.width, self.height)        
         super(LinearPML, self).__init__(coeff)
       
     def Eval(self, K, T, ip):
-        K.SetSize(3,3)
         ptx = T.Transform(ip)
        
         invS = self.Eval_invS(ptx)
         detS = self.Eval_detS(ptx)       
-       
-        if self.coeffs.is_matrix():
-            K_m  = self.coeffs[0].Eval(K, T, ip)
+
+        if self.coeffs.is_matrix():          
+            K_m = self.coeffs.Eval(self.K, T, ip)
         else:
-            K_m  = self.coeffs.Eval(T, ip)
+            K_m = self.coeffs.Eval(T, ip)
 
         detS_inv_S_x_inv_S = (invS*detS).dot(K_m).dot(invS)
 
@@ -97,29 +87,23 @@ class LinearPML(CC_Matrix):
             detS_inv_S_x_inv_S = np.linalg.inv(detS_inv_S_x_inv_S)
 
         return detS_inv_S_x_inv_S
-    
-    def Eval_invS(self, x):
+
+    def Eval_S(self, x):
         ret = np.array([1+0j, 1., 1.])
 
         if self.direction[0]:
-            ret[0] = 1 + self.S * ((x[0] - self.ref_p[0])/self.pml_width[0])**self.order
+           ret[0] = 1 + self.S * ((x[0] - self.ref_p[0])/self.pml_width[0])**self.order
         if self.direction[1]:
-            ret[1] = 1 + self.S * ((x[1] - self.ref_p[1])/self.pml_width[1])**self.order
-        if self.direction[2]:
-            ret[2] = 1 + self.S * ((x[2] - self.ref_p[2])/self.pml_width[2])**self.order
-
+           ret[1] = 1 + self.S * ((x[1] - self.ref_p[1])/self.pml_width[1])**self.order
+        return ret
+    
+    def Eval_invS(self, x):
+        ret = self.Eval_S(x)
         return np.diag((1+0j)/ret)
 
     def Eval_detS(self, x):
-        ret = np.array([1+0j, 1., 1.])
-        if self.direction[0]:
-            ret[0] = 1 + self.S * ((x[0] - self.ref_p[0])/self.pml_width[0])**self.order
-        if self.direction[1]:
-            ret[1] = 1 + self.S * ((x[1] - self.ref_p[1])/self.pml_width[1])**self.order
-        if self.direction[2]:          
-            ret[2] = 1 + self.S * ((x[2] - self.ref_p[2])/self.pml_width[2])**self.order
-
-        return ret[0]*ret[1]*ret[2]
+        ret = self.Eval_S(x)       
+        return ret[0]*ret[1]
     
     @property
     def width(self):
@@ -128,46 +112,46 @@ class LinearPML(CC_Matrix):
     def height(self):
         return 3
     
-class EM3D_LinearPML(EM3D_PML):
+class EM2D_LinearPML(EM2D_PML):
     has_2nd_panel = False
     has_3rd_panel = False
     _has_4th_panel = False    
     vt  = Vtable(data)
 
     def attribute_set(self, v):
-        v = super(EM3D_LinearPML, self).attribute_set(v)
-        v["stretch_dir"] = [False, False, False]
+        v = super(EM2D_LinearPML, self).attribute_set(v)
+        v["stretch_dir"] = [False, False]
         v["ref_point"] = ""
         return v
     
     def panel1_param(self):
         panels1 = [["Direction", self.stretch_dir, 36,
-                    {'col':3, 'labels':['x', 'y', 'z']}],
+                    {'col':3, 'labels':['x', 'y']}],
                    ["Ref. point", self.ref_point, 0, {}],                   
                   ]
-        panels2 = super(EM3D_LinearPML, self).panel1_param()
+        panels2 = super(EM2D_LinearPML, self).panel1_param()
         
         panels = panels1 + panels2
         return panels
 
     def get_panel1_value(self):
-        val =  super(EM3D_LinearPML, self).get_panel1_value()
+        val =  super(EM2D_LinearPML, self).get_panel1_value()
         val = [self.stretch_dir, self.ref_point] + val
         return val
 
     def import_panel1_value(self, v):
-        super(EM3D_LinearPML, self).import_panel1_value(v[2:])
+        super(EM2D_LinearPML, self).import_panel1_value(v[2:])
         self.ref_point = str(v[1])
         self.stretch_dir = [vv[1] for vv in v[0]]
 
     def panel1_tip(self):
         tip1 = ["PML direction", "reference point to measure the PML thickness"]
-        tip2 = super(EM3D_LinearPML, self).panel1_tip()
+        tip2 = super(EM2D_LinearPML, self).panel1_tip()
         return tip1 + tip2
         
     
     def preprocess_params(self, engine):
-        super(EM3D_LinearPML, self).preprocess_params(engine)
+        super(EM2D_LinearPML, self).preprocess_params(engine)
         dprint1("PML (stretch, order) ", self.stretch, self.s_order)
         
         base_mesh = engine.meshes[0]
@@ -180,16 +164,15 @@ class EM3D_LinearPML(EM3D_PML):
         
         dprint1("PML reference point:", self.ref_point_coord)
 
-        s = sum([ec['vol2surf'][k] for k in self.get_parent_selection()], [])
-        l = sum([ec['surf2line'][k] for k in s], [])
+        l = sum([ec['surf2line'][k] for k in self.get_parent_selection()], [])
         l = list(set(l))
         v = sum([ec['line2vert'][k] for k in l], [])
         v = list(set(v))        
 
         ptx = np.vstack([base_mesh.GetVertexArray(v2v[idx]) for idx in v])
 
-        self.pml_width = [0]*3
-        for k in range(3):
+        self.pml_width = [0]*2
+        for k in range(2):
            dd = ptx[:,k] - self.ref_point_coord[k]
            ii = np.argmax(np.abs(dd))
            self.pml_width[k] = dd[ii]
@@ -197,24 +180,24 @@ class EM3D_LinearPML(EM3D_PML):
         dprint1("PML width ", self.pml_width)
         
 
-    def make_PML_epsilon(self, coeff):
+    def make_PML_coeff(self, coeff):
         coeff = LinearPML(coeff, self.stretch, self.stretch_dir,
                           self.ref_point_coord, self.pml_width, self.s_order,
                           False)
         return coeff
-
-    def make_PML_invmu(self, coeff):
+    '''
+    def make_PML_invmu(self):
         coeff = LinearPML(coeff, self.stretch, self.stretch_dir,
                           self.ref_point_coord, self.pml_width, self.s_order,
                           True)
         return coeff
 
-    def make_PML_sigma(self, coeff):
+    def make_PML_sigma(self):
         coeff = LinearPML(coeff, self.stretch, self.stretch_dir,
                           self.ref_point_coord, self.pml_width, self.s_order,
                           False)
         return coeff
-
+    '''
 
     
 
