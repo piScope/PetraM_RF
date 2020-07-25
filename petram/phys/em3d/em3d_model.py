@@ -236,10 +236,11 @@ class EM3D(PhysModule):
         from .em3d_h           import EM3D_H
         from .em3d_surfj       import EM3D_SurfJ
         from .em3d_port        import EM3D_Port
+        from .em3d_portarray        import EM3D_PortArray
         from .em3d_e           import EM3D_E
         from .em3d_cont        import EM3D_Continuity
         from .em3d_z           import EM3D_Impedance
-        return [EM3D_PEC, EM3D_Port, EM3D_E, EM3D_SurfJ, 
+        return [EM3D_PEC, EM3D_Port, EM3D_PortArray, EM3D_E, EM3D_SurfJ, 
                 EM3D_H, EM3D_PMC, EM3D_Impedance, EM3D_Continuity]
     
     def get_possible_domain(self):
