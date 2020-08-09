@@ -116,7 +116,7 @@ class EM2Da_DefPair(Pair, Phys):
         return []
 
 class EM2Da(PhysModule):
-    der_var_base = ['Br', 'Bphi', 'Bz']
+    der_var_base = ['Er' 'Ephi', 'Ez', 'Br', 'Bphi', 'Bz' 'm_mode']
     geom_dim = 2    
     def __init__(self, **kwargs):
         super(EM2Da, self).__init__()
@@ -265,12 +265,18 @@ class EM2Da(PhysModule):
         from petram.helper.variables import add_surf_normals
         from petram.helper.variables import add_constant      
 
-        from petram.phys.em3d.eval_deriv import eval_curl        
-        def evalB(gfr, gfi = None):
+        from petram.phys.em2da.eval_deriv import eval_curl, eval_grad
+        def eval_curlEt(gfr, gfi = None):
             gfr, gfi, extra = eval_curl(gfr, gfi)
             gfi /= (2*self.freq*np.pi)   # real B
             gfr /= -(2*self.freq*np.pi)  # imag B
             return gfi, gfr, extra
+        
+        def eval_gradrEf(gfr, gfi = None):
+            gfr, gfi, extra = eval_grad(gfr, gfi)
+            gfi /= (2*self.freq*np.pi)   # real B
+            gfr /= -(2*self.freq*np.pi)  # imag B
+            return gfi, gfr, extra        
 
         ind_vars = [x.strip() for x in self.ind_vars.split(',')]
         suffix = self.dep_vars_suffix
@@ -283,17 +289,31 @@ class EM2Da(PhysModule):
         
         if name.startswith('Et'):
             add_elements(v, 'E', suffix, ind_vars, solr, soli, elements=[0,1])
+            add_components(v, 'Bphi', suffix, ind_vars, solr, soli,
+                           deriv=eval_curlEt)            
             
         elif name.startswith('rEf'):
             add_scalar(v, 'rEf', suffix, ind_vars, solr, soli)
             add_expression(v, 'Ephi', suffix, ind_vars,
                            'rEf/r', ['rEf',])
-            
+            add_components(v, 'gradrEf', suffix, ind_vars, solr, soli,
+                           deriv=eval_gradrEf)                        
         elif name.startswith('psi'):
             add_scalar(v, 'psi', suffix, ind_vars, solr, soli)
 
         add_expression(v, 'E', suffix, ind_vars, 'array([Er, Ephi, Ez])',
                       ['Er', 'Ephi', 'Ez'])
+        
+        add_expression(v, 'Ephi', suffix, ind_vars,
+                           'rEf/r', ['rEf',])
+        add_expression(v, 'Br', suffix, ind_vars,
+                       '1j*m_mode*Ez/r-gradrEf',
+                       ['m_mode', 'gradrEf', 'Ez'])
+        add_expression(v, 'Bz', suffix, ind_vars,
+                       '-1j*m_mode*Er/r+gradrEf',
+                       ['m_mode', 'gradrEf', 'Er'])        
+        add_expression(v, 'B', suffix, ind_vars, 'array([Br, Bphi, Bz])',
+                      ['Br', 'Bphi', 'Bz'])
             
         # collect all definition from children
         #for mm in self.walk():

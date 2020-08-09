@@ -308,5 +308,9 @@ class EM2Da_Vac(EM2Da_Domain):
                          domains = self._sel_index,
                          gdomain = self._global_ns)
 
+        add_constant(v, 'm_mode', suffix, self.t_mode, 
+                     domains = self._sel_index,
+                     gdomain = self._global_ns)
+            
 
     
