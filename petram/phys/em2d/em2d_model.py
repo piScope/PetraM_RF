@@ -120,7 +120,8 @@ class EM2D_DefPair(Pair, Phys):
         return []
 
 class EM2D(PhysModule):
-    der_var_base = ['Bx', 'By', 'Bz']
+    der_vars_base = ['Bx', 'By', 'Bz']
+    der_vars_vec = ['E', 'B']
     geom_dim = 2    
     def __init__(self, **kwargs):
         super(EM2D, self).__init__()
@@ -183,13 +184,13 @@ class EM2D(PhysModule):
                 ["indpendent vars.", self.ind_vars, 0, {}],
                 ["dep. vars. suffix", self.dep_vars_suffix, 0, {}],
                 ["dep. vars.", ','.join(self.dep_vars), 2, {}],
-                ["derived vars.", ','.join(EM2D.der_var_base), 2, {}],
+                ["derived vars.", ','.join(EM2D.der_vars_base), 2, {}],
                 ["predefined ns vars.", txt_predefined , 2, {}]])
         return panels
       
     def get_panel1_value(self):
-        names  = ','.join([x for x in self.dep_vars])
-        names2  = ','.join([x+self.dep_vars_suffix for x in EM2D.der_var_base])
+        names  = ', '.join([x for x in self.dep_vars])
+        names2 = ', '.join(self.get_dependent_variables())        
         val =  super(EM2D, self).get_panel1_value()
         val.extend([self.freq_txt, self.ind_vars, self.dep_vars_suffix,
                     names, names2, txt_predefined])

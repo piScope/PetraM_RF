@@ -227,8 +227,13 @@ class EM2D_Anisotropic(EM2D_Domain, EM2D_Domain_helper):
                              mbf.AddDomainIntegrator, itg)
         '''
     def add_domain_variables(self, v, n, suffix, ind_vars, solr, soli = None):
+
         from petram.helper.variables import add_expression, add_constant
-        pass
+        
+        e, m, s, kz = self.vt.make_value_or_expression(self)        
+        add_constant(v, 'kz', suffix, np.float(self.kz),
+                     domains = self._sel_index,
+                     gdomain = self._global_ns)
 
 
     

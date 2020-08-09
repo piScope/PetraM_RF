@@ -120,6 +120,7 @@ class EM3D_DefPair(Pair, Phys):
 
 class EM3D(PhysModule):
     der_var_base = ['Bx', 'By', 'Bz']
+    der_var_vec = ['B']
     geom_dim = 3
     def __init__(self, **kwargs):
         super(EM3D, self).__init__()
@@ -200,8 +201,8 @@ class EM3D(PhysModule):
         return panels
       
     def get_panel1_value(self):
-        names  = ','.join(self.dep_vars)
-        names2  = ','.join([x+self.dep_vars_suffix for x in EM3D.der_var_base])
+        names  = ', '.join(self.dep_vars)
+        names2 = ', '.join(self.get_dependent_variables())
         val =  super(EM3D, self).get_panel1_value()
         val.extend([self.freq_txt,
                     self.ind_vars, self.dep_vars_suffix,
@@ -273,6 +274,7 @@ class EM3D(PhysModule):
         from petram.helper.variables import add_coordinates
         from petram.helper.variables import add_scalar
         from petram.helper.variables import add_components
+        from petram.helper.variables import add_component_expression as addc_expression
         from petram.helper.variables import add_expression
         from petram.helper.variables import add_surf_normals
         from petram.helper.variables import add_constant      
@@ -311,44 +313,47 @@ class EM3D(PhysModule):
                            ['B'])
 
             # Poynting Flux
-            add_expression(v, 'Poyx', suffix, ind_vars,
-                           '(conj(Ey)*Bz - conj(Ez)*By)/mu0', ['B', 'E'])
-            add_expression(v, 'Poyy', suffix, ind_vars,
-                           '(conj(Ez)*Bx - conj(Ex)*Bz)/mu0', ['B', 'E'])
-            add_expression(v, 'Poyz', suffix, ind_vars,
-                           '(conj(Ex)*By - conj(Ey)*Bx)/mu0', ['B', 'E'])
+            addc_expression(v, 'Poy', suffix, ind_vars,
+                           '(conj(Ey)*Bz - conj(Ez)*By)/mu0',
+                            ['B', 'E'], 0)
+            addc_expression(v, 'Poy', suffix, ind_vars,
+                           '(conj(Ez)*Bx - conj(Ex)*Bz)/mu0',
+                            ['B', 'E'], 1)
+            addc_expression(v, 'Poy', suffix, ind_vars,
+                           '(conj(Ex)*By - conj(Ey)*Bx)/mu0',
+                            ['B', 'E'], 2)
 
             #e = - epsion * w^2 - i * sigma * w
             # Jd : displacement current  = -i omega* e0 er E
-            add_expression(v, 'Jdx', suffix, ind_vars,
-                           '(-1j*(dot(epsilonr, E))*freq*2*pi*e0)[0]', 
-                           ['epsilonr', 'E'])
-            add_expression(v, 'Jdy', suffix, ind_vars,
-                           '(-1j*(dot(epsilonr, E))*freq*2*pi*e0)[1]', 
-                           ['epsilonr', 'E'])
-            add_expression(v, 'Jdz', suffix, ind_vars,
-                           '(-1j*(dot(epsilonr, E))*freq*2*pi*e0)[2]', 
-                           ['epsilonr', 'E'])
+            addc_expression(v, 'Jd', suffix, ind_vars,
+                           '(-1j*(dot(epsilonr, E))*freq*2*pi*e0)[0]',
+                            ['epsilonr', 'E'],  0)
+            addc_expression(v, 'Jd', suffix, ind_vars,
+                           '(-1j*(dot(epsilonr, E))*freq*2*pi*e0)[1]',
+                            ['epsilonr', 'E'], 1)
+            addc_expression(v, 'Jd', suffix, ind_vars,
+                           '(-1j*(dot(epsilonr, E))*freq*2*pi*e0)[2]',
+                            ['epsilonr', 'E'], 2)
             # Ji : induced current = sigma *E
-            add_expression(v, 'Jix', suffix, ind_vars,
-                           '(dot(sigma, E))[0]', 
-                           ['sigma', 'E'])
-            add_expression(v, 'Jiy', suffix, ind_vars,
-                           '(dot(sigma, E))[1]', 
-                           ['sigma', 'E'])
-            add_expression(v, 'Jiz', suffix, ind_vars,
-                           '(dot(sigma, E))[2]', 
-                           ['sigma', 'E'])
+            addc_expression(v, 'Ji', suffix, ind_vars,
+                           '(dot(sigma, E))[0]',
+                            ['sigma', 'E'], 0)
+            addc_expression(v, 'Ji', suffix, ind_vars,
+                           '(dot(sigma, E))[1]',
+                            ['sigma', 'E'], 1)
+            addc_expression(v, 'Ji', suffix, ind_vars,
+                           '(dot(sigma, E))[2]',
+                            ['sigma', 'E'], 2)
             # Jp : polarization current (Jp = -i omega* e0 (er - 1) E
-            add_expression(v, 'Jpx', suffix, ind_vars,
-                           '(-1j*(dot(epsilonr, E) - E)*freq*2*pi*e0)[0]', 
-                           ['epsilonr', 'E'])
-            add_expression(v, 'Jpy', suffix, ind_vars,
-                           '(-1j*(dot(epsilonr, E) - E)*freq*2*pi*e0)[1]', 
-                           ['epsilonr', 'E'])
-            add_expression(v, 'Jpz', suffix, ind_vars,
-                           '(-1j*(dot(epsilonr, E) - E)*freq*2*pi*e0)[2]', 
-                           ['epsilonr', 'E'])
+            addc_expression(v, 'Jp', suffix, ind_vars,
+                           '(-1j*(dot(epsilonr, E) - E)*freq*2*pi*e0)[0]',
+                            ['epsilonr', 'E'], 0)
+            addc_expression(v, 'Jp', suffix, ind_vars,
+                           '(-1j*(dot(epsilonr, E) - E)*freq*2*pi*e0)[1]',
+                            ['epsilonr', 'E'], 1)
+            addc_expression(v, 'Jp', suffix, ind_vars,
+                           '(-1j*(dot(epsilonr, E) - E)*freq*2*pi*e0)[2]',
+                            ['epsilonr', 'E'], 2)
             
             
         elif name.startswith('psi'):

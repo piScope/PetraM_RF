@@ -216,7 +216,8 @@ class EM2D_Vac(EM2D_Domain, EM2D_Domain_helper):
 
     def add_domain_variables(self, v, n, suffix, ind_vars, solr, soli = None):
         from petram.helper.variables import add_expression, add_constant
-
+        e, m, s, kz = self.vt.make_value_or_expression(self)
+        
         if len(self._sel_index) == 0: return
         var, f_name = self.eval_phys_expr(self.epsilonr, 'epsilonr')
         if callable(var):
@@ -248,5 +249,7 @@ class EM2D_Vac(EM2D_Domain, EM2D_Domain_helper):
                          domains = self._sel_index,
                          gdomain = self._global_ns)
 
-
+        add_constant(v, 'kz', suffix, np.float(self.kz), 
+                     domains = self._sel_index,
+                     gdomain = self._global_ns)
     

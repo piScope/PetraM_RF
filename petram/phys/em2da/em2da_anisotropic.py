@@ -377,7 +377,13 @@ class EM2Da_Anisotropic(EM2Da_Domain):
 
     def add_domain_variables(self, v, n, suffix, ind_vars, solr, soli = None):
         from petram.helper.variables import add_expression, add_constant
-        pass
+
+        e, m, s, tmode = self.vt.make_value_or_expression(self)
+
+        add_constant(v, 'm_mode', suffix, np.float(tmode), 
+                     domains = self._sel_index,
+                     gdomain = self._global_ns)
+
 
 
     

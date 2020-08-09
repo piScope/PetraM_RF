@@ -16,7 +16,7 @@ with open(path.join(here, 'README.md')) as f:
 
 setup(
     name='PetraM_RF',
-    version='0.9.7',
+    version='1.0.0',
 
     description='PetraM RF package',
     long_description=long_description,
