@@ -217,7 +217,7 @@ class EM1D(PhysModule):
         from .em1d_extj        import EM1D_ExtJ
         #from em3d_div       import EM3D_Div        
 
-        return [EM1D_Vac, EM1D_Anisotropic,]
+        return [EM1D_Vac, EM1D_Anisotropic, EM1D_ExtJ]
 
     def get_possible_edge(self):
         return []                

@@ -23,56 +23,18 @@ data =  (('jext', VtableElement('jext', type='complex',
                              default = [0,0,0],
                              tip = "volumetric external current" )),)
 
-
-class Jext(PhysCoefficient):
-   def __init__(self, *args, **kwargs):
-       #kwargs['isArray'] = True
-       self.Jext_idx = kwargs.pop('Eyz_idx')
-       PhysCoefficient.__init__(self, *args, **kwargs)
-   def EvalValue(self, x):
-       v = super(Jext, self).EvalValue(x)
-       v = v[self.Jextem_idx]
-       if self.real:  return v.real
-       else: return v.imag
+from petram.phys.coefficient import VCoeff
+from petram.phys.coefficient import PyComplexVectorSliceCoefficient as ComplexVectorSlice
    
+def jwJ_Coeff(exprs, ind_vars, l, g, omega):
+    # iomega x Jext
+    fac =  1j * omega
+    return VCoeff(3, exprs, ind_vars, l, g, return_complex=True, scale=fac)
+
 class EM1D_ExtJ(EM1D_Bdry):
-    has_essential = True
+    has_essential = False
     vt  = Vtable(data)
     
-    def get_essential_idx(self, kfes):
-        if kfes > 3: return
-        return self._sel_index
-
-    def apply_essential(self, engine, gf, real = False, kfes = 0):
-        if kfes == 0: return
-        if real:       
-            dprint1("Apply Ess.(real)" + str(self._sel_index))
-        else:
-            dprint1("Apply Ess.(imag)" + str(self._sel_index))
-            
-        Eyz = self.vt.make_value_or_expression(self)              
-        mesh = engine.get_mesh(mm = self)        
-        ibdr = mesh.bdr_attributes.ToList()
-        bdr_attr = [0]*mesh.bdr_attributes.Max()
-        for idx in self._sel_index:
-            bdr_attr[idx-1] = 1
-
-        if kfes == 1:
-            coeff1 = Et(Eyz,
-                        self.get_root_phys().ind_vars,
-                        self._local_ns, self._global_ns,
-                        real = real, Eyz_idx=0)
-            gf.ProjectBdrCoefficient(coeff1,
-                                            mfem.intArray(bdr_attr))
-        elif kfes == 2:
-            coeff1 = Et(Eyz,
-                        self.get_root_phys().ind_vars,
-                        self._local_ns, self._global_ns,
-                        real = real, Eyz_idx=1)
-            gf.ProjectBdrCoefficient(coeff1,
-                                     mfem.intArray(bdr_attr))
-
-
     def has_lf_contribution(self, kfes = 0):
         if kfes == 0: return True
         if kfes == 1: return True
@@ -80,34 +42,22 @@ class EM1D_ExtJ(EM1D_Bdry):
         return False
 
     def add_lf_contribution(self, engine, b, real = True, kfes = 0):
-        if kfes < 2:
+        if kfes < 3:
             if real:       
                 dprint1("Add LF contribution(real)" + str(self._sel_index))
             else:
                 dprint1("Add LF contribution(imag)" + str(self._sel_index))
             freq, omega = self.get_root_phys().get_freq_omega()
-            f_name = self.vt.make_value_or_expression(self)
             self.set_integrator_realimag_mode(real)
-            
-            jwJ = jwJ_Coeff(f_name[0], self.get_root_phys().ind_vars,
+
+            jext = self.vt.make_value_or_expression(self)            
+            jwJ = jwJ_Coeff(jext[0], self.get_root_phys().ind_vars,
                             self._local_ns, self._global_ns, omega)
+            
 
-            if kfes == 0:
-            coeff1 = Et(Eyz,
-                        self.get_root_phys().ind_vars,
-                        self._local_ns, self._global_ns,
-                        real = real, Eyz_idx=0)
-
-                jwJ01 = ComplexVectorSlice(jwJ, [0,1])
-        
-                self.add_integrator(engine, 'jext', jwJ01, 
-                                    b.AddDomainIntegrator,
-                                    mfem.VectorFEDomainLFIntegrator)
-            elif kfes == 1:
-
-            else:
-                jwJ2 = ComplexVectorSlice(jwJ, [2])               
-                self.add_integrator(engine, 'jext', jwJ2,
+            if kfes in [0, 1, 2]:
+                j_slice = ComplexVectorSlice(jwJ, [kfes])               
+                self.add_integrator(engine, 'jext', j_slice,
                                     b.AddDomainIntegrator,
                                     mfem.DomainLFIntegrator)
 
