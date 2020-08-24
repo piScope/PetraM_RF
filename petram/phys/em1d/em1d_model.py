@@ -213,11 +213,11 @@ class EM1D(PhysModule):
     
     def get_possible_domain(self):
         from .em1d_anisotropic import EM1D_Anisotropic
-        from .em1d_vac       import EM1D_Vac
-        #from em1d_extj       import EM1D_ExtJ
+        from .em1d_vac         import EM1D_Vac
+        from .em1d_extj        import EM1D_ExtJ
         #from em3d_div       import EM3D_Div        
 
-        return [EM1D_Vac, EM1D_Anisotropic,]
+        return [EM1D_Vac, EM1D_Anisotropic, EM1D_ExtJ]
 
     def get_possible_edge(self):
         return []                
