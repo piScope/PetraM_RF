@@ -249,7 +249,7 @@ class EM2D_Vac(EM2D_Domain, EM2D_Domain_helper):
                          domains = self._sel_index,
                          gdomain = self._global_ns)
 
-        add_constant(v, 'kz', suffix, np.float(self.kz), 
+        add_constant(v, 'kz', suffix, np.float(kz), 
                      domains = self._sel_index,
                      gdomain = self._global_ns)
     
