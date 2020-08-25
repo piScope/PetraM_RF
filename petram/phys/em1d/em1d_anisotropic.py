@@ -181,7 +181,19 @@ class EM1D_Anisotropic(EM1D_Vac):
 
     def add_domain_variables(self, v, n, suffix, ind_vars, solr, soli = None):
         from petram.helper.variables import add_expression, add_constant
-        pass
+
+        e, m, s, ky, kz = self.vt.make_value_or_expression(self)
+        
+        if len(self._sel_index) == 0: return
+
+        add_constant(v, 'ky', suffix, np.float(ky),
+                     domains = self._sel_index,
+                     gdomain = self._global_ns)
+        
+        add_constant(v, 'kz', suffix, np.float(kz),
+                     domains = self._sel_index,
+                     gdomain = self._global_ns)
+        
 
 
     

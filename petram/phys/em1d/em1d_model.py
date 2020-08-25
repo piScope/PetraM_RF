@@ -239,28 +239,57 @@ class EM1D(PhysModule):
         from petram.helper.variables import add_coordinates
         from petram.helper.variables import add_scalar
         from petram.helper.variables import add_components
+        from petram.helper.variables import add_component_expression as addc_expression        
         from petram.helper.variables import add_expression
         from petram.helper.variables import add_surf_normals
         from petram.helper.variables import add_constant      
 
-        from petram.phys.em3d.eval_deriv import eval_curl
-
-        '''
-        def evalB(gfr, gfi = None):
-            gfr, gfi, extra = eval_curl(gfr, gfi)
-            gfi /= (2*self.freq*np.pi)   # real B
-            gfr /= -(2*self.freq*np.pi)  # imag B
-            return gfi, gfr, extra
-        '''
+        from petram.phys.em2da.eval_deriv import eval_grad
+        
         ind_vars = [x.strip() for x in self.ind_vars.split(',')]
         suffix = self.dep_vars_suffix
 
         from petram.helper.variables import TestVariable
-        #v['debug_test'] =  TestVariable()
-        
+
+        freq, omega = self.get_freq_omega()
+        add_constant(v, 'omega', suffix, np.float(omega),)
+        add_constant(v, 'freq', suffix, np.float(freq),)
+
         add_coordinates(v, ind_vars)        
         add_surf_normals(v, ind_vars)
         add_scalar(v, name, "", ind_vars, solr, soli)
+
+        if name.startswith('E'):
+            if name.endswith('y'):
+                  add_scalar(v, 'gradEy', suffix, ind_vars, solr, soli,
+                             deriv=eval_grad, vars=['E'])
+            if name.endswith('z'):
+                  add_scalar(v, 'gradEz', suffix, ind_vars, solr, soli,
+                             deriv=eval_grad, vars=['E'])
+
+        addc_expression(v, 'B', suffix, ind_vars,
+                                 '1j/omega*(1j*ky*Ez - 1j*kz*Ey)',
+                                 ['ky', 'kz', 'E', 'omega'], 0)
+        addc_expression(v, 'B', suffix, ind_vars,
+                                 '1j/omega*(1j*kz*Ex - gradEz)',
+                                 ['ky', 'kz', 'E', 'omega'], 'y')
+        addc_expression(v, 'B', suffix, ind_vars,
+                                 '1j/omega*(gradEy - 1j*ky*Ex)',
+                                 ['ky', 'kz', 'E', 'omega'], 'z')                                                
+        
+        add_expression(v, 'B', suffix, ind_vars,
+                       'array([Bx, By, Bz])',  ['B'])
+
+        # Poynting Flux
+        addc_expression(v, 'Poy', suffix, ind_vars,
+                       '(conj(Ey)*Bz - conj(Ez)*By)/mu0',
+                        ['B', 'E'], 0)
+        addc_expression(v, 'Poy', suffix, ind_vars,
+                        '(conj(Ez)*Bx - conj(Ex)*Bz)/mu0',
+                        ['B', 'E'], 'y')
+        addc_expression(v, 'Poy', suffix, ind_vars, 
+                        '(conj(Ex)*By - conj(Ey)*Bx)/mu0',
+                        ['B', 'E'], 'z')
 
         return v
         '''
