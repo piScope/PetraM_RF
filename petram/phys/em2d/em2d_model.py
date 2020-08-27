@@ -263,44 +263,70 @@ class EM2D(PhysModule):
         from petram.helper.variables import add_components
         from petram.helper.variables import add_elements        
         from petram.helper.variables import add_expression
+        from petram.helper.variables import add_component_expression as addc_expression        
         from petram.helper.variables import add_surf_normals
         from petram.helper.variables import add_constant      
 
-        from petram.phys.em3d.eval_deriv import eval_curl        
-        def evalB(gfr, gfi = None):
+        
+        from petram.phys.em2da.eval_deriv import eval_curl, eval_grad
+        
+        def eval_curlExy(gfr, gfi = None):
             gfr, gfi, extra = eval_curl(gfr, gfi)
-            gfi /= (2*self.freq*np.pi)   # real B
-            gfr /= -(2*self.freq*np.pi)  # imag B
             return gfi, gfr, extra
-
+        
+        def eval_gradEz(gfr, gfi = None):
+            gfr, gfi, extra = eval_grad(gfr, gfi)
+            return gfi, gfr, extra        
+        
         ind_vars = [x.strip() for x in self.ind_vars.split(',')]
         suffix = self.dep_vars_suffix
 
-        from petram.helper.variables import TestVariable
+        freq, omega = self.get_freq_omega()
+        add_constant(v, 'omega', suffix, np.float(omega),)
+        add_constant(v, 'freq', suffix, np.float(freq),)
         
         add_coordinates(v, ind_vars)        
         add_surf_normals(v, ind_vars)
         
         if name.startswith('Exy'):
             add_elements(v, 'E', suffix, ind_vars, solr, soli, elements=[0,1])
+            add_scalar(v, 'curlExy', suffix, ind_vars, solr, soli,
+                           deriv=eval_curlExy)            
+            addc_expression(v, 'B', suffix, ind_vars,
+                                 '1j/omega*curlExy', ['curlExy','omega'], 'z')
             
         elif name.startswith('Ez'):
-            add_scalar(v, 'Ez', suffix, ind_vars, solr, soli)
+            add_scalar(v, 'Ez', suffix, ind_vars, solr, soli, vars=['E'])
+            add_components(v, 'gradE', suffix, ind_vars, solr, soli,
+                           deriv=eval_gradEz)                      
             
         elif name.startswith('psi'):
             add_scalar(v, 'psi', suffix, ind_vars, solr, soli)
 
         add_expression(v, 'E', suffix, ind_vars, 'array([Ex, Ey, Ez])',
                       ['Ex', 'Ey', 'Ez'])
-            
-        # collect all definition from children
-        #for mm in self.walk():
-        #    if not mm.enabled: continue
-        #    if mm is self: continue
-        #    mm.add_domain_variables(v, name, suffix, ind_vars,
-        #                            solr, soli)
-        #    mm.add_bdr_variables(v, name, suffix, ind_vars,
-        #                            solr, soli)
+
+        addc_expression(v, 'B', suffix, ind_vars,
+                                 '1j/omega*(-1j*kz*Ez + gradEy)',
+                                 ['m_mode', 'E', 'omega'], 0)
+        addc_expression(v, 'B', suffix, ind_vars,
+                                 '1j/omega*(1j*kz*Ex - gradEx)',
+                                 ['m_mode', 'E', 'omega'], 1)   
+        add_expression(v, 'B', suffix, ind_vars,
+                       'array([Bx, By, Bz])',
+                       ['B'])
+
+        # Poynting Flux
+
+        addc_expression(v, 'Poy', suffix, ind_vars,
+                       '(conj(Ey)*Bz - conj(Ez)*By)/mu0',
+                        ['B', 'E'], 0)
+        addc_expression(v, 'Poy', suffix, ind_vars,
+                        '(conj(Ez)*Bx - conj(Ex)*Bz)/mu0',
+                        ['B', 'E'], 'y')
+        addc_expression(v, 'Poy', suffix, ind_vars, 
+                        '(conj(Ex)*By - conj(Ey)*Bx)/mu0',
+                        ['B', 'E'], 'z')
 
         return v
 

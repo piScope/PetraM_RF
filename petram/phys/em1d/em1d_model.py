@@ -292,19 +292,6 @@ class EM1D(PhysModule):
                         ['B', 'E'], 'z')
 
         return v
-        '''
-        if name.startswith('Et'):
-            add_components(v, 'E', suffix, ind_vars, solr, soli)
-            
-        elif name.startswith('rEf'):
-            add_scalar(v, 'rEf', suffix, ind_vars, solr, soli)
-            add_expression(v, 'Ephi', suffix, ind_vars,
-                           'rEf/r', ['rEf',])
-            
-        elif name.startswith('psi'):
-            add_scalar(v, 'psi', suffix, ind_vars, solr, soli)
-        '''
-
                
     def get_fes_for_dep(self, unknown_name, soldict):
         keys = soldict.keys()

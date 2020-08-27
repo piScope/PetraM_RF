@@ -31,7 +31,7 @@ def jwJ_Coeff(exprs, ind_vars, l, g, omega):
     fac =  1j * omega
     return VCoeff(3, exprs, ind_vars, l, g, return_complex=True, scale=fac)
 
-class EM1D_ExtJ(EM1D_Bdry):
+class EM1D_ExtJ(EM1D_Domain):
     has_essential = False
     vt  = Vtable(data)
     
