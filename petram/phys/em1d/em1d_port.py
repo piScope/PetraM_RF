@@ -74,7 +74,8 @@ class E_port(mfem.PyCoefficient):
        k = omega*np.sqrt(eps*epsilon0 * mur*mu0)
        kc2 = k**2 - ky**2 - kz**2
        if kc2 < 0:
-          raise ValueError('Mode does not propagate')
+          kc2 = complex(kc2)
+          #raise ValueError('Mode does not propagate')
        beta = np.sqrt(kc2)
        dprint1("propagation constant:" + str(beta))
        Ey, Ez = amp
@@ -107,8 +108,11 @@ class jwH_port(mfem.PyCoefficient):
 
        k = omega*np.sqrt(eps*epsilon0 * mur*mu0)
        kc2 = k**2 - ky**2 - kz**2
+       
        if kc2 < 0:
-          raise ValueError('Mode does not propagate')
+          dprint1('Mode does not propagate !!!')
+          kc2 = complex(kc2)
+          #raise ValueError('Mode does not propagate')
        
        norm = -bdry.norm # norm is INWARD propagation
        beta = np.sqrt(kc2) * norm
