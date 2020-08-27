@@ -268,13 +268,13 @@ class EM1D(PhysModule):
                              deriv=eval_grad, vars=['E'])
 
         addc_expression(v, 'B', suffix, ind_vars,
-                                 '1j/omega*(1j*ky*Ez - 1j*kz*Ey)',
+                                 '-1j/omega*(1j*ky*Ez - 1j*kz*Ey)',
                                  ['ky', 'kz', 'E', 'omega'], 0)
         addc_expression(v, 'B', suffix, ind_vars,
-                                 '1j/omega*(1j*kz*Ex - gradEz)',
+                                 '-1j/omega*(1j*kz*Ex - gradEz)',
                                  ['ky', 'kz', 'E', 'omega'], 'y')
         addc_expression(v, 'B', suffix, ind_vars,
-                                 '1j/omega*(gradEy - 1j*ky*Ex)',
+                                 '-1j/omega*(gradEy - 1j*ky*Ex)',
                                  ['ky', 'kz', 'E', 'omega'], 'z')                                                
         
         add_expression(v, 'B', suffix, ind_vars,

@@ -293,7 +293,7 @@ class EM2D(PhysModule):
             add_scalar(v, 'curlExy', suffix, ind_vars, solr, soli,
                            deriv=eval_curlExy)            
             addc_expression(v, 'B', suffix, ind_vars,
-                                 '1j/omega*curlExy', ['curlExy','omega'], 'z')
+                                 '-1j/omega*curlExy', ['curlExy','omega'], 'z')
             
         elif name.startswith('Ez'):
             add_scalar(v, 'Ez', suffix, ind_vars, solr, soli, vars=['E'])
@@ -307,10 +307,10 @@ class EM2D(PhysModule):
                       ['Ex', 'Ey', 'Ez'])
 
         addc_expression(v, 'B', suffix, ind_vars,
-                                 '1j/omega*(-1j*kz*Ez + gradEy)',
+                                 '-1j/omega*(-1j*kz*Ez + gradEy)',
                                  ['m_mode', 'E', 'omega'], 0)
         addc_expression(v, 'B', suffix, ind_vars,
-                                 '1j/omega*(1j*kz*Ex - gradEx)',
+                                 '-1j/omega*(1j*kz*Ex - gradEx)',
                                  ['m_mode', 'E', 'omega'], 1)   
         add_expression(v, 'B', suffix, ind_vars,
                        'array([Bx, By, Bz])',

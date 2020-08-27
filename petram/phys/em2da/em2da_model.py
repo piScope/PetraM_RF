@@ -294,7 +294,7 @@ class EM2Da(PhysModule):
             add_scalar(v, 'curlEt', suffix, ind_vars, solr, soli,
                            deriv=eval_curlEt)            
             addc_expression(v, 'B', suffix, ind_vars,
-                                 '1j/omega*curlEt', ['curlEt','omega'], 'phi')
+                                 '-1j/omega*curlEt', ['curlEt','omega'], 'phi')
             
         elif name.startswith('rEf'):
             add_scalar(v, 'rEf', suffix, ind_vars, solr, soli)
@@ -312,10 +312,10 @@ class EM2Da(PhysModule):
         addc_expression(v, 'E', suffix, ind_vars,
                                  'rEf/r', ['rEf',], 'phi')
         addc_expression(v, 'B', suffix, ind_vars,
-                                 '1j/omega*(1j*m_mode*Ez/r-gradrEz/r)',
+                                 '-1j/omega*(1j*m_mode*Ez/r-gradrEz/r)',
                                  ['m_mode', 'E', 'omega'], 0)
         addc_expression(v, 'B', suffix, ind_vars,
-                                 '1j/omega*(-1j*m_mode*Er/r+gradrEr/r)',
+                                 '-1j/omega*(-1j*m_mode*Er/r+gradrEr/r)',
                                  ['m_mode', 'E', 'omega'], 1)   
         add_expression(v, 'B', suffix, ind_vars,
                        'array([Br, Bphi, Bz])',
