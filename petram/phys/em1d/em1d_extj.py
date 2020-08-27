@@ -32,7 +32,9 @@ def jwJ_Coeff(exprs, ind_vars, l, g, omega):
     return VCoeff(3, exprs, ind_vars, l, g, return_complex=True, scale=fac)
 
 class EM1D_ExtJ(EM1D_Domain):
-    has_essential = False
+    is_secondary_condition = True  # does not count this class for persing "remaining"
+    has_3rd_panel = False
+
     vt  = Vtable(data)
     
     def has_lf_contribution(self, kfes = 0):
