@@ -276,6 +276,8 @@ class EM1D(PhysModule):
         addc_expression(v, 'B', suffix, ind_vars,
                                  '-1j/omega*(gradEy - 1j*ky*Ex)',
                                  ['ky', 'kz', 'E', 'omega'], 'z')                                                
+        add_expression(v, 'E', suffix, ind_vars,
+                       'array([Ex, Ey, Ez])',  ['E'])
         
         add_expression(v, 'B', suffix, ind_vars,
                        'array([Bx, By, Bz])',  ['B'])
