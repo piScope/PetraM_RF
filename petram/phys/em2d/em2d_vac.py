@@ -219,10 +219,25 @@ class EM2D_Vac(EM2D_Domain, EM2D_Domain_helper):
         e, m, s, kz = self.vt.make_value_or_expression(self)
         
         if len(self._sel_index) == 0: return
+
+        self.do_add_scalar_expr(v, suffix, ind_vars, 'sepsilonr', e, add_diag=3)
+        self.do_add_scalar_expr(v, suffix, ind_vars, 'smur', m, add_diag=3)
+        self.do_add_scalar_expr(v, suffix, ind_vars, 'ssigma', s, add_diag=3)
+
+        var = ['x', 'y', 'z']
+        self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'epsilonr')
+        self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'mur')
+        self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'simga')
+        
+        add_constant(v, 'kz', suffix, np.float(kz), 
+                     domains = self._sel_index,
+                     gdomain = self._global_ns)
+
+        '''
         var, f_name = self.eval_phys_expr(self.epsilonr, 'epsilonr')
         if callable(var):
             add_expression(v, 'epsilonr', suffix, ind_vars, f_name,
-                           [], domains = self._sel_index, 
+           n                [], domains = self._sel_index, 
                            gdomain = self._global_ns)            
         else:
             add_constant(v, 'epsilonr', suffix, var,
@@ -248,8 +263,5 @@ class EM2D_Vac(EM2D_Domain, EM2D_Domain_helper):
             add_constant(v, 'sigma', suffix, var,
                          domains = self._sel_index,
                          gdomain = self._global_ns)
-
-        add_constant(v, 'kz', suffix, np.float(kz), 
-                     domains = self._sel_index,
-                     gdomain = self._global_ns)
+        '''
     
