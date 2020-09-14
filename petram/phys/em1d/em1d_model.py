@@ -133,6 +133,16 @@ class EM1D(PhysModule):
         ret = 'E'
         return ret
 
+    def get_fec_type(self, idx):
+        '''
+        H1 
+        H1v2 (vector dim)
+        ND
+        RT
+        '''
+        values = ['L2', 'H1', 'H1']
+        return values[idx]
+    
     def get_fec(self):
         v = self.dep_vars
         return [(v[0], 'L2_FECollection'),
@@ -215,9 +225,11 @@ class EM1D(PhysModule):
         from .em1d_anisotropic import EM1D_Anisotropic
         from .em1d_vac         import EM1D_Vac
         from .em1d_extj        import EM1D_ExtJ
+        from petram.phys.wf.wf_constraints import WF_WeakDomainBilinConstraint, WF_WeakDomainLinConstraint        
         #from em3d_div       import EM3D_Div        
 
-        return [EM1D_Vac, EM1D_Anisotropic, EM1D_ExtJ]
+        return [EM1D_Vac, EM1D_Anisotropic, EM1D_ExtJ,
+                WF_WeakDomainBilinConstraint, WF_WeakDomainLinConstraint]
 
     def get_possible_edge(self):
         return []                

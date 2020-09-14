@@ -387,7 +387,7 @@ class EM2Da_Anisotropic(EM2Da_Domain):
         var = ['r', 'phi', 'z']
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'epsilonr')
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'mur')
-        self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'simga')
+        self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'sigma')
 
         add_constant(v, 'm_mode', suffix, np.float(tmode), 
                      domains = self._sel_index,

@@ -202,7 +202,7 @@ class EM1D_Anisotropic(EM1D_Vac):
         var = ['x', 'y', 'z']
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'epsilonr')
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'mur')
-        self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'simga')
+        self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'sigma')
 
 
 

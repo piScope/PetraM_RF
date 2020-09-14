@@ -178,31 +178,6 @@ class EM3D_Anisotropic(EM3D_Domain):
         var = ['x', 'y', 'z']
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'epsilonr')
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'mur')
-        self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'simga')
-        
-        '''
-        def add_sigma_epsilonr_mur(name, f_name):
-            if isinstance(f_name[0], NativeCoefficientGenBase):
-                pass   
-            elif len(f_name) == 1:
-                if not isinstance(f_name[0], str): expr  = f_name[0].__repr__()
-                else: expr = f_name[0]
-                add_expression(v, name, suffix, ind_vars, expr, 
-                              [], domains = self._sel_index,
-                              gdomain = self._global_ns)
-            else:  # elemental format
-                expr_txt = [x.__repr__() if not isinstance(x, str) else x for x in f_name]
-                a = '['+','.join(expr_txt[:3]) +']'
-                b = '['+','.join(expr_txt[3:6])+']'
-                c = '['+','.join(expr_txt[6:]) +']'
-                expr = '[' + ','.join((a,b,c)) + ']'
-                add_expression(v, name, suffix, ind_vars, expr, 
-                              [], domains = self._sel_index,
-                              gdomain = self._global_ns)
-
-        add_sigma_epsilonr_mur('epsilonr', e)
-        add_sigma_epsilonr_mur('mur', m)
-        add_sigma_epsilonr_mur('sigma', s)
-        '''
+        self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'sigma')
         
 

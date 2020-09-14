@@ -239,7 +239,7 @@ class EM2D_Anisotropic(EM2D_Domain, EM2D_Domain_helper):
         var = ['x', 'y', 'z']
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'epsilonr')
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'mur')
-        self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'simga')
+        self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'sigma')
         
         add_constant(v, 'kz', suffix, np.float(kz),
                      domains = self._sel_index,

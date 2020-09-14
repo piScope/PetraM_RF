@@ -152,6 +152,10 @@ class EM2Da(PhysModule):
             ret = ['Et', 'rEf']
         return ret
 
+    def get_fec_type(self, idx):
+        values = ['ND', 'H1', 'H1']
+        return values[idx]
+    
     def get_fec(self):
         v = self.dep_vars
         if len(v) == 2:  # normal case
