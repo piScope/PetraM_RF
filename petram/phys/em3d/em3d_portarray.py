@@ -122,8 +122,10 @@ class EM3D_PortArray(EM3D_Bdry):
         v['mn'] = [1, 0]
         v['inc_amp_txt'] = '1.0'
         v['inc_phase_txt'] = '0.0'
+        v['inc_dphase_txt'] = '90.0'
         v['inc_amp'] = 1.0
         v['inc_phase'] = 0.0
+        v['inc_dphase'] = 0.0        
         v['epsilonr'] = 1.0
         v['mur'] = 1.0
         v['sel_readonly'] = False
@@ -503,7 +505,7 @@ class EM3D_PortArray(EM3D_Bdry):
 
         for params in self._port_params:
             self.set_portparams(params)
-
+            dprint1("phasing ", ph)
             v1, v2, t4_1 = self.do_add_extra_contribution(engine, inc_amp, ph, eps, mur)
 
             v1_arr.append(v1)
@@ -519,6 +521,6 @@ class EM3D_PortArray(EM3D_Bdry):
         v2 = HStackPyVec(v2_arr)
         v2 = v2.transpose()
 
-        print(v1.shape, v2.shape, t3.shape, t4.shape)
+        #print(v1.shape, v2.shape, t3.shape, t4.shape)
         
         return (v1, v2, t3, t4, True)

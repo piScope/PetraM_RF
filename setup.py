@@ -16,12 +16,12 @@ with open(path.join(here, 'README.md')) as f:
 
 setup(
     name='PetraM_RF',
-    version='1.0.1',
+    version='1.0.4',
 
     description='PetraM RF package',
     long_description=long_description,
     url='https://github.com/piScope/PetraM',
-    author='S. Sihraiwa',
+    author='S. Shiraiwa',
     author_email='shiraiwa@psfc.mit.edu',
     license='GNUv3',
 

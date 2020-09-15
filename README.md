@@ -56,7 +56,8 @@
   Domain:   
  *    EM1D_Anisotropic : tensor dielectric
  *    EM1D_Vac         : scalar dielectric
-
+ *    EM1D_ExtJ        : external current
+ 
   Boundary:
  *    EM1D_PEC         : Perfect electric conductor
  *    EM1D_PMC         : Perfect magnetic conductor

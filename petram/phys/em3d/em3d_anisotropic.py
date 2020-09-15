@@ -125,49 +125,6 @@ class EM3D_Anisotropic(EM3D_Domain):
         coeff2 = Mu_Coeff(m, ind_vars, l, g, omega)
         coeff3 = Sigma_Coeff(s, ind_vars, l, g, omega)
 
-        '''
-        if any([isinstance(ee, str) for ee in e]):
-            coeff1 = Epsilon(3, e,  self.get_root_phys().ind_vars,
-                            self._local_ns, self._global_ns,
-                            real = real, omega = omega)
-        else:
-            eps = np.array(e).reshape(3,3)
-            eps =  - eps*epsilon0*omega*omega
-            eps = eps.real if real else eps.imag
-            if np.all(eps == 0.0):
-                coeff1 = None
-            else:
-                coeff1 = PhysMatrixConstant(eps)
-        '''
-        '''
-        if isinstance(m[0], str):
-           coeff2 = InvMu(3, m,  self.get_root_phys().ind_vars,
-                            self._local_ns, self._global_ns,
-                            real = real, omega = omega)
-        else:
-           mur = np.array(m).reshape(3,3)           
-           mur = 1./mu0*inv(mur)
-           mur = mur.real if real else mur.imag
-           if np.all(mur == 0):
-               coeff2 = None
-           else:
-               coeff2 = PhysMatrixConstant(mur)
-        '''
-        '''
-        if any([isinstance(ss, str) for ss in s]):               
-            coeff3 = Sigma(3, s,  self.get_root_phys().ind_vars,
-                       self._local_ns, self._global_ns,
-                       real = real, omega = omega)
-        else:
-           sigma = -1j *omega * np.array(s).reshape(3,3)
-           sigma = sigma.real if real else sigma.imag           
-           if np.all(sigma == 0.0):
-              coeff3 = None
-           else:
-              coeff3 = PhysMatrixConstant(sigma)
-
-        dprint1("epsr, mur, sigma " + str(coeff1) + " " + str(coeff2) + " " + str(coeff3))
-        '''
         return coeff1, coeff2, coeff3
                  
     def add_bf_contribution(self, engine, a, real = True, kfes = 0):
@@ -213,27 +170,14 @@ class EM3D_Anisotropic(EM3D_Domain):
         if len(self._sel_index) == 0: return
 
         e, m, s = self.vt.make_value_or_expression(self)
-        
-        def add_sigma_epsilonr_mur(name, f_name):
-            if isinstance(f_name[0], NativeCoefficientGenBase):
-                pass   
-            elif len(f_name) == 1:
-                if not isinstance(f_name[0], str): expr  = f_name[0].__repr__()
-                else: expr = f_name[0]
-                add_expression(v, name, suffix, ind_vars, expr, 
-                              [], domains = self._sel_index,
-                              gdomain = self._global_ns)
-            else:  # elemental format
-                expr_txt = [x.__repr__() if not isinstance(x, str) else x for x in f_name]
-                a = '['+','.join(expr_txt[:3]) +']'
-                b = '['+','.join(expr_txt[3:6])+']'
-                c = '['+','.join(expr_txt[6:]) +']'
-                expr = '[' + ','.join((a,b,c)) + ']'
-                add_expression(v, name, suffix, ind_vars, expr, 
-                              [], domains = self._sel_index,
-                              gdomain = self._global_ns)
 
-        add_sigma_epsilonr_mur('epsilonr', e)
-        add_sigma_epsilonr_mur('mur', m)
-        add_sigma_epsilonr_mur('sigma', s)                           
+        self.do_add_matrix_expr(v, suffix, ind_vars, 'epsilonr', e)
+        self.do_add_matrix_expr(v, suffix, ind_vars, 'mur', m)
+        self.do_add_matrix_expr(v, suffix, ind_vars, 'sigma', s)
+
+        var = ['x', 'y', 'z']
+        self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'epsilonr')
+        self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'mur')
+        self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'sigma')
+        
 

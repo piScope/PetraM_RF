@@ -152,6 +152,10 @@ class EM2Da(PhysModule):
             ret = ['Et', 'rEf']
         return ret
 
+    def get_fec_type(self, idx):
+        values = ['ND', 'H1', 'H1']
+        return values[idx]
+    
     def get_fec(self):
         v = self.dep_vars
         if len(v) == 2:  # normal case
@@ -271,14 +275,10 @@ class EM2Da(PhysModule):
         
         def eval_curlEt(gfr, gfi = None):
             gfr, gfi, extra = eval_curl(gfr, gfi)
-            gfi /= (2*self.freq*np.pi)   # real B
-            gfr /= -(2*self.freq*np.pi)  # imag B
             return gfi, gfr, extra
         
         def eval_gradrEf(gfr, gfi = None):
             gfr, gfi, extra = eval_grad(gfr, gfi)
-            gfi /= (2*self.freq*np.pi)   # real B
-            gfr /= -(2*self.freq*np.pi)  # imag B
             return gfi, gfr, extra        
 
         ind_vars = [x.strip() for x in self.ind_vars.split(',')]
@@ -286,6 +286,9 @@ class EM2Da(PhysModule):
 
         from petram.helper.variables import TestVariable
         #v['debug_test'] =  TestVariable()
+        freq, omega = self.get_freq_omega()
+        add_constant(v, 'omega', suffix, np.float(omega),)
+        add_constant(v, 'freq', suffix, np.float(freq),)
         
         add_coordinates(v, ind_vars)        
         add_surf_normals(v, ind_vars)
@@ -295,7 +298,7 @@ class EM2Da(PhysModule):
             add_scalar(v, 'curlEt', suffix, ind_vars, solr, soli,
                            deriv=eval_curlEt)            
             addc_expression(v, 'B', suffix, ind_vars,
-                                 'curlEt', ['curlEt',], 'phi')
+                                 '-1j/omega*curlEt', ['curlEt','omega'], 'phi')
             
         elif name.startswith('rEf'):
             add_scalar(v, 'rEf', suffix, ind_vars, solr, soli)
@@ -313,11 +316,11 @@ class EM2Da(PhysModule):
         addc_expression(v, 'E', suffix, ind_vars,
                                  'rEf/r', ['rEf',], 'phi')
         addc_expression(v, 'B', suffix, ind_vars,
-                                 '1j*m_mode*Ez/r-gradrEz/r',
-                                 ['m_mode', 'E'], 0)
+                                 '-1j/omega*(1j*m_mode*Ez/r-gradrEz/r)',
+                                 ['m_mode', 'E', 'omega'], 0)
         addc_expression(v, 'B', suffix, ind_vars,
-                                 '-1j*m_mode*Er/r+gradrEr/r',
-                                 ['m_mode', 'E'], 1)   
+                                 '-1j/omega*(-1j*m_mode*Er/r+gradrEr/r)',
+                                 ['m_mode', 'E', 'omega'], 1)   
         add_expression(v, 'B', suffix, ind_vars,
                        'array([Br, Bphi, Bz])',
                        ['B'])

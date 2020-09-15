@@ -32,7 +32,7 @@ class PortScanner(DefaultParametricScanner):
         names = ["port.".join(str(i)) for i in range(len(self.port))]
         self._names = names
                                     
-        DefaultParametricScanner.__init__(self, data = data)
+        DefaultParametricScanner.__init__(self, data=data)
 
     def apply_param(self, data):
         from petram.phys.em3d.em3d_port import EM3D_Port
