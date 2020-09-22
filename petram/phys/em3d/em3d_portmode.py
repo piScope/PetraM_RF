@@ -20,7 +20,7 @@ import numpy as np
 from petram.phys.em3d.em3d_const import epsilon0, mu0
 
 import petram.debug as debug
-dprint1, dprint2, dprint3 = debug.init_dprints('EM3D_Port')
+dprint1, dprint2, dprint3 = debug.init_dprints('EM3D_PortMode')
 
 from petram.mfem_config import use_parallel
 if use_parallel:

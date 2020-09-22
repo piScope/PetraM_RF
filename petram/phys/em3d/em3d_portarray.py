@@ -376,17 +376,16 @@ class EM3D_PortArray(EM3D_Bdry):
         from itertools import cycle
         dphase = cycle(np.atleast_1d(inc_dphase))
 
-        for params in self._port_params:
-
+        for params, sel in zip(self._port_params, self._sel_index):
             self.set_portparams(params)
 
             inc_wave = inc_amp * np.exp(1j * ph / 180. * np.pi)
-
+               
             phase = np.angle(inc_wave) * 180 / np.pi
             amp = np.sqrt(np.abs(inc_wave))
 
             Ht = C_jwHt(3, phase, self, real=real, amp=amp, eps=eps, mur=mur)
-            Ht = self.restrict_coeff(Ht, engine, vec=True)
+            Ht = self.restrict_coeff(Ht, engine, vec=True, idx=[sel])
 
             intg = mfem.VectorFEBoundaryTangentLFIntegrator(Ht)
             b.AddBoundaryIntegrator(intg)
@@ -418,27 +417,27 @@ class EM3D_PortArray(EM3D_Bdry):
         name = self.name() + '_' + str(self.port_idx)
         sol_extra[name] = sol.toarray()
 
-    def do_add_extra_contribution(self, engine, inc_amp, inc_phase, eps, mur):
+    def do_add_extra_contribution(self, engine, inc_amp, inc_phase, eps, mur, sel):
         C_Et, C_jwHt = self.get_coeff_cls()
 
         fes = engine.get_fes(self.get_root_phys(), 0)
 
         lf1 = engine.new_lf(fes)
         Ht1 = C_jwHt(3, 0.0, self, real=True, eps=eps, mur=mur)
-        Ht2 = self.restrict_coeff(Ht1, engine, vec=True)
+        Ht2 = self.restrict_coeff(Ht1, engine, vec=True, idx=[sel])
         intg = mfem.VectorFEBoundaryTangentLFIntegrator(Ht2)
         lf1.AddBoundaryIntegrator(intg)
         lf1.Assemble()
         lf1i = engine.new_lf(fes)
         Ht3 = C_jwHt(3, 0.0, self, real=False, eps=eps, mur=mur)
-        Ht4 = self.restrict_coeff(Ht3, engine, vec=True)
+        Ht4 = self.restrict_coeff(Ht3, engine, vec=True, idx=[sel])
         intg = mfem.VectorFEBoundaryTangentLFIntegrator(Ht4)
         lf1i.AddBoundaryIntegrator(intg)
         lf1i.Assemble()
 
         lf2 = engine.new_lf(fes)
         Et = C_Et(3, self, real=True, eps=eps, mur=mur)
-        Et = self.restrict_coeff(Et, engine, vec=True)
+        Et = self.restrict_coeff(Et, engine, vec=True, idx=[sel])
         intg = mfem.VectorFEDomainLFIntegrator(Et)
         lf2.AddBoundaryIntegrator(intg)
         lf2.Assemble()
@@ -503,10 +502,10 @@ class EM3D_PortArray(EM3D_Bdry):
         v2_arr = []
         t4 = []
 
-        for params in self._port_params:
+        for params, sel in zip(self._port_params, self._sel_index):            
             self.set_portparams(params)
-            dprint1("phasing ", ph)
-            v1, v2, t4_1 = self.do_add_extra_contribution(engine, inc_amp, ph, eps, mur)
+            #dprint1("phasing ", ph, sel)
+            v1, v2, t4_1 = self.do_add_extra_contribution(engine, inc_amp, ph, eps, mur, sel)
 
             v1_arr.append(v1)
             v2_arr.append(v2)
