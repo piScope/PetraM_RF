@@ -20,6 +20,24 @@
     2020 7/20  generated from portarray
 '''
 from __future__ import print_function
+from petram.phys.em3d.em3d_portmode import (C_Et_TE,
+                                            C_jwHt_TE,
+                                            C_Et_TEM,
+                                            C_jwHt_TEM,
+                                            C_Et_CoaxTEM,
+                                            C_jwHt_CoaxTEM,)
+from petram.helper.geom import find_circle_center_radius
+from petram.helper.geom import connect_pairs
+from petram.phys.em3d.em3d_base import EM3D_Bdry, EM3D_Domain
+from petram.phys.phys_model import Phys
+from petram.model import Bdry, Pair
+from petram.phys.vtable import VtableElement, Vtable
+from mfem.common.chypre import (LF2PyVec,
+                                PyVec2PyMat,
+                                Array2PyVec,
+                                IdentityPyMat,
+                                HStackPyVec)
+from petram.mfem_config import use_parallel
 
 from itertools import cycle
 import numpy as np
@@ -27,7 +45,6 @@ import numpy as np
 import petram.debug as debug
 dprint1, dprint2, dprint3 = debug.init_dprints('EM3D_PortArray')
 
-from petram.mfem_config import use_parallel
 if use_parallel:
     import mfem.par as mfem
     from mfem.common.mpi_debug import nicePrint
@@ -40,28 +57,6 @@ else:
     import mfem.ser as mfem
     nicePrint = dprint1
 
-from mfem.common.chypre import (LF2PyVec,
-                                PyVec2PyMat,
-                                Array2PyVec,
-                                IdentityPyMat,
-                                HStackPyVec)
-
-from petram.phys.vtable import VtableElement, Vtable
-from petram.mfem_config import use_parallel
-
-from petram.model import Bdry, Pair
-from petram.phys.phys_model import Phys
-from petram.phys.em3d.em3d_base import EM3D_Bdry, EM3D_Domain
-
-from petram.helper.geom import connect_pairs
-from petram.helper.geom import find_circle_center_radius
-
-from petram.phys.em3d.em3d_portmode import (C_Et_TE,
-                                            C_jwHt_TE,
-                                            C_Et_TEM,
-                                            C_jwHt_TEM,
-                                            C_Et_CoaxTEM,
-                                            C_jwHt_CoaxTEM,)
 
 data = (('inc_amp', VtableElement('inc_amp',
                                   type='complex',
@@ -125,7 +120,7 @@ class EM3D_PortArray(EM3D_Bdry):
         v['inc_dphase_txt'] = '90.0'
         v['inc_amp'] = 1.0
         v['inc_phase'] = 0.0
-        v['inc_dphase'] = 0.0        
+        v['inc_dphase'] = 0.0
         v['epsilonr'] = 1.0
         v['mur'] = 1.0
         v['sel_readonly'] = False
@@ -134,14 +129,14 @@ class EM3D_PortArray(EM3D_Bdry):
 
     def panel1_param(self):
         return ([["port group id", str(self.port_idx), 0, {}],
-                ["mode", self.mode, 4, {"readonly": True,
-                 "choices": ["TE", "TEM", "Coax(TEM)"]}],
-                ["m/n", ','.join(str(x) for x in self.mn), 0, {}], ] +
+                 ["mode", self.mode, 4, {"readonly": True,
+                                         "choices": ["TE", "TEM", "Coax(TEM)"]}],
+                 ["m/n", ','.join(str(x) for x in self.mn), 0, {}], ] +
                 self.vt.panel_param(self))
 
     def get_panel1_value(self):
         return ([str(self.port_idx),
-                self.mode, ','.join(str(x) for x in self.mn)] +
+                 self.mode, ','.join(str(x) for x in self.mn)] +
                 self.vt.get_panel_value(self))
 
     def import_panel1_value(self, v):
@@ -203,70 +198,72 @@ class EM3D_PortArray(EM3D_Bdry):
 
         # find rectangular shape
         if str(self.mode).upper().strip() in ['TE', 'TM', 'TEM']:
-           edges = np.array([mesh.GetBdrElementEdges(i)[0]
-                            for i in ibe]).flatten()
-           d = {}
-           for x in edges:
-              d[x] = x in d
-           edges = [x for x in d.keys() if not d[x]]
-           ivert = [mesh.GetEdgeVertices(x) for x in edges]
-           ivert = connect_pairs(ivert)
-           vv = np.vstack([mesh.GetVertexArray(i) for i in ivert])
+            edges = np.array([mesh.GetBdrElementEdges(i)[0]
+                              for i in ibe]).flatten()
+            d = {}
+            for x in edges:
+                d[x] = x in d
+            edges = [x for x in d.keys() if not d[x]]
+            ivert = [mesh.GetEdgeVertices(x) for x in edges]
+            ivert = connect_pairs(ivert)
+            vv = np.vstack([mesh.GetVertexArray(i) for i in ivert])
 
-           self.ctr = (np.max(vv, 0) + np.min(vv, 0)) / 2.0
-           dprint1("Center " + list(self.ctr).__repr__())
+            self.ctr = (np.max(vv, 0) + np.min(vv, 0)) / 2.0
+            dprint1("Center " + list(self.ctr).__repr__())
 
-           # rectangular port
-           # idx = np.argsort(np.sqrt(np.sum((vv - self.ctr)**2,1)))
-               # corners = vv[idx[-4:],:]
-           # since vv is cyclic I need to omit last one element here..
-           idx = np.argsort(np.sqrt(np.sum((vv[:-1] - self.ctr)**2, 1)))
-           corners = vv[:-1][idx[-4:], :]
-           for i in range(4):
-              dprint1("Corner " + list(corners[i]).__repr__())
-           tmp = np.sort(np.sqrt(np.sum((corners - corners[0, :])**2, 1)))
-           self.b = tmp[1]
-           self.a = tmp[2]
-           tmp = np.argsort(np.sqrt(np.sum((corners - corners[0, :])**2, 1)))
-           # self.c = corners[0]  # corner
-           self.b_vec = corners[tmp[1]] - corners[0]
-           self.a_vec = np.cross(self.b_vec, self.norm)
+            # rectangular port
+            # idx = np.argsort(np.sqrt(np.sum((vv - self.ctr)**2,1)))
+            # corners = vv[idx[-4:],:]
+            # since vv is cyclic I need to omit last one element here..
+            idx = np.argsort(np.sqrt(np.sum((vv[:-1] - self.ctr)**2, 1)))
+            corners = vv[:-1][idx[-4:], :]
+            for i in range(4):
+                dprint1("Corner " + list(corners[i]).__repr__())
+            tmp = np.sort(np.sqrt(np.sum((corners - corners[0, :])**2, 1)))
+            self.b = tmp[1]
+            self.a = tmp[2]
+            tmp = np.argsort(np.sqrt(np.sum((corners - corners[0, :])**2, 1)))
+            # self.c = corners[0]  # corner
+            self.b_vec = corners[tmp[1]] - corners[0]
+            self.a_vec = np.cross(self.b_vec, self.norm)
 #            self.a_vec = corners[tmp[2]]-corners[0]
-           self.b_vec = self.b_vec / np.sqrt(np.sum(self.b_vec**2))
-           self.a_vec = self.a_vec / np.sqrt(np.sum(self.a_vec**2))
-           if np.sum(np.cross(self.a_vec, self.b_vec) * self.norm) > 0:
+            self.b_vec = self.b_vec / np.sqrt(np.sum(self.b_vec**2))
+            self.a_vec = self.a_vec / np.sqrt(np.sum(self.a_vec**2))
+            if np.sum(np.cross(self.a_vec, self.b_vec) * self.norm) > 0:
                 self.a_vec = -self.a_vec
 
-           if self.mode == 'TEM':
-               '''
-               special handling
-               set a vector along PEC-like edge, regardless the actual
-               length of edges
-               '''
-               for i in range(nbe):
-                   if (edges[0] in mesh.GetBdrElementEdges(i)[0] and
-                       self._sel_index[0] != mesh.GetBdrAttribute(i)):
-                       dprint1("Checking surface :", mesh.GetBdrAttribute(i))
-                       attr = mesh.GetBdrAttribute(i)
-                       break
-               for node in self.get_root_phys().walk():
-                   if not isinstance(node, Bdry): continue
-                   if not node.enabled: continue
-                   if attr in node._sel_index:
-                       break
+            if self.mode == 'TEM':
+                '''
+                special handling
+                set a vector along PEC-like edge, regardless the actual
+                length of edges
+                '''
+                for i in range(nbe):
+                    if (edges[0] in mesh.GetBdrElementEdges(i)[0] and
+                            self._sel_index[0] != mesh.GetBdrAttribute(i)):
+                        dprint1("Checking surface :", mesh.GetBdrAttribute(i))
+                        attr = mesh.GetBdrAttribute(i)
+                        break
+                for node in self.get_root_phys().walk():
+                    if not isinstance(node, Bdry):
+                        continue
+                    if not node.enabled:
+                        continue
+                    if attr in node._sel_index:
+                        break
 
-               ivert = mesh.GetEdgeVertices(edges[0])
-               vect = mesh.GetVertexArray(
-                   ivert[0]) - mesh.GetVertexArray(ivert[1])
-               vect = vect / np.sqrt(np.sum(vect**2))
-               do_swap = False
-               if (isinstance(node, Pair) and
-                   np.abs(np.sum(self.a_vec * vect)) > 0.9):
-                  do_swap = True
-               if (not isinstance(node, Pair) and
-                   np.abs(np.sum(self.a_vec * vect)) < 0.001):
-                  do_swap = True
-               if do_swap:
+                ivert = mesh.GetEdgeVertices(edges[0])
+                vect = mesh.GetVertexArray(
+                    ivert[0]) - mesh.GetVertexArray(ivert[1])
+                vect = vect / np.sqrt(np.sum(vect**2))
+                do_swap = False
+                if (isinstance(node, Pair) and
+                        np.abs(np.sum(self.a_vec * vect)) > 0.9):
+                    do_swap = True
+                if (not isinstance(node, Pair) and
+                        np.abs(np.sum(self.a_vec * vect)) < 0.001):
+                    do_swap = True
+                if do_swap:
                     dprint1("swapping port edges")
                     tmp = self.a_vec
                     self.a_vec = -self.b_vec
@@ -275,33 +272,33 @@ class EM3D_PortArray(EM3D_Bdry):
                     tmp = self.a
                     self.a = self.b
                     self.b = tmp
-           if self.a_vec[np.argmax(np.abs(self.a_vec))] < 0:
-               self.a_vec = -self.a_vec
-               self.b_vec = -self.b_vec
-           dprint1("Long Edge  " + self.a.__repr__())
-           dprint1("Long Edge Vec." + list(self.a_vec).__repr__())
-           dprint1("Short Edge  " + self.b.__repr__())
-           dprint1("Short Edge Vec." + list(self.b_vec).__repr__())
+            if self.a_vec[np.argmax(np.abs(self.a_vec))] < 0:
+                self.a_vec = -self.a_vec
+                self.b_vec = -self.b_vec
+            dprint1("Long Edge  " + self.a.__repr__())
+            dprint1("Long Edge Vec." + list(self.a_vec).__repr__())
+            dprint1("Short Edge  " + self.b.__repr__())
+            dprint1("Short Edge Vec." + list(self.b_vec).__repr__())
         elif self.mode == 'Coax(TEM)':
-           edges = np.array([mesh.GetBdrElementEdges(i)[0]
-                            for i in ibe]).flatten()
-           d = {}
-           for x in edges:
-              d[x] = x in d
-           edges = [x for x in d.keys() if not d[x]]
-           ivert = [mesh.GetEdgeVertices(x) for x in edges]
-           iv1, iv2 = connect_pairs(ivert)  # index of outer/inner circles
-           vv1 = np.vstack([mesh.GetVertexArray(i) for i in iv1])
-           vv2 = np.vstack([mesh.GetVertexArray(i) for i in iv2])
-           ctr1, a1 = find_circle_center_radius(vv1, self.norm)
-           ctr2, b1 = find_circle_center_radius(vv2, self.norm)
-           self.ctr = np.mean((ctr1, ctr2), 0)
-           self.a = a1 if a1 < b1 else b1
-           self.b = a1 if a1 > b1 else b1
-           dprint1("Big R:  " + self.b.__repr__())
-           dprint1("Small R: " + self.a.__repr__())
-           dprint1("Center:  " + self.ctr.__repr__())
-           vv = vv1
+            edges = np.array([mesh.GetBdrElementEdges(i)[0]
+                              for i in ibe]).flatten()
+            d = {}
+            for x in edges:
+                d[x] = x in d
+            edges = [x for x in d.keys() if not d[x]]
+            ivert = [mesh.GetEdgeVertices(x) for x in edges]
+            iv1, iv2 = connect_pairs(ivert)  # index of outer/inner circles
+            vv1 = np.vstack([mesh.GetVertexArray(i) for i in iv1])
+            vv2 = np.vstack([mesh.GetVertexArray(i) for i in iv2])
+            ctr1, a1 = find_circle_center_radius(vv1, self.norm)
+            ctr2, b1 = find_circle_center_radius(vv2, self.norm)
+            self.ctr = np.mean((ctr1, ctr2), 0)
+            self.a = a1 if a1 < b1 else b1
+            self.b = a1 if a1 > b1 else b1
+            dprint1("Big R:  " + self.b.__repr__())
+            dprint1("Small R: " + self.a.__repr__())
+            dprint1("Center:  " + self.ctr.__repr__())
+            vv = vv1
         C_Et, C_jwHt = self.get_coeff_cls()
 
         self.vt.preprocess_params(self)
@@ -346,10 +343,11 @@ class EM3D_PortArray(EM3D_Bdry):
             return C_Et_CoaxTEM, C_jwHt_CoaxTEM
         else:
             raise NotImplementedError(
-             "you must implement this mode")
+                "you must implement this mode")
 
     def has_lf_contribution(self, kfes):
-        if kfes != 0: return False
+        if kfes != 0:
+            return False
         self.vt.preprocess_params(self)
         inc_amp, inc_phase, inc_dphase, eps, mur = self.vt.make_value_or_expression(
             self)
@@ -380,7 +378,7 @@ class EM3D_PortArray(EM3D_Bdry):
             self.set_portparams(params)
 
             inc_wave = inc_amp * np.exp(1j * ph / 180. * np.pi)
-               
+
             phase = np.angle(inc_wave) * 180 / np.pi
             amp = np.sqrt(np.abs(inc_wave))
 
@@ -403,7 +401,8 @@ class EM3D_PortArray(EM3D_Bdry):
     '''
 
     def has_extra_DoF(self, kfes):
-        if kfes != 0: return False
+        if kfes != 0:
+            return False
         return True
 
     def get_exter_NDoF(self):
@@ -417,7 +416,8 @@ class EM3D_PortArray(EM3D_Bdry):
         name = self.name() + '_' + str(self.port_idx)
         sol_extra[name] = sol.toarray()
 
-    def do_add_extra_contribution(self, engine, inc_amp, inc_phase, eps, mur, sel):
+    def do_add_extra_contribution(
+            self, engine, inc_amp, inc_phase, eps, mur, sel):
         C_Et, C_jwHt = self.get_coeff_cls()
 
         fes = engine.get_fes(self.get_root_phys(), 0)
@@ -474,7 +474,6 @@ class EM3D_PortArray(EM3D_Bdry):
 
         v2 = v2.transpose()
         '''
-        print(v1.shape, v2.shape)
         return (v1, v2, t4)
 
     def add_extra_contribution(self, engine, **kwargs):
@@ -491,7 +490,8 @@ class EM3D_PortArray(EM3D_Bdry):
         dprint1("Add Extra contribution" + str(self._sel_index))
 
         self.vt.preprocess_params(self)
-        inc_amp, inc_phase, inc_dphase, eps, mur = self.vt.make_value_or_expression(self)
+        inc_amp, inc_phase, inc_dphase, eps, mur = self.vt.make_value_or_expression(
+            self)
 
         dprint1("Power, Phase: ", inc_amp, inc_phase)
 
@@ -502,10 +502,11 @@ class EM3D_PortArray(EM3D_Bdry):
         v2_arr = []
         t4 = []
 
-        for params, sel in zip(self._port_params, self._sel_index):            
+        for params, sel in zip(self._port_params, self._sel_index):
             self.set_portparams(params)
             #dprint1("phasing ", ph, sel)
-            v1, v2, t4_1 = self.do_add_extra_contribution(engine, inc_amp, ph, eps, mur, sel)
+            v1, v2, t4_1 = self.do_add_extra_contribution(
+                engine, inc_amp, ph, eps, mur, sel)
 
             v1_arr.append(v1)
             v2_arr.append(v2)
@@ -521,5 +522,5 @@ class EM3D_PortArray(EM3D_Bdry):
         v2 = v2.transpose()
 
         #print(v1.shape, v2.shape, t3.shape, t4.shape)
-        
+
         return (v1, v2, t3, t4, True)
