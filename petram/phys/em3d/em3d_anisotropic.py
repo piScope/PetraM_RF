@@ -65,45 +65,9 @@ def Mu_Coeff(exprs, ind_vars, l, g, omega):
     coeff = MCoeff(3, exprs, ind_vars, l, g, return_complex=True, scale=fac)
     return coeff
  
-'''
-class Epsilon(MatrixPhysCoefficient):
-   def __init__(self, *args, **kwargs):
-       self.omega = kwargs.pop('omega', 1.0)
-       super(Epsilon, self).__init__(*args, **kwargs)
-   def EvalValue(self, x):
-       from .em3d_const import mu0, epsilon0      
-       v = super(Epsilon, self).EvalValue(x)
-       v = - v * epsilon0 * self.omega * self.omega
-       if self.real:  return v.real
-       else: return v.imag
-    
-class Sigma(MatrixPhysCoefficient):
-   def __init__(self, *args, **kwargs):
-       self.omega = kwargs.pop('omega', 1.0)
-       super(Sigma, self).__init__(*args, **kwargs)
-   def EvalValue(self, x):
-       from .em3d_const import mu0, epsilon0      
-       v = super(Sigma, self).EvalValue(x)
-       v =  - 1j*self.omega * v       
-       if self.real:  return v.real
-       else: return v.imag
-
-class InvMu(MatrixPhysCoefficient):
-   #   1./mu0/mur
-   def __init__(self, *args, **kwargs):
-       self.omega = kwargs.pop('omega', 1.0)      
-       super(InvMu, self).__init__(*args, **kwargs)
-
-   def EvalValue(self, x):
-       from .em3d_const import mu0, epsilon0      
-       v = super(InvMu, self).EvalValue(x)
-       v = 1/mu0*inv(v)
-       if self.real:  return v.real
-       else: return v.imag
-'''
-
 class EM3D_Anisotropic(EM3D_Domain):
-    vt  = Vtable(data)
+    allow_custom_intorder = True
+    vt = Vtable(data)
     #nlterms = ['epsilonr']
     def get_possible_child(self):
         from .em3d_pml      import EM3D_LinearPML
@@ -145,15 +109,40 @@ class EM3D_Anisotropic(EM3D_Domain):
             coeff3 = self.make_PML_sigma(coeff3)
         else:
             coeff2 = ComplexMatrixInv(coeff2)
+            
+        if self.allow_custom_intorder:
+            fes = a.FESpace()
+            geom = fes.GetFE(0).GetGeomType()
+            order = fes.GetFE(0).GetOrder()
+            isPK = (fes.GetFE(0).Space() == mfem.FunctionSpace.Pk)
+            orderw = fes.GetElementTransformation(0).OrderW()
+            curlcurl_order = order*2 - 2 if isPK else order*2
+            mass_order = orderw + 2*order
+            curlcurl_order += self.add_intorder
+            mass_order += self.add_intorder
 
+            dprint1("Debug: custom int order. Increment = " + str(self.add_intorder))
+            dprint1("  FE order: " + str(order))
+            dprint1("  OrderW: " + str(orderw))
+            dprint1("  CurlCurlOrder: " + str(curlcurl_order))
+            dprint1("  FEMassOrder: " + str(mass_order))
+
+            cc_ir = mfem.IntRules.Get(geom, curlcurl_order)
+            ms_ir = mfem.IntRules.Get(geom, mass_order)
+        else:
+            cc_ir = None
+            ms_ir = None
+           
         self.add_integrator(engine, 'epsilonr', coeff1,
                                 a.AddDomainIntegrator,
-                                mfem.VectorFEMassIntegrator)
+                                mfem.VectorFEMassIntegrator,
+                                ir=ms_ir)
                   
         if coeff2 is not None:
             self.add_integrator(engine, 'mur', coeff2,
                                 a.AddDomainIntegrator,
-                                mfem.CurlCurlIntegrator)
+                                mfem.CurlCurlIntegrator,
+                                ir=cc_ir)
             #coeff2 = self.restrict_coeff(coeff2, engine)
             #a.AddDomainIntegrator(mfem.CurlCurlIntegrator(coeff2))
         else:
@@ -161,7 +150,8 @@ class EM3D_Anisotropic(EM3D_Domain):
 
         self.add_integrator(engine, 'sigma', coeff3,
                             a.AddDomainIntegrator,
-                            mfem.VectorFEMassIntegrator)
+                            mfem.VectorFEMassIntegrator,
+                            ir=cc_ir)        
         
     def add_domain_variables(self, v, n, suffix, ind_vars, solr, soli = None):
         from petram.helper.variables import add_expression, add_constant

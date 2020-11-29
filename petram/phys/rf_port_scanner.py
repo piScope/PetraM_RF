@@ -25,8 +25,8 @@ class PortScanner(DefaultParametricScanner):
         self.port = [int(x) for x in args[0]]
         data = []
         for i in range(len(self.port)):
-            amp = np.array([0]*len(self.port))
-            amp[i] = amplitude
+            amp = np.array([0]*max(self.port))
+            amp[self.port[i]-1] = amplitude
             data.append(amp)
 
         names = ["port.".join(str(i)) for i in range(len(self.port))]
@@ -52,9 +52,8 @@ class PortScanner(DefaultParametricScanner):
 
                     iport = int(obj.port_idx)
                     obj.inc_amp_txt = '0.0'
-                    if iport in self.port:
-                        ii = self.port.index(iport)
-                        obj.inc_amp_txt = str(data[ii])
+                    if iport < len(data)+1:
+                        obj.inc_amp_txt = str(data[iport-1])
                         obj.inc_phase_txt = str(self.phase)
                     dprint1("Port Scanner: Setting port:", obj, "=", obj.inc_amp_txt)
     @property
