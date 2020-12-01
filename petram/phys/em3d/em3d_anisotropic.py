@@ -118,7 +118,7 @@ class EM3D_Anisotropic(EM3D_Domain):
             orderw = fes.GetElementTransformation(0).OrderW()
             curlcurl_order = order*2 - 2 if isPK else order*2
             mass_order = orderw + 2*order
-            curlcurl_order += self.add_intorder
+            #curlcurl_order += self.add_intorder
             mass_order += self.add_intorder
 
             dprint1("Debug: custom int order. Increment = " + str(self.add_intorder))
