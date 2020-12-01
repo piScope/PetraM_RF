@@ -110,7 +110,7 @@ class EM3D_Anisotropic(EM3D_Domain):
         else:
             coeff2 = ComplexMatrixInv(coeff2)
             
-        if self.allow_custom_intorder:
+        if self.allow_custom_intorder and self.add_intorder != 0:
             fes = a.FESpace()
             geom = fes.GetFE(0).GetGeomType()
             order = fes.GetFE(0).GetOrder()
