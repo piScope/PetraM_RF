@@ -288,6 +288,8 @@ class EM2D(PhysModule):
         freq, omega = self.get_freq_omega()
         add_constant(v, 'omega', suffix, np.float(omega),)
         add_constant(v, 'freq', suffix, np.float(freq),)
+        add_constant(v, 'mu0', '', self._global_ns['mu0'])
+        add_constant(v, 'e0', '', self._global_ns['e0'])
         
         add_coordinates(v, ind_vars)        
         add_surf_normals(v, ind_vars)

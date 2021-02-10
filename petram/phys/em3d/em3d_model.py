@@ -301,9 +301,9 @@ class EM3D(PhysModule):
         add_surf_normals(v, ind_vars)
         
         if name.startswith('E'):
-            #add_constant(v, 'freq', suffix, self._global_ns['freq'])
-            #add_constant(v, 'mu0',  suffix, self._global_ns['mu0'])
-            #add_constant(v, 'e0',  suffix, self._global_ns['e0'])
+            add_constant(v, 'freq', suffix, self._global_ns['freq'])
+            add_constant(v, 'mu0', '', self._global_ns['mu0'])
+            add_constant(v, 'e0', '', self._global_ns['e0'])
                            
             add_components(v, 'E', suffix, ind_vars, solr, soli)
             add_components(v, 'B', suffix, ind_vars, solr, soli,
