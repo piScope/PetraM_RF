@@ -331,13 +331,13 @@ class EM3D(PhysModule):
             # Jd : displacement current  = -i omega* e0 er E
             addc_expression(v, 'Jd', suffix, ind_vars,
                            '(-1j*(dot(epsilonr, E))*freq*2*pi*e0)[0]',
-                            ['epsilonr', 'E'],  0)
+                            ['epsilonr', 'E', 'freq'],  0)
             addc_expression(v, 'Jd', suffix, ind_vars,
                            '(-1j*(dot(epsilonr, E))*freq*2*pi*e0)[1]',
-                            ['epsilonr', 'E'], 1)
+                            ['epsilonr', 'E', 'freq'], 1)
             addc_expression(v, 'Jd', suffix, ind_vars,
                            '(-1j*(dot(epsilonr, E))*freq*2*pi*e0)[2]',
-                            ['epsilonr', 'E'], 2)
+                            ['epsilonr', 'E', 'freq'], 2)
             # Ji : induced current = sigma *E
             addc_expression(v, 'Ji', suffix, ind_vars,
                            '(dot(sigma, E))[0]',
@@ -351,13 +351,13 @@ class EM3D(PhysModule):
             # Jp : polarization current (Jp = -i omega* e0 (er - 1) E
             addc_expression(v, 'Jp', suffix, ind_vars,
                            '(-1j*(dot(epsilonr, E) - E)*freq*2*pi*e0)[0]',
-                            ['epsilonr', 'E'], 0)
+                            ['epsilonr', 'E', 'freq'], 0)
             addc_expression(v, 'Jp', suffix, ind_vars,
                            '(-1j*(dot(epsilonr, E) - E)*freq*2*pi*e0)[1]',
-                            ['epsilonr', 'E'], 1)
+                            ['epsilonr', 'E', 'freq'], 1)
             addc_expression(v, 'Jp', suffix, ind_vars,
                            '(-1j*(dot(epsilonr, E) - E)*freq*2*pi*e0)[2]',
-                            ['epsilonr', 'E'], 2)
+                            ['epsilonr', 'E', 'freq'], 2)
             
             
         elif name.startswith('psi'):
