@@ -215,21 +215,25 @@ class EM1D(PhysModule):
         from .em1d_port      import EM1D_Port
         from .em1d_e         import EM1D_E
         from .em1d_cont      import EM1D_Continuity
+
+        bdrs = super(EM1D, self).get_possible_bdry()
+        
         return [EM1D_PEC,
                 EM1D_Port,
                 EM1D_E,                                
                 EM1D_PMC,
-                EM1D_Continuity]
+                EM1D_Continuity] + bdrs
     
     def get_possible_domain(self):
         from .em1d_anisotropic import EM1D_Anisotropic
         from .em1d_vac         import EM1D_Vac
         from .em1d_extj        import EM1D_ExtJ
-        from petram.phys.wf.wf_constraints import WF_WeakDomainBilinConstraint, WF_WeakDomainLinConstraint        
+        
+        doms = super(EM1D, self).get_possible_domain()
         #from em3d_div       import EM3D_Div        
 
-        return [EM1D_Vac, EM1D_Anisotropic, EM1D_ExtJ,
-                WF_WeakDomainBilinConstraint, WF_WeakDomainLinConstraint]
+        return [EM1D_Vac, EM1D_Anisotropic, EM1D_ExtJ] + doms
+
 
     def get_possible_edge(self):
         return []                
@@ -266,6 +270,8 @@ class EM1D(PhysModule):
         freq, omega = self.get_freq_omega()
         add_constant(v, 'omega', suffix, np.float(omega),)
         add_constant(v, 'freq', suffix, np.float(freq),)
+        add_constant(v, 'mu0', '', self._global_ns['mu0'])
+        add_constant(v, 'e0', '', self._global_ns['e0'])
 
         add_coordinates(v, ind_vars)        
         add_surf_normals(v, ind_vars)

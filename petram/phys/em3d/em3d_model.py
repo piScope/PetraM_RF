@@ -245,16 +245,19 @@ class EM3D(PhysModule):
         from .em3d_e           import EM3D_E
         from .em3d_cont        import EM3D_Continuity
         from .em3d_z           import EM3D_Impedance
+        bdrs = super(EM3D, self).get_possible_bdry()
         return [EM3D_PEC, EM3D_Port, EM3D_PortArray, EM3D_E, EM3D_SurfJ, 
-                EM3D_H, EM3D_PMC, EM3D_Impedance, EM3D_Continuity]
+                EM3D_H, EM3D_PMC, EM3D_Impedance, EM3D_Continuity]+bdrs
     
     def get_possible_domain(self):
         from .em3d_anisotropic import EM3D_Anisotropic
         from .em3d_vac         import EM3D_Vac
         from .em3d_extj        import EM3D_ExtJ
-        from .em3d_div         import EM3D_Div        
-
-        return [EM3D_Vac, EM3D_Anisotropic, EM3D_ExtJ, EM3D_Div]
+        from .em3d_div         import EM3D_Div
+        
+        doms = super(EM3D, self).get_possible_domain()
+        
+        return [EM3D_Vac, EM3D_Anisotropic, EM3D_ExtJ, EM3D_Div] + doms
 
     def get_possible_edge(self):
         return []                
@@ -264,10 +267,10 @@ class EM3D(PhysModule):
         from .em3d_floquet     import EM3D_Floquet
 
         return [EM3D_Floquet]
-
+    '''
     def get_possible_point(self):
         return []
-
+    '''
     def is_complex(self):
         return True
 
@@ -301,9 +304,9 @@ class EM3D(PhysModule):
         add_surf_normals(v, ind_vars)
         
         if name.startswith('E'):
-            #add_constant(v, 'freq', suffix, self._global_ns['freq'])
-            #add_constant(v, 'mu0',  suffix, self._global_ns['mu0'])
-            #add_constant(v, 'e0',  suffix, self._global_ns['e0'])
+            add_constant(v, 'freq', suffix, self._global_ns['freq'])
+            add_constant(v, 'mu0', '', self._global_ns['mu0'])
+            add_constant(v, 'e0', '', self._global_ns['e0'])
                            
             add_components(v, 'E', suffix, ind_vars, solr, soli)
             add_components(v, 'B', suffix, ind_vars, solr, soli,
@@ -331,13 +334,13 @@ class EM3D(PhysModule):
             # Jd : displacement current  = -i omega* e0 er E
             addc_expression(v, 'Jd', suffix, ind_vars,
                            '(-1j*(dot(epsilonr, E))*freq*2*pi*e0)[0]',
-                            ['epsilonr', 'E'],  0)
+                            ['epsilonr', 'E', 'freq'],  0)
             addc_expression(v, 'Jd', suffix, ind_vars,
                            '(-1j*(dot(epsilonr, E))*freq*2*pi*e0)[1]',
-                            ['epsilonr', 'E'], 1)
+                            ['epsilonr', 'E', 'freq'], 1)
             addc_expression(v, 'Jd', suffix, ind_vars,
                            '(-1j*(dot(epsilonr, E))*freq*2*pi*e0)[2]',
-                            ['epsilonr', 'E'], 2)
+                            ['epsilonr', 'E', 'freq'], 2)
             # Ji : induced current = sigma *E
             addc_expression(v, 'Ji', suffix, ind_vars,
                            '(dot(sigma, E))[0]',
@@ -351,13 +354,13 @@ class EM3D(PhysModule):
             # Jp : polarization current (Jp = -i omega* e0 (er - 1) E
             addc_expression(v, 'Jp', suffix, ind_vars,
                            '(-1j*(dot(epsilonr, E) - E)*freq*2*pi*e0)[0]',
-                            ['epsilonr', 'E'], 0)
+                            ['epsilonr', 'E', 'freq'], 0)
             addc_expression(v, 'Jp', suffix, ind_vars,
                            '(-1j*(dot(epsilonr, E) - E)*freq*2*pi*e0)[1]',
-                            ['epsilonr', 'E'], 1)
+                            ['epsilonr', 'E', 'freq'], 1)
             addc_expression(v, 'Jp', suffix, ind_vars,
                            '(-1j*(dot(epsilonr, E) - E)*freq*2*pi*e0)[2]',
-                            ['epsilonr', 'E'], 2)
+                            ['epsilonr', 'E', 'freq'], 2)
             
             
         elif name.startswith('psi'):
