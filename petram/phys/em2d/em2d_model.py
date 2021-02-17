@@ -231,11 +231,14 @@ class EM2D(PhysModule):
         #from .em2d_port      import EM2D_Port
         from .em2d_e         import EM2D_E
         from .em2d_cont      import EM2D_Continuity
+        
+        bdrs = super(EM2D, self).get_possible_bdry()
+        
         return [EM2D_PEC,
                 #EM2D_Port,
                 EM2D_E,                                
                 #EM2D_PMC,
-                EM2D_Continuity]
+                EM2D_Continuity] + bdrs
 
     
     def get_possible_domain(self):
@@ -243,7 +246,9 @@ class EM2D(PhysModule):
         from .em2d_vac          import EM2D_Vac
         from .em2d_extj         import EM2D_ExtJ
 
-        return [EM2D_Vac, EM2D_Anisotropic, EM2D_ExtJ]
+        doms = super(EM2D, self).get_possible_domain()
+        
+        return [EM2D_Vac, EM2D_Anisotropic, EM2D_ExtJ] + doms
 
     def get_possible_edge(self):
         return []                

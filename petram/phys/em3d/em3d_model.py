@@ -245,16 +245,19 @@ class EM3D(PhysModule):
         from .em3d_e           import EM3D_E
         from .em3d_cont        import EM3D_Continuity
         from .em3d_z           import EM3D_Impedance
+        bdrs = super(EM3D, self).get_possible_bdry()
         return [EM3D_PEC, EM3D_Port, EM3D_PortArray, EM3D_E, EM3D_SurfJ, 
-                EM3D_H, EM3D_PMC, EM3D_Impedance, EM3D_Continuity]
+                EM3D_H, EM3D_PMC, EM3D_Impedance, EM3D_Continuity]+bdrs
     
     def get_possible_domain(self):
         from .em3d_anisotropic import EM3D_Anisotropic
         from .em3d_vac         import EM3D_Vac
         from .em3d_extj        import EM3D_ExtJ
-        from .em3d_div         import EM3D_Div        
-
-        return [EM3D_Vac, EM3D_Anisotropic, EM3D_ExtJ, EM3D_Div]
+        from .em3d_div         import EM3D_Div
+        
+        doms = super(EM3D, self).get_possible_domain()
+        
+        return [EM3D_Vac, EM3D_Anisotropic, EM3D_ExtJ, EM3D_Div] + doms
 
     def get_possible_edge(self):
         return []                
@@ -264,10 +267,10 @@ class EM3D(PhysModule):
         from .em3d_floquet     import EM3D_Floquet
 
         return [EM3D_Floquet]
-
+    '''
     def get_possible_point(self):
         return []
-
+    '''
     def is_complex(self):
         return True
 
