@@ -236,7 +236,7 @@ class EM2Da(PhysModule):
         
         return [EM2Da_PEC,
                 EM2Da_Port,
-                EM2Da_E,                                
+                EM2Da_E,                              
                 EM2Da_PMC,
                 EM2Da_Continuity] + bdrs
     
@@ -253,8 +253,8 @@ class EM2Da(PhysModule):
         return []                
 
     def get_possible_pair(self):
-        #from em3d_floquet       import EM3D_Floquet
-        return []
+        from .em2da_floquet     import EM2Da_Floquet
+        return [EM2Da_Floquet]
 
     def get_possible_point(self):
         return []
