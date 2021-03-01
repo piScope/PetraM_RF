@@ -240,6 +240,9 @@ class EM2D(PhysModule):
                 #EM2D_PMC,
                 EM2D_Continuity] + bdrs
 
+    def get_possible_pair(self):
+        from .em2d_floquet     import EM2D_Floquet
+        return [EM2D_Floquet]
     
     def get_possible_domain(self):
         from .em2d_anisotropic  import EM2D_Anisotropic
