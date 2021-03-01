@@ -225,7 +225,7 @@ class EM2D(PhysModule):
             
     def get_possible_bdry(self):
         from .em2d_pec       import EM2D_PEC
-        #from .em2d_pmc       import EM2D_PMC
+        from .em2d_pmc       import EM2D_PMC
         #from em2d_h          import EM2D_H
         #from em2d_surfj      import EM2D_SurfJ
         #from .em2d_port      import EM2D_Port
@@ -237,7 +237,7 @@ class EM2D(PhysModule):
         return [EM2D_PEC,
                 #EM2D_Port,
                 EM2D_E,                                
-                #EM2D_PMC,
+                EM2D_PMC,
                 EM2D_Continuity] + bdrs
 
     
@@ -254,8 +254,8 @@ class EM2D(PhysModule):
         return []                
 
     def get_possible_pair(self):
-        #from em3d_floquet       import EM3D_Floquet
-        return []
+        from .em2d_floquet     import EM2D_Floquet
+        return [EM2D_Floquet]
 
     def get_possible_point(self):
         return []
