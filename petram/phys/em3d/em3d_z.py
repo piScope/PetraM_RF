@@ -81,7 +81,7 @@ vt2  = Vtable(data2)
 
 data3 = (('Z_param', VtableElement('Z_param',
                                    type = 'selectable',
-                                   guilabel = '',                                   
+                                   guilabel = '',
                                    choices= ('Impedance', 'e/m/s'),
                                    vtables = (vt1, vt2),
                                    default = 'Impedance')),)
@@ -90,18 +90,18 @@ from petram.phys.coefficient import SCoeff
 from .em3d_const import mu0, epsilon0
 
 class ImpedanceByEMS(mfem.PyCoefficient):
-   def __init__(self, ems,  ind_vars, l, g, omega, real): 
-       self.e = [SCoeff([ems[0]],  ind_vars, l, g, real=True),
-                 SCoeff([ems[0]],  ind_vars, l, g, real=False)]
-       self.m = [SCoeff([ems[1]],  ind_vars, l, g, real=True),
-                 SCoeff([ems[1]],  ind_vars, l, g, real= False)]
-       self.s = [SCoeff([ems[2]],  ind_vars, l, g, real=True),
-                 SCoeff([ems[2]],  ind_vars, l, g, real=False)]
+   def __init__(self, ems,  ind_vars, l, g, omega, real):
+       self.e = [SCoeff([ems[0]], ind_vars, l, g, real=True),
+                 SCoeff([ems[0]], ind_vars, l, g, real=False)]
+       self.m = [SCoeff([ems[1]], ind_vars, l, g, real=True),
+                 SCoeff([ems[1]], ind_vars, l, g, real=False)]
+       self.s = [SCoeff([ems[2]], ind_vars, l, g, real=True),
+                 SCoeff([ems[2]], ind_vars, l, g, real=False)]
 
        self.omega = omega
        self.real = real
        mfem.PyCoefficient.__init__(self)
-       
+
    def Eval(self, T, ip):
 
        e = self.e[0].Eval(T, ip) + 1j* self.e[1].Eval(T, ip)
@@ -112,27 +112,27 @@ class ImpedanceByEMS(mfem.PyCoefficient):
        z = np.sqrt((1j*omega*mu0*m)/(s + 1j*omega*e*epsilon0))
        gamma = -1j*omega/z
        if self.real:
-          return gamma.real
+           return gamma.real
        else:
-          return gamma.imag
-       
+           return gamma.imag
+
 class ImpedanceByZ(mfem.PyCoefficient):
-   def __init__(self, z,  ind_vars, l, g, omega, real): 
-       self.z = [SCoeff([ems[0]],  ind_vars, l, g, real=True),
-                 SCoeff([ems[0]],  ind_vars, l, g, real=False)]
+   def __init__(self, z,  ind_vars, l, g, omega, real):
+       self.z = [SCoeff([z[0]], ind_vars, l, g, real=True),
+                 SCoeff([z[0]], ind_vars, l, g, real=False)]
 
        self.omega = omega
        self.real = real
        mfem.PyCoefficient.__init__(self)
-       
+
    def Eval(self, T, ip):
        z = self.z[0].Eval(T, ip) + 1j* self.z[1].Eval(T, ip)
        omega = self.omega
        gamma = -1j*omega/z
        if self.real:
-          return gamma.real
+           return gamma.real
        else:
-          return gamma.imag          
+           return gamma.imag          
 
 class EM3D_Impedance(EM3D_Bdry):
     is_essential = False
@@ -173,11 +173,13 @@ class EM3D_Impedance(EM3D_Bdry):
             try:
                gamma = -1j*omega/z
                coeff = SCoeff([gamma], ind_vars, l, g, real=real)
+               dprint1("Impedance", z)
                #assert False, "cause error"
             except:
                #import traceback
                #traceback.print_exc()
-               coeff = ImpedanceByZ(parameters, ind_vars, l, g, omega, real)           
+               coeff = ImpedanceByZ(parameters, ind_vars, l, g, omega, real)
+               dprint1("Impedance", parameters)                              
      
         self.add_integrator(engine, 'impedance', coeff,
                             b.AddBoundaryIntegrator,

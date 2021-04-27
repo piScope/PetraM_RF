@@ -59,7 +59,7 @@ else:
 
 
 data = (('inc_amp', VtableElement('inc_amp',
-                                  type='complex',
+                                  type='array',
                                   guilabel='incoming amp',
                                   default=0.0,
                                   tip="amplitude of incoming wave")),
@@ -100,13 +100,13 @@ class EM3D_PortArray(EM3D_Bdry):
 
     def extra_DoF_name(self):
         p1 = int(self.port_idx)
-        p2 = p1 + len(self._sel_index)
+        p2 = len(self._sel_index)
         txt = str(p1) + '_' + str(p2)
         return self.get_root_phys().dep_vars[0] + "_port_" + txt
 
     def get_probe(self):
         p1 = int(self.port_idx)
-        p2 = p1 + len(self._sel_index)
+        p2 = len(self._sel_index)
         txt = str(p1) + '_' + str(p2)
         return self.get_root_phys().dep_vars[0] + "_port_" + txt
 
@@ -352,7 +352,19 @@ class EM3D_PortArray(EM3D_Bdry):
         inc_amp, inc_phase, inc_dphase, eps, mur = self.vt.make_value_or_expression(
             self)
 
-        return inc_amp != 0
+        return np.any(np.array(inc_amp) != 0)
+
+    def _fixup_inc_amp(self, inc_amp):
+
+        num_ports = len(self._sel_index)
+
+        if len(inc_amp) == 1:
+            inc_amp = [inc_amp[0]]*num_ports
+        elif len(inc_amp) !=  num_ports:
+            assert False, "Number of ports are not the same as number of incoming amplitude"
+        else:
+            pass # looks good
+        return inc_amp, num_ports
 
     def add_lf_contribution(self, engine, b, real=True, kfes=0):
         if real:
@@ -364,20 +376,28 @@ class EM3D_PortArray(EM3D_Bdry):
         inc_amp, inc_phase, inc_dphase, eps, mur = self.vt.make_value_or_expression(
             self)
 
-        dprint1("Power, Phase: ", inc_amp, inc_phase)
+
 
         C_Et, C_jwHt = self.get_coeff_cls()
 
-        ph = inc_phase
         sels = self._sel_index
 
         from itertools import cycle
         dphase = cycle(np.atleast_1d(inc_dphase))
 
-        for params, sel in zip(self._port_params, self._sel_index):
+        inc_amp, num_ports = self._fixup_inc_amp(inc_amp)
+        ph = inc_phase
+        
+        dprint1("Power, Phase: ", inc_amp, inc_phase)
+        
+        for kport in range(num_ports):
+            sel = self._sel_index[kport]
+            params = self._port_params[kport]
+            inc_a = inc_amp[kport]
+            
             self.set_portparams(params)
 
-            inc_wave = inc_amp * np.exp(1j * ph / 180. * np.pi)
+            inc_wave = inc_a * np.exp(1j * ph / 180. * np.pi)
 
             phase = np.angle(inc_wave) * 180 / np.pi
             amp = np.sqrt(np.abs(inc_wave))
@@ -492,21 +512,25 @@ class EM3D_PortArray(EM3D_Bdry):
         self.vt.preprocess_params(self)
         inc_amp, inc_phase, inc_dphase, eps, mur = self.vt.make_value_or_expression(
             self)
-
-        dprint1("Power, Phase: ", inc_amp, inc_phase)
-
+        inc_amp, num_ports = self._fixup_inc_amp(inc_amp)
         ph = inc_phase
         dphase = cycle(np.atleast_1d(inc_dphase))
-
+        
+        dprint1("Power, Phase: ", inc_amp, inc_phase)
+        
         v1_arr = []
         v2_arr = []
         t4 = []
 
-        for params, sel in zip(self._port_params, self._sel_index):
+        for kport in range(num_ports):
+            sel = self._sel_index[kport]
+            params = self._port_params[kport]
+            inc_a = inc_amp[kport]
+            
             self.set_portparams(params)
             #dprint1("phasing ", ph, sel)
             v1, v2, t4_1 = self.do_add_extra_contribution(
-                engine, inc_amp, ph, eps, mur, sel)
+                engine, inc_a, ph, eps, mur, sel)
 
             v1_arr.append(v1)
             v2_arr.append(v2)
