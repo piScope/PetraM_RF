@@ -281,11 +281,11 @@ class EM2D(PhysModule):
         
         def eval_curlExy(gfr, gfi = None):
             gfr, gfi, extra = eval_curl(gfr, gfi)
-            return gfi, gfr, extra
+            return gfr, gfi, extra
         
         def eval_gradEz(gfr, gfi = None):
             gfr, gfi, extra = eval_grad(gfr, gfi)
-            return gfi, gfr, extra        
+            return gfr, gfi, extra        
         
         ind_vars = [x.strip() for x in self.ind_vars.split(',')]
         suffix = self.dep_vars_suffix

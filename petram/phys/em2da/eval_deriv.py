@@ -50,10 +50,9 @@ def eval_curl(gfr, gfi=None):
     # needs to return rts to prevent rts to be collected.
     return br, bi, rts
 
-
 def eval_grad(gfr, gfi=None):
     '''
-    evaluate curl, gfr/gfi is supposed to be Et
+    evaluate grad
     '''
     fes = gfr.FESpace()
     ordering = fes.GetOrdering()
@@ -61,7 +60,8 @@ def eval_grad(gfr, gfi=None):
     vdim = 1
     sdim = mesh.SpaceDimension()
     p = fes.GetOrder(0)
-    rt_coll = mfem.L2_FECollection(p - 1, sdim)
+    #rt_coll = mfem.L2_FECollection(p - 1, sdim)
+    rt_coll = mfem.ND_FECollection(p - 1, sdim)
 
     rts = FiniteElementSpace(mesh, rt_coll, vdim, ordering)
 
