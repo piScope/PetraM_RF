@@ -4,10 +4,19 @@
   DiscreteLinearOperator
 
 '''
+import numpy as np
+
 from petram.mfem_config import use_parallel
 import petram.debug
+
 dprint1, dprint2, dprint3 = petram.debug.init_dprints('eval_deriv')
 
+import mfem
+if mfem.__version__.startswith('4.2'):
+    isMFEM42 = True
+else:
+    isMFEM42 = False
+    
 if use_parallel:
     import mfem.par as mfem
     FiniteElementSpace = mfem.ParFiniteElementSpace
@@ -33,12 +42,13 @@ def eval_curl(gfr, gfi=None):
     rt_coll = mfem.L2_FECollection(p - 1, sdim)
 
     rts = FiniteElementSpace(mesh, rt_coll, vdim, ordering)
+    #rts = FiniteElementSpace(mesh, rt_coll)
 
     curl = DiscreteLinearOperator(fes, rts)
     itp = mfem.CurlInterpolator()
     curl.AddDomainInterpolator(itp)
     curl.Assemble()
-    curl.Finalize()
+    #curl.Finalize()
 
     br = GridFunction(rts)
     curl.Mult(gfr, br)
@@ -47,7 +57,23 @@ def eval_curl(gfr, gfi=None):
         curl.Mult(gfi, bi)
     else:
         bi = None
-    # needs to return rts to prevent rts to be collected.
+
+
+    if isMFEM42:
+        arr = br.GetDataArray()
+        scale = np.zeros(len(arr))
+
+        for ii in range(rts.GetNE()):
+            trans = rts.GetElementTransformation(ii)
+            dofs = rts.GetElementDofs(ii)
+            scale[dofs] = trans.Weight()
+
+        brr = br.GetDataArray()
+        brr /= scale
+        if bi is not None:
+            bii = bi.GetDataArray()
+            bii /= scale
+        
     return br, bi, rts
 
 def eval_grad(gfr, gfi=None):
