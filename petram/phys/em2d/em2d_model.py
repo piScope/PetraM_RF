@@ -44,6 +44,7 @@ EM2D : 2D Frequency domain Maxwell equation.
      EM2D_Port        : TE, TEM, Coax port      (N.I)
      EM2D_E           : Electric field
      EM2D_Continuity  : Continuitiy
+     EM2D_Z           : Impedance
 
 '''
 import numpy as np
@@ -67,7 +68,7 @@ class EM2D_DefDomain(EM2D_Vac):
     nlterms = []
     #vt  = Vtable(data1)
     #do not use vtable here, since we want to use
-    #vtable defined in EM3D_Vac in add_bf_conttribution
+    #vtable defined in EM2D_Vac in add_bf_conttribution
     
     def __init__(self, **kwargs):
         super(EM2D_DefDomain, self).__init__(**kwargs)
@@ -224,13 +225,14 @@ class EM2D(PhysModule):
         self._global_ns['epsilon0'] = epsilon0
             
     def get_possible_bdry(self):
-        from .em2d_pec       import EM2D_PEC
-        from .em2d_pmc       import EM2D_PMC
-        #from em2d_h          import EM2D_H
+        from petram.phys.em2d.em2d_pec       import EM2D_PEC
+        from petram.phys.em2d.em2d_pmc       import EM2D_PMC
+        from petram.phys.em2d.em2d_z         import EM2D_Impedance
+        from petram.phys.em2d.em2d_h         import EM2D_H
         #from em2d_surfj      import EM2D_SurfJ
         #from .em2d_port      import EM2D_Port
-        from .em2d_e         import EM2D_E
-        from .em2d_cont      import EM2D_Continuity
+        from petram.phys.em2d.em2d_e         import EM2D_E
+        from petram.phys.em2d.em2d_cont      import EM2D_Continuity
         
         bdrs = super(EM2D, self).get_possible_bdry()
         
@@ -238,8 +240,9 @@ class EM2D(PhysModule):
                 #EM2D_Port,
                 EM2D_E,                                
                 EM2D_PMC,
+                EM2D_H,
+                EM2D_Impedance,
                 EM2D_Continuity] + bdrs
-
     
     def get_possible_domain(self):
         from .em2d_anisotropic  import EM2D_Anisotropic
@@ -281,11 +284,11 @@ class EM2D(PhysModule):
         
         def eval_curlExy(gfr, gfi = None):
             gfr, gfi, extra = eval_curl(gfr, gfi)
-            return gfi, gfr, extra
+            return gfr, gfi, extra
         
         def eval_gradEz(gfr, gfi = None):
             gfr, gfi, extra = eval_grad(gfr, gfi)
-            return gfi, gfr, extra        
+            return gfr, gfi, extra        
         
         ind_vars = [x.strip() for x in self.ind_vars.split(',')]
         suffix = self.dep_vars_suffix

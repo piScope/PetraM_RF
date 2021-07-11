@@ -45,10 +45,10 @@
 import numpy as np
 
 from petram.phys.phys_model  import Phys, PhysCoefficient
-from petram.phys.em3d.em3d_base import EM3D_Bdry, EM3D_Domain
+from petram.phys.em2d.em2d_base import EM2D_Bdry, EM2D_Domain
 
 import petram.debug as debug
-dprint1, dprint2, dprint3 = debug.init_dprints('EM3D_Z')
+dprint1, dprint2, dprint3 = debug.init_dprints('EM2D_Z')
 
 from petram.mfem_config import use_parallel
 if use_parallel:
@@ -87,7 +87,7 @@ data3 = (('Z_param', VtableElement('Z_param',
                                    default = 'Impedance')),)
 
 from petram.phys.coefficient import SCoeff
-from .em3d_const import mu0, epsilon0
+from petram.phys.phys_const import mu0, epsilon0
 
 class ImpedanceByEMS(mfem.PyCoefficient):
    def __init__(self, ems,  ind_vars, l, g, omega, real):
@@ -134,16 +134,14 @@ class ImpedanceByZ(mfem.PyCoefficient):
        else:
            return gamma.imag          
 
-class EM3D_Impedance(EM3D_Bdry):
+class EM2D_Impedance(EM2D_Bdry):
     is_essential = False
     vt  = Vtable(data3)
 
-    def has_bf_contribution(self, kfes = 0):
-        if kfes != 0: return False
+    def has_bf_contribution(self, kfes=0):
         return True
     
-    def add_bf_contribution(self, engine, b, real = True, kfes = 0):
-        if kfes != 0: return 
+    def add_bf_contribution(self, engine, b, real=True, kfes=0):
         if real:       
             dprint1("Add BF contribution(real)" + str(self._sel_index))
         else:
@@ -157,33 +155,39 @@ class EM3D_Impedance(EM3D_Bdry):
         g = self._global_ns
         
         if mode == 'e/m/s':
-            er, mr, s  = parameters
+            er, mr, s = parameters
             try:
-               z = np.sqrt((1j*omega*mu0*mr)/(s + 1j*omega*er*epsilon0))
-               gamma = -1j*omega/z
-               coeff = SCoeff([gamma], ind_vars, l, g, real=real)
-               #assert False, "cause error"
+                z = np.sqrt((1j*omega*mu0*mr)/(s + 1j*omega*er*epsilon0))
+                gamma = -1j*omega/z
+                coeff = SCoeff([gamma], ind_vars, l, g, real=real)
+                #assert False, "cause error"
             except:
-               #import traceback
-               #traceback.print_exc()
-               coeff = ImpedanceByEMS(parameters, ind_vars, l, g, omega, real)
+                #import traceback
+                #traceback.print_exc()
+                coeff = ImpedanceByEMS(parameters, ind_vars, l, g, omega, real)
 
         else:
-            z  = parameters[0]
+            z = parameters[0]
             try:
-               gamma = -1j*omega/z
-               coeff = SCoeff([gamma], ind_vars, l, g, real=real)
-               dprint1("Impedance", z)
-               #assert False, "cause error"
+                gamma = -1j*omega/z
+                coeff = SCoeff([gamma], ind_vars, l, g, real=real)
+                dprint1("Impedance", z)
+                #assert False, "cause error"
             except:
-               #import traceback
-               #traceback.print_exc()
-               coeff = ImpedanceByZ(parameters, ind_vars, l, g, omega, real)
-               dprint1("Impedance", parameters)                              
-     
-        self.add_integrator(engine, 'impedance', coeff,
-                            b.AddBoundaryIntegrator,
-                            mfem.VectorFEMassIntegrator)
+                #import traceback
+                #traceback.print_exc()
+                coeff = ImpedanceByZ(parameters, ind_vars, l, g, omega, real)
+                dprint1("Impedance", parameters)                              
+
+        if kfes == 0:
+            self.add_integrator(engine, 'impedance1', coeff,
+                                b.AddBoundaryIntegrator,
+                                mfem.VectorFEMassIntegrator)
+        else:
+            self.add_integrator(engine, 'impedance2', coeff,
+                                b.AddBoundaryIntegrator,
+                                mfem.MassIntegrator)
+           
         '''
         coeff1 = self.restrict_coeff(coeff1, engine, vec = True)
         b.AddBoundaryIntegrator(mfem.VectorFEDomainLFIntegrator(coeff1))

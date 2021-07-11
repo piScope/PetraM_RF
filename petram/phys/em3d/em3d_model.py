@@ -291,7 +291,9 @@ class EM3D(PhysModule):
             gfr, gfi, extra = eval_curl(gfr, gfi)
             gfi /= (2*self.freq*np.pi)   # real B
             gfr /= -(2*self.freq*np.pi)  # imag B
-            return gfi, gfr, extra
+            # flipping gfi and gfr so that it returns
+            # -i * (-gfr + i gfi) = gfi + i gfr
+            return gfi, gfr, extra       
 
         ind_vars = [x.strip() for x in self.ind_vars.split(',') if x.strip() != '']
         

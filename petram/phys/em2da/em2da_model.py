@@ -277,13 +277,13 @@ class EM2Da(PhysModule):
 
         from petram.phys.em2da.eval_deriv import eval_curl, eval_grad
         
-        def eval_curlEt(gfr, gfi = None):
+        def eval_curlEt(gfr, gfi=None):
             gfr, gfi, extra = eval_curl(gfr, gfi)
-            return gfi, gfr, extra
+            return gfr, gfi, extra
         
-        def eval_gradrEf(gfr, gfi = None):
+        def eval_gradrEf(gfr, gfi=None):
             gfr, gfi, extra = eval_grad(gfr, gfi)
-            return gfi, gfr, extra        
+            return gfr, gfi, extra        
 
         ind_vars = [x.strip() for x in self.ind_vars.split(',')]
         suffix = self.dep_vars_suffix
@@ -298,13 +298,13 @@ class EM2Da(PhysModule):
         
         add_coordinates(v, ind_vars)        
         add_surf_normals(v, ind_vars)
-        
+
         if name.startswith('Et'):
             add_elements(v, 'E', suffix, ind_vars, solr, soli, elements=[0,1])
             add_scalar(v, 'curlEt', suffix, ind_vars, solr, soli,
                            deriv=eval_curlEt)            
             addc_expression(v, 'B', suffix, ind_vars,
-                                 '-1j/omega*curlEt', ['curlEt','omega'], 'phi')
+                                 '-1j/omega*(-1)*curlEt', ['curlEt', 'omega'], 'phi')
             
         elif name.startswith('rEf'):
             add_scalar(v, 'rEf', suffix, ind_vars, solr, soli)
@@ -318,27 +318,27 @@ class EM2Da(PhysModule):
         add_expression(v, 'E', suffix, ind_vars,
                        'array([Er, Ephi, Ez])',
                        ['E'])
-        
+
         addc_expression(v, 'E', suffix, ind_vars,
-                                 'rEf/r', ['rEf',], 'phi')
+                        'rEf/r', ['rEf',], 'phi')
         addc_expression(v, 'B', suffix, ind_vars,
-                                 '-1j/omega*(1j*m_mode*Ez/r-gradrEz/r)',
-                                 ['m_mode', 'E', 'omega'], 0)
+                        '-1j/omega*(1j*m_mode*Ez/r-gradrEz/r)',
+                        ['m_mode', 'E', 'omega'], 0)
         addc_expression(v, 'B', suffix, ind_vars,
-                                 '-1j/omega*(-1j*m_mode*Er/r+gradrEr/r)',
-                                 ['m_mode', 'E', 'omega'], 1)   
+                        '-1j/omega*(-1j*m_mode*Er/r+gradrEr/r)',
+                        ['m_mode', 'E', 'omega'], 1)
         add_expression(v, 'B', suffix, ind_vars,
                        'array([Br, Bphi, Bz])',
                        ['B'])
 
         # Poynting Flux
         addc_expression(v, 'Poy', suffix, ind_vars,
-                       '(conj(Ephi)*Bz - conj(Ez)*Bphi)/mu0',
+                        '(conj(Ephi)*Bz - conj(Ez)*Bphi)/mu0',
                         ['B', 'E'], 0)
         addc_expression(v, 'Poy', suffix, ind_vars,
                         '(conj(Ez)*Br - conj(Er)*Bz)/mu0',
                         ['B', 'E'], 'phi')
-        addc_expression(v, 'Poy', suffix, ind_vars, 
+        addc_expression(v, 'Poy', suffix, ind_vars,
                         '(conj(Er)*Bphi - conj(Ephi)*Br)/mu0',
                         ['B', 'E'], 1)
         

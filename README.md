@@ -1,5 +1,7 @@
 ## Petra-M(RF)
 
+This module provides various Frequency domain RF interface to Petra-M.
+
 ### EM3D : Frequency domain Maxwell equation in 3D
   Domain:   
  *    EM3D_Anisotropic : tensor dielectric
@@ -14,8 +16,10 @@
  *    EM3D_H           : Mangetic field boundary
  *    EM3D_SurfJ       : Surface current
  *    EM3D_Port        : TE, TEM, Coax port
+ *    EM3D_PortArray   : Array of Ports 
  *    EM3D_E           : Electric field
  *    EM3D_Continuity  : Continuitiy
+ *    EM3D_Impedance   : Impedance BC Continuitiy (Leontovich) 
 
   Pair:
  *    EM3D_Floquet     : Periodic boundary condition
@@ -46,11 +50,15 @@
   Boundary:
  *    EM2D_PEC         : Perfect electric conductor
  *    EM2D_PMC         : Perfect magnetic conductor
- *    EM2D_H           : Mangetic field boundary (N.I)
+ *    EM2D_H           : Mangetic field boundary 
  *    EM2D_SurfJ       : Surface current         (N.I)
  *    EM2D_Port        : TE, TEM, Coax port      (N.I)
  *    EM2D_E           : Electric field
  *    EM2D_Continuity  : Continuitiy
+ *    EM2D_Impedance   : Impedance BC Continuitiy (Leontovich)
+
+  Pair:
+ *    EM2D_Floquet     : Periodic boundary condition  
 
 ### EM1D : Frequency domain Maxwell equation in 1D
   Domain:   
