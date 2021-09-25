@@ -44,6 +44,7 @@ EM2D : 2D Frequency domain Maxwell equation.
      EM2D_Port        : TE, TEM, Coax port      (N.I)
      EM2D_E           : Electric field
      EM2D_Continuity  : Continuitiy
+     EM2D_Z           : Impedance
 
 '''
 import numpy as np
@@ -67,7 +68,7 @@ class EM2D_DefDomain(EM2D_Vac):
     nlterms = []
     #vt  = Vtable(data1)
     #do not use vtable here, since we want to use
-    #vtable defined in EM3D_Vac in add_bf_conttribution
+    #vtable defined in EM2D_Vac in add_bf_conttribution
     
     def __init__(self, **kwargs):
         super(EM2D_DefDomain, self).__init__(**kwargs)
@@ -120,7 +121,8 @@ class EM2D_DefPair(Pair, Phys):
         return []
 
 class EM2D(PhysModule):
-    der_var_base = ['Bx', 'By', 'Bz']
+    der_vars_base = ['Bx', 'By', 'Bz']
+    der_vars_vec = ['E', 'B']
     geom_dim = 2    
     def __init__(self, **kwargs):
         super(EM2D, self).__init__()
@@ -155,6 +157,10 @@ class EM2D(PhysModule):
             ret = ['Exy', 'Ez']
         return ret
 
+    def get_fec_type(self, idx):
+        values = ['ND', 'H1', 'H1']
+        return values[idx]
+    
     def get_fec(self):
         v = self.dep_vars
         if len(v) == 2:  # normal case
@@ -183,13 +189,13 @@ class EM2D(PhysModule):
                 ["indpendent vars.", self.ind_vars, 0, {}],
                 ["dep. vars. suffix", self.dep_vars_suffix, 0, {}],
                 ["dep. vars.", ','.join(self.dep_vars), 2, {}],
-                ["derived vars.", ','.join(EM2D.der_var_base), 2, {}],
+                ["derived vars.", ','.join(EM2D.der_vars_base), 2, {}],
                 ["predefined ns vars.", txt_predefined , 2, {}]])
         return panels
       
     def get_panel1_value(self):
-        names  = ','.join([x for x in self.dep_vars])
-        names2  = ','.join([x+self.dep_vars_suffix for x in EM2D.der_var_base])
+        names  = ', '.join([x for x in self.dep_vars])
+        names2 = ', '.join(self.get_dependent_variables())        
         val =  super(EM2D, self).get_panel1_value()
         val.extend([self.freq_txt, self.ind_vars, self.dep_vars_suffix,
                     names, names2, txt_predefined])
@@ -219,33 +225,40 @@ class EM2D(PhysModule):
         self._global_ns['epsilon0'] = epsilon0
             
     def get_possible_bdry(self):
-        from .em2d_pec       import EM2D_PEC
-        #from .em2d_pmc       import EM2D_PMC
-        #from em2d_h          import EM2D_H
+        from petram.phys.em2d.em2d_pec       import EM2D_PEC
+        from petram.phys.em2d.em2d_pmc       import EM2D_PMC
+        from petram.phys.em2d.em2d_z         import EM2D_Impedance
+        from petram.phys.em2d.em2d_h         import EM2D_H
         #from em2d_surfj      import EM2D_SurfJ
         #from .em2d_port      import EM2D_Port
-        from .em2d_e         import EM2D_E
-        from .em2d_cont      import EM2D_Continuity
+        from petram.phys.em2d.em2d_e         import EM2D_E
+        from petram.phys.em2d.em2d_cont      import EM2D_Continuity
+        
+        bdrs = super(EM2D, self).get_possible_bdry()
+        
         return [EM2D_PEC,
                 #EM2D_Port,
                 EM2D_E,                                
-                #EM2D_PMC,
-                EM2D_Continuity]
-
+                EM2D_PMC,
+                EM2D_H,
+                EM2D_Impedance,
+                EM2D_Continuity] + bdrs
     
     def get_possible_domain(self):
         from .em2d_anisotropic  import EM2D_Anisotropic
         from .em2d_vac          import EM2D_Vac
         from .em2d_extj         import EM2D_ExtJ
 
-        return [EM2D_Vac, EM2D_Anisotropic, EM2D_ExtJ]
+        doms = super(EM2D, self).get_possible_domain()
+        
+        return [EM2D_Vac, EM2D_Anisotropic, EM2D_ExtJ] + doms
 
     def get_possible_edge(self):
         return []                
 
     def get_possible_pair(self):
-        #from em3d_floquet       import EM3D_Floquet
-        return []
+        from .em2d_floquet     import EM2D_Floquet
+        return [EM2D_Floquet]
 
     def get_possible_point(self):
         return []
@@ -262,44 +275,72 @@ class EM2D(PhysModule):
         from petram.helper.variables import add_components
         from petram.helper.variables import add_elements        
         from petram.helper.variables import add_expression
+        from petram.helper.variables import add_component_expression as addc_expression        
         from petram.helper.variables import add_surf_normals
         from petram.helper.variables import add_constant      
 
-        from petram.phys.em3d.eval_deriv import eval_curl        
-        def evalB(gfr, gfi = None):
+        
+        from petram.phys.em2da.eval_deriv import eval_curl, eval_grad
+        
+        def eval_curlExy(gfr, gfi = None):
             gfr, gfi, extra = eval_curl(gfr, gfi)
-            gfi /= (2*self.freq*np.pi)   # real B
-            gfr /= -(2*self.freq*np.pi)  # imag B
-            return gfi, gfr, extra
-
+            return gfr, gfi, extra
+        
+        def eval_gradEz(gfr, gfi = None):
+            gfr, gfi, extra = eval_grad(gfr, gfi)
+            return gfr, gfi, extra        
+        
         ind_vars = [x.strip() for x in self.ind_vars.split(',')]
         suffix = self.dep_vars_suffix
 
-        from petram.helper.variables import TestVariable
+        freq, omega = self.get_freq_omega()
+        add_constant(v, 'omega', suffix, np.float(omega),)
+        add_constant(v, 'freq', suffix, np.float(freq),)
+        add_constant(v, 'mu0', '', self._global_ns['mu0'])
+        add_constant(v, 'e0', '', self._global_ns['e0'])
         
         add_coordinates(v, ind_vars)        
         add_surf_normals(v, ind_vars)
         
         if name.startswith('Exy'):
             add_elements(v, 'E', suffix, ind_vars, solr, soli, elements=[0,1])
+            add_scalar(v, 'curlExy', suffix, ind_vars, solr, soli,
+                           deriv=eval_curlExy)            
+            addc_expression(v, 'B', suffix, ind_vars,
+                                 '-1j/omega*curlExy', ['curlExy','omega'], 'z')
             
         elif name.startswith('Ez'):
-            add_scalar(v, 'Ez', suffix, ind_vars, solr, soli)
+            add_scalar(v, 'Ez', suffix, ind_vars, solr, soli, vars=['E'])
+            add_components(v, 'gradE', suffix, ind_vars, solr, soli,
+                           deriv=eval_gradEz)                      
             
         elif name.startswith('psi'):
             add_scalar(v, 'psi', suffix, ind_vars, solr, soli)
 
         add_expression(v, 'E', suffix, ind_vars, 'array([Ex, Ey, Ez])',
                       ['Ex', 'Ey', 'Ez'])
-            
-        # collect all definition from children
-        #for mm in self.walk():
-        #    if not mm.enabled: continue
-        #    if mm is self: continue
-        #    mm.add_domain_variables(v, name, suffix, ind_vars,
-        #                            solr, soli)
-        #    mm.add_bdr_variables(v, name, suffix, ind_vars,
-        #                            solr, soli)
+
+        addc_expression(v, 'B', suffix, ind_vars,
+                                 '-1j/omega*(-1j*kz*Ez + gradEy)',
+                                 ['m_mode', 'E', 'omega'], 0)
+        addc_expression(v, 'B', suffix, ind_vars,
+                                 '-1j/omega*(1j*kz*Ex - gradEx)',
+                                 ['m_mode', 'E', 'omega'], 1)   
+        add_expression(v, 'B', suffix, ind_vars,
+                       'array([Bx, By, Bz])',
+                       ['B'])
+
+        # Poynting Flux
+
+        addc_expression(v, 'Poy', suffix, ind_vars,
+                       '(conj(Ey)*Bz - conj(Ez)*By)/mu0',
+                        ['B', 'E'], 0)
+        addc_expression(v, 'Poy', suffix, ind_vars,
+                        '(conj(Ez)*Bx - conj(Ex)*Bz)/mu0',
+                        ['B', 'E'], 'y')
+        addc_expression(v, 'Poy', suffix, ind_vars, 
+                        '(conj(Ex)*By - conj(Ey)*Bx)/mu0',
+                        ['B', 'E'], 'z')
 
         return v
 

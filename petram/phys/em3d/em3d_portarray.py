@@ -1,5 +1,25 @@
+'''
+
+   3D port array boundary condition
+
+
+   TE Mode
+    Expression are based on Microwave Engineering p122 - p123.
+    Note that it consists from two terms
+       1)  \int dS W \dot n \times iwH (VectorFETangentIntegrator does this)
+       2)  an weighting to evaulate mode amplutude from the E field
+           on a boundary
+   TEM Mode
+       E is parallel to the periodic edge
+       Mode number is ignored (of course)
+
+   About sign of port phasing.
+       positive phasing means the incoming wave appears later (phase delay)
+       at the port
+
+    2020 7/20  generated from portarray
+'''
 from __future__ import print_function
-from petram.phys.vtable import VtableElement, Vtable
 from petram.phys.em3d.em3d_portmode import (C_Et_TE,
                                             C_jwHt_TE,
                                             C_Et_TEM,
@@ -10,80 +30,97 @@ from petram.helper.geom import find_circle_center_radius
 from petram.helper.geom import connect_pairs
 from petram.phys.em3d.em3d_base import EM3D_Bdry, EM3D_Domain
 from petram.phys.phys_model import Phys
-from petram.model import Bdry
+from petram.model import Bdry, Pair
+from petram.phys.vtable import VtableElement, Vtable
+from mfem.common.chypre import (LF2PyVec,
+                                PyVec2PyMat,
+                                Array2PyVec,
+                                IdentityPyMat,
+                                HStackPyVec)
 from petram.mfem_config import use_parallel
-'''
 
-   3D port boundary condition
-
-
-    2016 5/20  first version only TE modes
-'''
-
+from itertools import cycle
 import numpy as np
 
 import petram.debug as debug
-dprint1, dprint2, dprint3 = debug.init_dprints('EM3D_Port')
-
+dprint1, dprint2, dprint3 = debug.init_dprints('EM3D_PortArray')
 
 if use_parallel:
     import mfem.par as mfem
     from mfem.common.mpi_debug import nicePrint
-    '''
-   from mpi4py import MPI
-   num_proc = MPI.COMM_WORLD.size
-   myid     = MPI.COMM_WORLD.rank
-   '''
+
+    #from mpi4py import MPI
+    #num_proc = MPI.COMM_WORLD.size
+    #myid     = MPI.COMM_WORLD.rank
+
 else:
     import mfem.ser as mfem
     nicePrint = dprint1
 
 
-data = (('inc_amp', VtableElement('inc_amp', type='complex',
+data = (('inc_amp', VtableElement('inc_amp',
+                                  type='array',
                                   guilabel='incoming amp',
-                                  default=1.0,
+                                  default=0.0,
                                   tip="amplitude of incoming wave")),
-        ('inc_phase', VtableElement('inc_phase', type='float',
+        ('inc_phase', VtableElement('inc_phase',
+                                    type='float',
                                     guilabel='incoming phase (deg)',
                                     default=0.0,
                                     tip="phase of incoming wave")),
-        ('epsilonr', VtableElement('epsilonr', type='complex',
+        ('inc_dphase', VtableElement('inc_dphase',
+                                     type='float',
+                                     guilabel='phase progression (deg)',
+                                     default=0.0,
+                                     tip="phase progression of incoming wave")),
+        ('epsilonr', VtableElement('epsilonr',
+                                   type='complex',
                                    guilabel='epsilonr',
                                    default=1.0,
                                    tip="relative permittivity")),
-        ('mur', VtableElement('mur', type='complex',
+        ('mur', VtableElement('mur',
+                              type='complex',
                               guilabel='mur',
                               default=1.0,
                               tip="relative permeability")),)
 
 
-class EM3D_Port(EM3D_Bdry):
+class EM3D_PortArray(EM3D_Bdry):
     vt = Vtable(data)
 
     def __init__(self, mode='TE', mn='0,1', inc_amp='1',
-                 inc_phase='0', port_idx=1):
-        super(EM3D_Port, self).__init__(mode=mode,
-                                        mn=mn,
-                                        inc_amp=inc_amp,
-                                        inc_phase=inc_phase,
-                                        port_idx=port_idx)
+                 inc_phase='0', inc_dphase='90', port_idx=1):
+        super(EM3D_PortArray, self).__init__(mode=mode,
+                                             mn=mn,
+                                             inc_amp=inc_amp,
+                                             inc_phase=inc_phase,
+                                             inc_dphase=inc_dphase,
+                                             port_idx=port_idx)
         Phys.__init__(self)
 
     def extra_DoF_name(self):
-        return self.get_root_phys().dep_vars[0] + "_port_" + str(self.port_idx)
+        p1 = int(self.port_idx)
+        p2 = len(self._sel_index)
+        txt = str(p1) + '_' + str(p2)
+        return self.get_root_phys().dep_vars[0] + "_port_" + txt
 
     def get_probe(self):
-        return self.get_root_phys().dep_vars[0] + "_port_" + str(self.port_idx)
+        p1 = int(self.port_idx)
+        p2 = len(self._sel_index)
+        txt = str(p1) + '_' + str(p2)
+        return self.get_root_phys().dep_vars[0] + "_port_" + txt
 
     def attribute_set(self, v):
-        super(EM3D_Port, self).attribute_set(v)
+        super(EM3D_PortArray, self).attribute_set(v)
         v['port_idx'] = 1
         v['mode'] = 'TE'
         v['mn'] = [1, 0]
         v['inc_amp_txt'] = '1.0'
         v['inc_phase_txt'] = '0.0'
+        v['inc_dphase_txt'] = '90.0'
         v['inc_amp'] = 1.0
         v['inc_phase'] = 0.0
+        v['inc_dphase'] = 0.0
         v['epsilonr'] = 1.0
         v['mur'] = 1.0
         v['sel_readonly'] = False
@@ -91,7 +128,7 @@ class EM3D_Port(EM3D_Bdry):
         return v
 
     def panel1_param(self):
-        return ([["port id", str(self.port_idx), 0, {}],
+        return ([["port group id", str(self.port_idx), 0, {}],
                  ["mode", self.mode, 4, {"readonly": True,
                                          "choices": ["TE", "TEM", "Coax(TEM)"]}],
                  ["m/n", ','.join(str(x) for x in self.mn), 0, {}], ] +
@@ -108,26 +145,31 @@ class EM3D_Port(EM3D_Bdry):
         self.mn = [int(x) for x in v[2].split(',')]
         self.vt.import_panel_value(self, v[3:])
 
-    def get_exter_NDoF(self):
-        return 1
-        # (in future) must be number of modes on this port...
-
     def update_param(self):
         self.vt.preprocess_params(self)
-        inc_amp, inc_phase, eps, mur = self.vt.make_value_or_expression(self)
+        inc_amp, inc_phase, inc_dphase, eps, mur = self.vt.make_value_or_expression(
+            self)
 
         '''
         self.update_inc_amp_phase()
 
     def update_inc_amp_phase(self):
         try:
-            self.inc_amp = self.eval_phys_expr(str(self.inc_amp_txt),  'inc_amp')[0]
-            self.inc_phase = self.eval_phys_expr(str(self.inc_phase_txt), 'inc_phase', chk_float = True)[0]
+            self.inc_amp = self.eval_phys_expr(
+                str(self.inc_amp_txt),  'inc_amp')[0]
+            self.inc_phase = self.eval_phys_expr(
+                str(self.inc_phase_txt), 'inc_phase', chk_float = True)[0]
         except:
             raise ValueError("Cannot evaluate amplitude/phase to float number")
         '''
 
-    def preprocess_params(self, engine):
+    def do_preprocess_params(self, engine):
+        self.a = 0
+        self.b = 0
+        self.a_vec = 0
+        self.b_vec = 0
+        self.c = 0
+        self.ctr = 0
         # find normal (outward) vector...
         mesh = engine.get_emesh(mm=self)
 
@@ -149,9 +191,9 @@ class EM3D_Port(EM3D_Bdry):
         self.norm = nor.GetDataArray().copy()
         self.norm = self.norm / np.sqrt(np.sum(self.norm**2))
 
-        #freq = self._global_ns["freq"]
-        #self.omega = freq * 2 * np.pi
-        #dprint1("Frequency " + (freq).__repr__())
+        # freq = self._global_ns["freq"]
+        # self.omega = freq * 2 * np.pi
+        # dprint1("Frequency " + (freq).__repr__())
         dprint1("Normal Vector " + list(self.norm).__repr__())
 
         # find rectangular shape
@@ -170,8 +212,8 @@ class EM3D_Port(EM3D_Bdry):
             dprint1("Center " + list(self.ctr).__repr__())
 
             # rectangular port
-            #idx = np.argsort(np.sqrt(np.sum((vv - self.ctr)**2,1)))
-            #corners = vv[idx[-4:],:]
+            # idx = np.argsort(np.sqrt(np.sum((vv - self.ctr)**2,1)))
+            # corners = vv[idx[-4:],:]
             # since vv is cyclic I need to omit last one element here..
             idx = np.argsort(np.sqrt(np.sum((vv[:-1] - self.ctr)**2, 1)))
             corners = vv[:-1][idx[-4:], :]
@@ -181,7 +223,7 @@ class EM3D_Port(EM3D_Bdry):
             self.b = tmp[1]
             self.a = tmp[2]
             tmp = np.argsort(np.sqrt(np.sum((corners - corners[0, :])**2, 1)))
-            self.c = corners[0]  # corner
+            # self.c = corners[0]  # corner
             self.b_vec = corners[tmp[1]] - corners[0]
             self.a_vec = np.cross(self.b_vec, self.norm)
 #            self.a_vec = corners[tmp[2]]-corners[0]
@@ -209,7 +251,7 @@ class EM3D_Port(EM3D_Bdry):
                         continue
                     if attr in node._sel_index:
                         break
-                from petram.model import Pair
+
                 ivert = mesh.GetEdgeVertices(edges[0])
                 vect = mesh.GetVertexArray(
                     ivert[0]) - mesh.GetVertexArray(ivert[1])
@@ -260,7 +302,9 @@ class EM3D_Port(EM3D_Bdry):
         C_Et, C_jwHt = self.get_coeff_cls()
 
         self.vt.preprocess_params(self)
-        inc_amp, inc_phase, eps, mur = self.vt.make_value_or_expression(self)
+        inc_amp, inc_phase, inc_dphase, eps, mur = self.vt.make_value_or_expression(
+            self)
+
         dprint1("E field pattern", eps, mur)
         Et = C_Et(3, self, real=True, eps=eps, mur=mur)
         for p in vv:
@@ -270,7 +314,27 @@ class EM3D_Port(EM3D_Bdry):
         for p in vv:
             dprint1(p.__repr__() + ' : ' + Ht.EvalValue(p).__repr__())
 
+    def read_portparams(self):
+        return (self.a, self.b, self.a_vec, self.b_vec, self.c, self.ctr)
+
+    def set_portparams(self, params):
+        self.a, self.b, self.a_vec, self.b_vec, self.c, self.ctr = params
+
+    def preprocess_params(self, engine):
+        sels = self._sel_index
+
+        port_params = []
+        for s in sels:
+            self._sel_index = [s]
+            self.do_preprocess_params(engine)
+            params = self.read_portparams()
+            port_params.append(params)
+
+        self._port_params = port_params
+        self._sel_index = sels
+
     def get_coeff_cls(self):
+
         if self.mode == 'TEM':
             return C_Et_TEM, C_jwHt_TEM
         elif self.mode == 'TE':
@@ -285,9 +349,22 @@ class EM3D_Port(EM3D_Bdry):
         if kfes != 0:
             return False
         self.vt.preprocess_params(self)
-        inc_amp, inc_phase, eps, mur = self.vt.make_value_or_expression(self)
+        inc_amp, inc_phase, inc_dphase, eps, mur = self.vt.make_value_or_expression(
+            self)
 
-        return inc_amp != 0
+        return np.any(np.array(inc_amp) != 0)
+
+    def _fixup_inc_amp(self, inc_amp):
+
+        num_ports = len(self._sel_index)
+
+        if len(inc_amp) == 1:
+            inc_amp = [inc_amp[0]]*num_ports
+        elif len(inc_amp) !=  num_ports:
+            assert False, "Number of ports are not the same as number of incoming amplitude"
+        else:
+            pass # looks good
+        return inc_amp, num_ports
 
     def add_lf_contribution(self, engine, b, real=True, kfes=0):
         if real:
@@ -296,22 +373,42 @@ class EM3D_Port(EM3D_Bdry):
             dprint1("Add LF contribution(imag)" + str(self._sel_index))
 
         self.vt.preprocess_params(self)
-        inc_amp, inc_phase, eps, mur = self.vt.make_value_or_expression(self)
+        inc_amp, inc_phase, inc_dphase, eps, mur = self.vt.make_value_or_expression(
+            self)
 
-        dprint1("Power, Phase: ", inc_amp, inc_phase)
+
 
         C_Et, C_jwHt = self.get_coeff_cls()
 
-        inc_wave = inc_amp * np.exp(1j * inc_phase / 180. * np.pi)
+        sels = self._sel_index
 
-        phase = np.angle(inc_wave) * 180 / np.pi
-        amp = np.sqrt(np.abs(inc_wave))
+        from itertools import cycle
+        dphase = cycle(np.atleast_1d(inc_dphase))
 
-        Ht = C_jwHt(3, phase, self, real=real, amp=amp, eps=eps, mur=mur)
-        Ht = self.restrict_coeff(Ht, engine, vec=True)
+        inc_amp, num_ports = self._fixup_inc_amp(inc_amp)
+        ph = inc_phase
+        
+        dprint1("Power, Phase: ", inc_amp, inc_phase)
+        
+        for kport in range(num_ports):
+            sel = self._sel_index[kport]
+            params = self._port_params[kport]
+            inc_a = inc_amp[kport]
+            
+            self.set_portparams(params)
 
-        intg = mfem.VectorFEBoundaryTangentLFIntegrator(Ht)
-        b.AddBoundaryIntegrator(intg)
+            inc_wave = inc_a * np.exp(1j * ph / 180. * np.pi)
+
+            phase = np.angle(inc_wave) * 180 / np.pi
+            amp = np.sqrt(np.abs(inc_wave))
+
+            Ht = C_jwHt(3, phase, self, real=real, amp=amp, eps=eps, mur=mur)
+            Ht = self.restrict_coeff(Ht, engine, vec=True, idx=[sel])
+
+            intg = mfem.VectorFEBoundaryTangentLFIntegrator(Ht)
+            b.AddBoundaryIntegrator(intg)
+
+            ph = ph + next(dphase)
 
     '''
     def add_lf_contribution_imag(self, engine, b):
@@ -329,7 +426,8 @@ class EM3D_Port(EM3D_Bdry):
         return True
 
     def get_exter_NDoF(self):
-        return 1
+        return len(self._sel_index)
+        # (in future) must be number of modes on this port...
 
     def is_extra_RHSonly(self):
         return True
@@ -338,33 +436,28 @@ class EM3D_Port(EM3D_Bdry):
         name = self.name() + '_' + str(self.port_idx)
         sol_extra[name] = sol.toarray()
 
-    def add_extra_contribution(self, engine, **kwargs):
-        dprint1("Add Extra contribution" + str(self._sel_index))
-        from mfem.common.chypre import LF2PyVec, PyVec2PyMat, Array2PyVec, IdentityPyMat
-
-        self.vt.preprocess_params(self)
-        inc_amp, inc_phase, eps, mur = self.vt.make_value_or_expression(self)
-
+    def do_add_extra_contribution(
+            self, engine, inc_amp, inc_phase, eps, mur, sel):
         C_Et, C_jwHt = self.get_coeff_cls()
 
         fes = engine.get_fes(self.get_root_phys(), 0)
 
         lf1 = engine.new_lf(fes)
         Ht1 = C_jwHt(3, 0.0, self, real=True, eps=eps, mur=mur)
-        Ht2 = self.restrict_coeff(Ht1, engine, vec=True)
+        Ht2 = self.restrict_coeff(Ht1, engine, vec=True, idx=[sel])
         intg = mfem.VectorFEBoundaryTangentLFIntegrator(Ht2)
         lf1.AddBoundaryIntegrator(intg)
         lf1.Assemble()
         lf1i = engine.new_lf(fes)
         Ht3 = C_jwHt(3, 0.0, self, real=False, eps=eps, mur=mur)
-        Ht4 = self.restrict_coeff(Ht3, engine, vec=True)
+        Ht4 = self.restrict_coeff(Ht3, engine, vec=True, idx=[sel])
         intg = mfem.VectorFEBoundaryTangentLFIntegrator(Ht4)
         lf1i.AddBoundaryIntegrator(intg)
         lf1i.Assemble()
 
         lf2 = engine.new_lf(fes)
         Et = C_Et(3, self, real=True, eps=eps, mur=mur)
-        Et = self.restrict_coeff(Et, engine, vec=True)
+        Et = self.restrict_coeff(Et, engine, vec=True, idx=[sel])
         intg = mfem.VectorFEDomainLFIntegrator(Et)
         lf2.AddBoundaryIntegrator(intg)
         lf2.Assemble()
@@ -383,8 +476,8 @@ class EM3D_Port(EM3D_Bdry):
         #
         v1 = LF2PyVec(lf1, lf1i)
         v1 *= -1
-        v2 = LF2PyVec(lf2, None, horizontal=True)
-        #x  = LF2PyVec(x, None)
+        v2 = LF2PyVec(lf2, None)
+        # x  = LF2PyVec(x, None)
         #
         # transfer x and lf2 to True DoF space to operate InnerProduct
         #
@@ -392,6 +485,7 @@ class EM3D_Port(EM3D_Bdry):
         #
         v2 *= 1. / weight
 
+        '''
         v1 = PyVec2PyMat(v1)
         v2 = PyVec2PyMat(v2.transpose())
 
@@ -399,8 +493,13 @@ class EM3D_Port(EM3D_Bdry):
         t3 = IdentityPyMat(1)
 
         v2 = v2.transpose()
-
         '''
+        return (v1, v2, t4)
+
+    def add_extra_contribution(self, engine, **kwargs):
+        '''
+        compute extra (multiplier) contribution
+
         Format of extar   (t2 is returnd as vertical(transposed) matrix)
         [M,  t1]   [  ]
         [      ] = [  ]
@@ -408,4 +507,44 @@ class EM3D_Port(EM3D_Bdry):
 
         and it returns if Lagurangian will be saved.
         '''
+        dprint1("Add Extra contribution" + str(self._sel_index))
+
+        self.vt.preprocess_params(self)
+        inc_amp, inc_phase, inc_dphase, eps, mur = self.vt.make_value_or_expression(
+            self)
+        inc_amp, num_ports = self._fixup_inc_amp(inc_amp)
+        ph = inc_phase
+        dphase = cycle(np.atleast_1d(inc_dphase))
+        
+        dprint1("Power, Phase: ", inc_amp, inc_phase)
+        
+        v1_arr = []
+        v2_arr = []
+        t4 = []
+
+        for kport in range(num_ports):
+            sel = self._sel_index[kport]
+            params = self._port_params[kport]
+            inc_a = inc_amp[kport]
+            
+            self.set_portparams(params)
+            #dprint1("phasing ", ph, sel)
+            v1, v2, t4_1 = self.do_add_extra_contribution(
+                engine, inc_a, ph, eps, mur, sel)
+
+            v1_arr.append(v1)
+            v2_arr.append(v2)
+
+            t4.append(t4_1)
+            ph = ph + next(dphase)
+
+        t3 = IdentityPyMat(len(self._sel_index))
+        t4 = Array2PyVec(np.array(t4))
+
+        v1 = HStackPyVec(v1_arr)
+        v2 = HStackPyVec(v2_arr)
+        v2 = v2.transpose()
+
+        #print(v1.shape, v2.shape, t3.shape, t4.shape)
+
         return (v1, v2, t3, t4, True)

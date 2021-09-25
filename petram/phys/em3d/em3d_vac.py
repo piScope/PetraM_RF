@@ -196,6 +196,17 @@ class EM3D_Vac(EM3D_Domain):
         
         e, m, s = self.vt.make_value_or_expression(self)
 
+        self.do_add_scalar_expr(v, suffix, ind_vars, 'sepsilonr', e, add_diag=3)
+        self.do_add_scalar_expr(v, suffix, ind_vars, 'smur', m, add_diag=3)
+        self.do_add_scalar_expr(v, suffix, ind_vars, 'ssigma', s, add_diag=3)
+
+        var = ['x', 'y', 'z']
+        self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'epsilonr')
+        self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'mur')
+        self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'sigma')
+
+        
+        '''
         def add_sigma_epsilonr_mur(name, f_name):
             if isinstance(f_name, NativeCoefficientGenBase):
                 pass   
@@ -211,45 +222,5 @@ class EM3D_Vac(EM3D_Domain):
         add_sigma_epsilonr_mur('epsilonr', e)
         add_sigma_epsilonr_mur('mur', m)
         add_sigma_epsilonr_mur('sigma', s)                           
-
         '''
 
-        var, f_name = self.eval_phys_expr(self.epsilonr, 'epsilonr')
-        if isinstance(var, NativeCoefficientGenBase):
-            pass   
-        elif callable(var):      
-            add_expression(v, 'epsilonr', suffix, ind_vars, f_name,
-                           [], domains = self._sel_index, 
-                           gdomain = self._global_ns)            
-        else:
-            add_constant(v, 'epsilonr', suffix, var,
-                         domains = self._sel_index,
-                         gdomain = self._global_ns)
-
-        var, f_name = self.eval_phys_expr(self.mur, 'mur')
-        if isinstance(var, NativeCoefficientGenBase):
-            pass   
-        elif callable(var):
-            add_expression(v, 'mur', suffix, ind_vars, f_name,
-                           [], domains = self._sel_index,
-                           gdomain = self._global_ns)            
-        else:
-            add_constant(v, 'mur', suffix, var,
-                         domains = self._sel_index,
-                         gdomain = self._global_ns)                        
-
-        var, f_name = self.eval_phys_expr(self.sigma, 'sigma')
-        if isinstance(var, NativeCoefficientGenBase):
-            pass   
-        elif callable(var):
-            add_expression(v, 'sigma', suffix, ind_vars, f_name,
-                           [], domains = self._sel_index, 
-                           gdomain = self._global_ns)            
-        else:
-            add_constant(v, 'sigma', suffix, var,
-                         domains = self._sel_index,
-                         gdomain = self._global_ns)
-
-
-    
-        '''

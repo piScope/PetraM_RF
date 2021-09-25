@@ -116,7 +116,8 @@ class EM2Da_DefPair(Pair, Phys):
         return []
 
 class EM2Da(PhysModule):
-    der_var_base = ['Br', 'Bphi', 'Bz']
+    der_vars_base = ['Er', 'Ephi', 'Ez', 'Br', 'Bphi', 'Bz', 'm_mode']
+    der_vars_vec = ['E', 'B']
     geom_dim = 2    
     def __init__(self, **kwargs):
         super(EM2Da, self).__init__()
@@ -151,6 +152,10 @@ class EM2Da(PhysModule):
             ret = ['Et', 'rEf']
         return ret
 
+    def get_fec_type(self, idx):
+        values = ['ND', 'H1', 'H1']
+        return values[idx]
+    
     def get_fec(self):
         v = self.dep_vars
         if len(v) == 2:  # normal case
@@ -183,13 +188,13 @@ class EM2Da(PhysModule):
                 ["indpendent vars.", self.ind_vars, 0, {}],
                 ["dep. vars. suffix", self.dep_vars_suffix, 0, {}],
                 ["dep. vars.", ','.join(self.dep_vars), 2, {}],
-                ["derived vars.", ','.join(EM2Da.der_var_base), 2, {}],
+                ["derived vars.", ','.join(EM2Da.der_vars_base), 2, {}],
                 ["predefined ns vars.", txt_predefined , 2, {}]])
         return panels
       
     def get_panel1_value(self):
-        names  = ','.join([x for x in self.dep_vars])
-        names2  = ','.join([x+self.dep_vars_suffix for x in EM2Da.der_var_base])
+        names  = ', '.join([x for x in self.dep_vars])
+        names2 = ', '.join(self.get_dependent_variables())
         val =  super(EM2Da, self).get_panel1_value()
         val.extend([self.freq_txt, self.ind_vars, self.dep_vars_suffix,
                     names, names2, txt_predefined])
@@ -226,26 +231,30 @@ class EM2Da(PhysModule):
         from .em2da_port      import EM2Da_Port
         from .em2da_e         import EM2Da_E
         from .em2da_cont      import EM2Da_Continuity
+
+        bdrs = super(EM2Da, self).get_possible_bdry()
+        
         return [EM2Da_PEC,
                 EM2Da_Port,
-                EM2Da_E,                                
+                EM2Da_E,                              
                 EM2Da_PMC,
-                EM2Da_Continuity]
+                EM2Da_Continuity] + bdrs
     
     def get_possible_domain(self):
         from .em2da_anisotropic import EM2Da_Anisotropic
         from .em2da_vac       import EM2Da_Vac
         from .em2da_extj       import EM2Da_ExtJ
-        #from em3d_div       import EM3D_Div        
 
-        return [EM2Da_Vac, EM2Da_Anisotropic, EM2Da_ExtJ]
+        doms = super(EM2Da, self).get_possible_domain()
+        
+        return [EM2Da_Vac, EM2Da_Anisotropic, EM2Da_ExtJ] + doms
 
     def get_possible_edge(self):
         return []                
 
     def get_possible_pair(self):
-        #from em3d_floquet       import EM3D_Floquet
-        return []
+        from .em2da_floquet     import EM2Da_Floquet
+        return [EM2Da_Floquet]
 
     def get_possible_point(self):
         return []
@@ -262,48 +271,87 @@ class EM2Da(PhysModule):
         from petram.helper.variables import add_components
         from petram.helper.variables import add_elements        
         from petram.helper.variables import add_expression
+        from petram.helper.variables import add_component_expression as addc_expression
         from petram.helper.variables import add_surf_normals
         from petram.helper.variables import add_constant      
 
-        from petram.phys.em3d.eval_deriv import eval_curl        
-        def evalB(gfr, gfi = None):
+        from petram.phys.em2da.eval_deriv import eval_curl, eval_grad
+        
+        def eval_curlEt(gfr, gfi=None):
             gfr, gfi, extra = eval_curl(gfr, gfi)
-            gfi /= (2*self.freq*np.pi)   # real B
-            gfr /= -(2*self.freq*np.pi)  # imag B
-            return gfi, gfr, extra
+            return gfr, gfi, extra
+        
+        def eval_gradrEf(gfr, gfi=None):
+            gfr, gfi, extra = eval_grad(gfr, gfi)
+            return gfr, gfi, extra        
 
         ind_vars = [x.strip() for x in self.ind_vars.split(',')]
         suffix = self.dep_vars_suffix
 
         from petram.helper.variables import TestVariable
         #v['debug_test'] =  TestVariable()
+        freq, omega = self.get_freq_omega()
+        add_constant(v, 'omega', suffix, np.float(omega),)
+        add_constant(v, 'freq', suffix, np.float(freq),)
+        add_constant(v, 'mu0', '', self._global_ns['mu0'])
+        add_constant(v, 'e0', '', self._global_ns['e0'])
         
         add_coordinates(v, ind_vars)        
         add_surf_normals(v, ind_vars)
-        
+
         if name.startswith('Et'):
             add_elements(v, 'E', suffix, ind_vars, solr, soli, elements=[0,1])
+            add_scalar(v, 'curlEt', suffix, ind_vars, solr, soli,
+                           deriv=eval_curlEt)            
+            addc_expression(v, 'B', suffix, ind_vars,
+                                 '-1j/omega*(-1)*curlEt', ['curlEt', 'omega'], 'phi')
             
         elif name.startswith('rEf'):
             add_scalar(v, 'rEf', suffix, ind_vars, solr, soli)
-            add_expression(v, 'Ephi', suffix, ind_vars,
-                           'rEf/r', ['rEf',])
-            
+            addc_expression(v, 'E', suffix, ind_vars,
+                                     'rEf/r', ['rEf',], 'phi')
+            add_components(v, 'gradrE', suffix, ind_vars, solr, soli,
+                           deriv=eval_gradrEf)                      
         elif name.startswith('psi'):
             add_scalar(v, 'psi', suffix, ind_vars, solr, soli)
 
-        add_expression(v, 'E', suffix, ind_vars, 'array([Er, Ephi, Ez])',
-                      ['Er', 'Ephi', 'Ez'])
-            
-        # collect all definition from children
-        #for mm in self.walk():
-        #    if not mm.enabled: continue
-        #    if mm is self: continue
-        #    mm.add_domain_variables(v, name, suffix, ind_vars,
-        #                            solr, soli)
-        #    mm.add_bdr_variables(v, name, suffix, ind_vars,
-        #                            solr, soli)
+        add_expression(v, 'E', suffix, ind_vars,
+                       'array([Er, Ephi, Ez])',
+                       ['E'])
 
+        addc_expression(v, 'E', suffix, ind_vars,
+                        'rEf/r', ['rEf',], 'phi')
+        addc_expression(v, 'B', suffix, ind_vars,
+                        '-1j/omega*(1j*m_mode*Ez/r-gradrEz/r)',
+                        ['m_mode', 'E', 'omega'], 0)
+        addc_expression(v, 'B', suffix, ind_vars,
+                        '-1j/omega*(-1j*m_mode*Er/r+gradrEr/r)',
+                        ['m_mode', 'E', 'omega'], 1)
+        add_expression(v, 'B', suffix, ind_vars,
+                       'array([Br, Bphi, Bz])',
+                       ['B'])
+
+        # Poynting Flux
+        addc_expression(v, 'Poy', suffix, ind_vars,
+                        '(conj(Ephi)*Bz - conj(Ez)*Bphi)/mu0',
+                        ['B', 'E'], 0)
+        addc_expression(v, 'Poy', suffix, ind_vars,
+                        '(conj(Ez)*Br - conj(Er)*Bz)/mu0',
+                        ['B', 'E'], 'phi')
+        addc_expression(v, 'Poy', suffix, ind_vars,
+                        '(conj(Er)*Bphi - conj(Ephi)*Br)/mu0',
+                        ['B', 'E'], 1)
+        
+        # collect all definition from children
+        '''
+        for mm in self.walk():
+            if not mm.enabled: continue
+            if mm is self: continue
+            mm.add_domain_variables(v, name, suffix, ind_vars,
+                                    solr, soli)
+            mm.add_bdr_variables(v, name, suffix, ind_vars,
+                                    solr, soli)
+        '''
         return v
 
                

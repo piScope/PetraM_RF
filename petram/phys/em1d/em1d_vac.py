@@ -223,37 +223,32 @@ class EM1D_Vac(EM1D_Domain):
 
     def add_domain_variables(self, v, n, suffix, ind_vars, solr, soli = None):
         from petram.helper.variables import add_expression, add_constant
-
+        from petram.helper.variables import NativeCoefficientGenBase
+        
+        e, m, s, ky, kz = self.vt.make_value_or_expression(self)
+        
         if len(self._sel_index) == 0: return
-        var, f_name = self.eval_phys_expr(self.epsilonr, 'epsilonr')
-        if callable(var):
-            add_expression(v, 'epsilonr', suffix, ind_vars, f_name,
-                           [], domains = self._sel_index, 
-                           gdomain = self._global_ns)            
-        else:
-            add_constant(v, 'epsilonr', suffix, var,
-                         domains = self._sel_index,
-                         gdomain = self._global_ns)
 
-        var, f_name = self.eval_phys_expr(self.mur, 'mur')
-        if callable(var):
-            add_expression(v, 'mur', suffix, ind_vars, f_name,
-                           [], domains = self._sel_index,
-                           gdomain = self._global_ns)            
-        else:
-            add_constant(v, 'mur', suffix, var,
-                         domains = self._sel_index,
-                         gdomain = self._global_ns)                        
+        add_constant(v, 'ky', suffix, np.float(ky),
+                     domains = self._sel_index,
+                     gdomain = self._global_ns)
+        
+        add_constant(v, 'kz', suffix, np.float(kz),
+                     domains = self._sel_index,
+                     gdomain = self._global_ns)
 
-        var, f_name = self.eval_phys_expr(self.sigma, 'sigma')
-        if callable(var):
-            add_expression(v, 'sigma', suffix, ind_vars, f_name,
-                           [], domains = self._sel_index, 
-                           gdomain = self._global_ns)            
-        else:
-            add_constant(v, 'sigma', suffix, var,
-                         domains = self._sel_index,
-                         gdomain = self._global_ns)
+        self.do_add_scalar_expr(v, suffix, ind_vars, 'sepsilonr', e, add_diag=3)
+        self.do_add_scalar_expr(v, suffix, ind_vars, 'smur', m, add_diag=3)
+        self.do_add_scalar_expr(v, suffix, ind_vars, 'ssigma', s, add_diag=3)
+
+        var = ['x', 'y', 'z']
+        self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'epsilonr')
+        self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'mur')
+        self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'sigma')
+
+
+        
+            
 
 
     
