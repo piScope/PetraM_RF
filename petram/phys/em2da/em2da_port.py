@@ -247,10 +247,6 @@ class EM2Da_Port(EM2Da_Bdry):
         self.mn = [int(x) for x in v[2].split(',')]
         self.vt.import_panel_value(self, v[3:])
 
-    def get_exter_NDoF(self):
-        return 1
-        # (in future) must be number of modes on this port...
-
     def update_param(self):
         self.update_inc_amp_phase()
 
@@ -393,7 +389,7 @@ class EM2Da_Port(EM2Da_Bdry):
         else:
             return False
 
-    def get_exter_NDoF(self):
+    def get_extra_NDoF(self):
         return 1
 
     # def get_probe(self):

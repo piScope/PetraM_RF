@@ -108,10 +108,6 @@ class EM3D_Port(EM3D_Bdry):
         self.mn = [int(x) for x in v[2].split(',')]
         self.vt.import_panel_value(self, v[3:])
 
-    def get_exter_NDoF(self):
-        return 1
-        # (in future) must be number of modes on this port...
-
     def update_param(self):
         self.vt.preprocess_params(self)
         inc_amp, inc_phase, eps, mur = self.vt.make_value_or_expression(self)
@@ -137,7 +133,7 @@ class EM3D_Port(EM3D_Bdry):
         ibe = np.array([i for i in range(nbe)
                         if mesh.GetBdrElement(i).GetAttribute() ==
                         self._sel_index[0]])
-        dprint1("idb", ibe)
+
         el = mesh.GetBdrElement(ibe[0])
         Tr = fespace.GetBdrElementTransformation(ibe[0])
         rules = mfem.IntegrationRules()
@@ -328,7 +324,7 @@ class EM3D_Port(EM3D_Bdry):
             return False
         return True
 
-    def get_exter_NDoF(self):
+    def get_extra_NDoF(self):
         return 1
 
     def is_extra_RHSonly(self):

@@ -1,11 +1,15 @@
 '''
    1D port boundary condition
 '''
+from petram.phys.vtable import VtableElement, Vtable
+from petram.mfem_config import use_parallel
+from petram.phys.em1d.em1d_const import epsilon0, mu0
+from mfem.common.mpi_debug import nicePrint
 import sys
 import numpy as np
 
 from petram.model import Bdry
-from petram.phys.phys_model  import Phys
+from petram.phys.phys_model import Phys
 from petram.phys.em1d.em1d_base import EM1D_Bdry, EM1D_Domain
 
 from petram.helper.geom import connect_pairs2
@@ -13,158 +17,157 @@ from petram.helper.geom import find_circle_center_radius
 
 import petram.debug as debug
 dprint1, dprint2, dprint3 = debug.init_dprints('EM1D_Port')
-from mfem.common.mpi_debug import nicePrint
 
-from petram.phys.em1d.em1d_const import epsilon0, mu0
 
-from petram.mfem_config import use_parallel
 if use_parallel:
-   import mfem.par as mfem
-   '''
+    import mfem.par as mfem
+    '''
    from mpi4py import MPI
    num_proc = MPI.COMM_WORLD.size
    myid     = MPI.COMM_WORLD.rank
    '''
 else:
-   import mfem.ser as mfem
+    import mfem.ser as mfem
 
 
-from petram.phys.vtable import VtableElement, Vtable   
-data =  (('inc_amp', VtableElement('inc_amp', type='complex',
-                                     guilabel = 'inc. amp.',
-                                     default = (1.0, 0.0),
-                                     suffix =('y', 'z'),
-                                     no_func = True,                                    
-                                     tip = "amplitude of incoming wave" )),
-         ('inc_phase', VtableElement('inc_phase', type='float',
-                                     guilabel = 'inc. phase (deg)',
-                                     default = 0.0,
-                                     no_func = True,
-                                     tip = "phase of incoming wave" )),
-         ('epsilonr', VtableElement('epsilonr', type='complex',
-                                     guilabel = 'epsilonr',
-                                     default = 1.0,
-                                     no_func = True,                                    
-                                     tip = "relative permittivity" )),
-         ('mur', VtableElement('mur', type='complex',
-                                     guilabel = 'mur',
-                                     default = 1.0,
-                                     no_func = True,                               
-                                     tip = "relative permeability" )),
-         ('ky', VtableElement('ky', type='float',
-                                     guilabel = 'ky',
-                                     default = 0. ,
-                                     no_func = True,
-                                     tip = "wave number` in the y direction" )),
-         ('kz', VtableElement('kz', type='float',
-                                     guilabel = 'kz',
-                                     default = 0.0,
-                                     no_func = True,                              
-                                     tip = "wave number in the z direction" )),)
+data = (('inc_amp', VtableElement('inc_amp', type='complex',
+                                  guilabel='inc. amp.',
+                                  default=(1.0, 0.0),
+                                  suffix=('y', 'z'),
+                                  no_func=True,
+                                  tip="amplitude of incoming wave")),
+        ('inc_phase', VtableElement('inc_phase', type='float',
+                                    guilabel='inc. phase (deg)',
+                                    default=0.0,
+                                    no_func=True,
+                                    tip="phase of incoming wave")),
+        ('epsilonr', VtableElement('epsilonr', type='complex',
+                                   guilabel='epsilonr',
+                                   default=1.0,
+                                   no_func=True,
+                                   tip="relative permittivity")),
+        ('mur', VtableElement('mur', type='complex',
+                              guilabel='mur',
+                              default=1.0,
+                              no_func=True,
+                              tip="relative permeability")),
+        ('ky', VtableElement('ky', type='float',
+                             guilabel='ky',
+                             default=0.,
+                             no_func=True,
+                             tip="wave number` in the y direction")),
+        ('kz', VtableElement('kz', type='float',
+                             guilabel='kz',
+                             default=0.0,
+                             no_func=True,
+                             tip="wave number in the z direction")),)
 
 
 class E_port(mfem.PyCoefficient):
-   def __init__(self, bdry, real = True, amp = (1.0,0.0),  eps=1.0,
-                mur=1.0, ky=0.0, kz=0.0, direction="y", normalize=False):
-      
-       mfem.PyCoefficient.__init__(self)
-       self.real = real
-       freq, omega = bdry.get_root_phys().get_freq_omega()        
+    def __init__(self, bdry, real=True, amp=(1.0, 0.0),  eps=1.0,
+                 mur=1.0, ky=0.0, kz=0.0, direction="y", normalize=False):
 
-       k = omega*np.sqrt(eps*epsilon0 * mur*mu0)
-       kc2 = k**2 - ky**2 - kz**2
-       if kc2 < 0:
-          kc2 = complex(kc2)
-          #raise ValueError('Mode does not propagate')
-       beta = np.sqrt(kc2)
-       dprint1("propagation constant:" + str(beta))
-       Ey, Ez = amp
-       Ex = -(Ey*ky + Ez*kz)/beta
-       if normalize:
-           E_norm = np.sqrt(Ex*np.conj(Ex) + Ey*np.conj(Ey) + Ez*np.conj(Ez))
-           Ex = Ex/E_norm
-           Ey = Ey/E_norm
-           Ez = Ez/E_norm
-       if direction == "y":
-           self.ret =  Ey
-       else:
-           self.ret =  Ez
-       self.ret = complex(self.ret)
+        mfem.PyCoefficient.__init__(self)
+        self.real = real
+        freq, omega = bdry.get_root_phys().get_freq_omega()
 
-   def EvalValue(self, x):
-       if self.real:
-           #print "returning(real)", self.ret.real
-           return self.ret.real
-       else:
-           #print "returning(imag)", self.ret.real          
-           return self.ret.imag
-   
+        k = omega*np.sqrt(eps*epsilon0 * mur*mu0)
+        kc2 = k**2 - ky**2 - kz**2
+        if kc2 < 0:
+            kc2 = complex(kc2)
+            #raise ValueError('Mode does not propagate')
+        beta = np.sqrt(kc2)
+        dprint1("propagation constant:" + str(beta))
+        Ey, Ez = amp
+        Ex = -(Ey*ky + Ez*kz)/beta
+        if normalize:
+            E_norm = np.sqrt(Ex*np.conj(Ex) + Ey*np.conj(Ey) + Ez*np.conj(Ez))
+            Ex = Ex/E_norm
+            Ey = Ey/E_norm
+            Ez = Ez/E_norm
+        if direction == "y":
+            self.ret = Ey
+        else:
+            self.ret = Ez
+        self.ret = complex(self.ret)
+
+    def EvalValue(self, x):
+        if self.real:
+            # print "returning(real)", self.ret.real
+            return self.ret.real
+        else:
+            # print "returning(imag)", self.ret.real
+            return self.ret.imag
+
+
 class jwH_port(mfem.PyCoefficient):
-   def __init__(self, bdry, real = True, amp = (1.0,0.0),  eps=1.0,
-                mur=1.0, ky=0.0, kz=0.0, direction="y", normalize=False):
-       mfem.PyCoefficient.__init__(self)
-       self.real = real
-       freq, omega = bdry.get_root_phys().get_freq_omega()        
+    def __init__(self, bdry, real=True, amp=(1.0, 0.0),  eps=1.0,
+                 mur=1.0, ky=0.0, kz=0.0, direction="y", normalize=False):
+        mfem.PyCoefficient.__init__(self)
+        self.real = real
+        freq, omega = bdry.get_root_phys().get_freq_omega()
 
-       k = omega*np.sqrt(eps*epsilon0 * mur*mu0)
-       kc2 = k**2 - ky**2 - kz**2
-       
-       if kc2 < 0:
-          dprint1('Mode does not propagate !!!')
-          kc2 = complex(kc2)
-          #raise ValueError('Mode does not propagate')
-       
-       norm = -bdry.norm # norm is INWARD propagation
-       beta = np.sqrt(kc2) * norm
-       dprint1("propagation constant:" + str(beta))
-       Ey, Ez = amp
-       Ex = -(Ey*ky + Ez*kz)/beta
-       if normalize:
-           E_norm = np.sqrt(Ex*np.conj(Ex) + Ey*np.conj(Ey) + Ez*np.conj(Ez))
-           Ex = Ex/E_norm
-           Ey = Ey/E_norm
-           Ez = Ez/E_norm
-       Hy = 1j*(- beta*Ez + kz*Ex)/mu0/mur
-       Hz = 1j*(beta*Ey - ky*Ex)/mu0/mur          
-       if direction == "y":
-           self.ret =  -Hz * bdry.norm
-       else:
-           self.ret =  Hy * bdry.norm
-       self.ret = complex(self.ret)
+        k = omega*np.sqrt(eps*epsilon0 * mur*mu0)
+        kc2 = k**2 - ky**2 - kz**2
 
-   def EvalValue(self, x):
-       if self.real:
-           return self.ret.real
-       else:
-           return self.ret.imag
+        if kc2 < 0:
+            dprint1('Mode does not propagate !!!')
+            kc2 = complex(kc2)
+            #raise ValueError('Mode does not propagate')
+
+        norm = -bdry.norm  # norm is INWARD propagation
+        beta = np.sqrt(kc2) * norm
+        dprint1("propagation constant:" + str(beta))
+        Ey, Ez = amp
+        Ex = -(Ey*ky + Ez*kz)/beta
+        if normalize:
+            E_norm = np.sqrt(Ex*np.conj(Ex) + Ey*np.conj(Ey) + Ez*np.conj(Ez))
+            Ex = Ex/E_norm
+            Ey = Ey/E_norm
+            Ez = Ez/E_norm
+        Hy = 1j*(- beta*Ez + kz*Ex)/mu0/mur
+        Hz = 1j*(beta*Ey - ky*Ex)/mu0/mur
+        if direction == "y":
+            self.ret = -Hz * bdry.norm
+        else:
+            self.ret = Hy * bdry.norm
+        self.ret = complex(self.ret)
+
+    def EvalValue(self, x):
+        if self.real:
+            return self.ret.real
+        else:
+            return self.ret.imag
+
 
 class EM1D_Port(EM1D_Bdry):
-    vt  = Vtable(data)         
-    def __init__(self, inc_amp='1, 0', inc_phase='0', port_idx= 1):
-        super(EM1D_Port, self).__init__(inc_amp = inc_amp,
-                                        inc_phase = inc_phase,
-                                        port_idx = port_idx)
+    vt = Vtable(data)
+
+    def __init__(self, inc_amp='1, 0', inc_phase='0', port_idx=1):
+        super(EM1D_Port, self).__init__(inc_amp=inc_amp,
+                                        inc_phase=inc_phase,
+                                        port_idx=port_idx)
         Phys.__init__(self)
-        
+
     def attribute_set(self, v):
         super(EM1D_Port, self).attribute_set(v)
         v['port_idx'] = 1
         v['sel_readonly'] = False
         v['sel_index'] = []
-        self.vt.attribute_set(v)                 
+        self.vt.attribute_set(v)
         return v
-        
+
     def panel1_param(self):
-        return ([["port id", str(self.port_idx), 0, {}],]+
-                 self.vt.panel_param(self))
-                 
+        return ([["port id", str(self.port_idx), 0, {}], ] +
+                self.vt.panel_param(self))
+
     def get_panel1_value(self):
-        return ([str(self.port_idx),]+
-                 self.vt.get_panel_value(self))
+        return ([str(self.port_idx), ] +
+                self.vt.get_panel_value(self))
 
     def import_panel1_value(self, v):
-        self.port_idx = v[0]       
-        self.vt.import_panel_value(self, v[1:])                         
+        self.port_idx = v[0]
+        self.vt.import_panel_value(self, v[1:])
 
     def update_param(self):
         self.update_inc_amp_phase()
@@ -174,118 +177,124 @@ class EM1D_Port(EM1D_Bdry):
         set parameter
         '''
         try:
-            self.vt.preprocess_params(self)           
-            inc_amp, inc_phase, eps, mur, ky, kz = self.vt.make_value_or_expression(self)           
+            self.vt.preprocess_params(self)
+            inc_amp, inc_phase, eps, mur, ky, kz = self.vt.make_value_or_expression(
+                self)
             self.inc_amp = inc_amp
             self.inc_phase = inc_phase
         except:
             raise ValueError("Cannot evaluate amplitude/phase to float number")
-         
+
     def preprocess_params(self, engine):
-        ### find normal (outward) vector...
-        mesh = engine.get_emesh(mm = self) ### 
+        # find normal (outward) vector...
+        mesh = engine.get_emesh(mm=self)
         fespace = engine.fespaces[self.get_root_phys().dep_vars[1]]
 
         nbe = mesh.GetNBE()
 
         BdrPtx = []
         for i in range(nbe):
-            iv = mesh.GetBdrElementVertices(i)           
+            iv = mesh.GetBdrElementVertices(i)
             BdrPtx.append(mesh.GetVertexArray(iv[0])[0])
-            
+
         ibe = np.array([i for i in range(nbe)
-                         if mesh.GetBdrElement(i).GetAttribute() == 
-                            self._sel_index[0]])
+                        if mesh.GetBdrElement(i).GetAttribute() ==
+                        self._sel_index[0]])
         iv = mesh.GetBdrElementVertices(ibe[0])
         ptx = mesh.GetVertexArray(iv[0])[0]
         if ptx == BdrPtx[-1]:
-           self.norm = 1.
+            self.norm = 1.
         else:
-           self.norm = -1.
+            self.norm = -1.
 
     def has_lf_contribution(self, kfes):
         self.vt.preprocess_params(self)
-        inc_amp, inc_phase, eps, mur, ky, kz = self.vt.make_value_or_expression(self)
+        inc_amp, inc_phase, eps, mur, ky, kz = self.vt.make_value_or_expression(
+            self)
         if kfes == 1:
-            return inc_amp[0] != 0               
+            return inc_amp[0] != 0
         elif kfes == 2:
-            return inc_amp[1] != 0                               
+            return inc_amp[1] != 0
         else:
             return False
 
-    def add_lf_contribution(self, engine, b, real = True, kfes = 0):
-        if kfes == 0: return
+    def add_lf_contribution(self, engine, b, real=True, kfes=0):
+        if kfes == 0:
+            return
 
         txt = ["Ex in ", "Ey in ", "Ez in "][kfes]
-        if real:       
+        if real:
             dprint1("Add LF contribution(real) " + txt + str(self._sel_index))
         else:
             dprint1("Add LF contribution(imag)" + txt + str(self._sel_index))
-                
-        self.vt.preprocess_params(self)           
-        inc_amp, inc_phase, eps, mur, ky, kz = self.vt.make_value_or_expression(self)
+
+        self.vt.preprocess_params(self)
+        inc_amp, inc_phase, eps, mur, ky, kz = self.vt.make_value_or_expression(
+            self)
 
         inc_wave = np.array(inc_amp) * np.exp(1j*inc_phase/180.*np.pi)
         d = "y" if kfes == 1 else "z"
 
         # note for the right hand side, we multiple -1 to ampulitude
-        
-        coeff = jwH_port(self, real = real, amp = -inc_wave,  eps=eps,
-                        mur = mur, ky = ky, kz = kz,  direction=d)
+
+        coeff = jwH_port(self, real=real, amp=-inc_wave,  eps=eps,
+                         mur=mur, ky=ky, kz=kz,  direction=d)
         self.add_integrator(engine, 'inc_amp', coeff,
-                                b.AddBoundaryIntegrator,
-                                mfem.BoundaryLFIntegrator)
+                            b.AddBoundaryIntegrator,
+                            mfem.BoundaryLFIntegrator)
 
     def has_extra_DoF(self, kfes):
         if kfes == 0:
             return False
         else:
             return True
-     
-    def get_exter_NDoF(self):
+
+    def get_extra_NDoF(self):
         return 1
-                
+
     def extra_DoF_name2(self, kfes=0):
         '''
         default DoF name
         '''
         if kfes == 0:
-            return # this cause error if it comes here
+            return  # this cause error if it comes here
         elif kfes == 1:
             return "Ey_port"+str(self.port_idx)
         elif kfes == 2:
             return "Ez_port"+str(self.port_idx)
-         
+
     def postprocess_extra(self, sol, flag, sol_extra):
         assert False, "Is it used?"
         name = self.name()+'_' + str(self.port_idx)
         sol_extra[name] = sol.toarray()
-        
+
     def add_extra_contribution(self, engine, **kwargs):
-               
+
         from mfem.common.chypre import LF2PyVec
-        
+
         kfes = kwargs.pop('kfes', 0)
-        if kfes == 0: return
+        if kfes == 0:
+            return
         dprint1("Add Extra contribution" + str(self._sel_index))
 
         self.vt.preprocess_params(self)
-        inc_amp, inc_phase, eps, mur, ky, kz = self.vt.make_value_or_expression(self)
+        inc_amp, inc_phase, eps, mur, ky, kz = self.vt.make_value_or_expression(
+            self)
 
         fes = engine.get_fes(self.get_root_phys(), kfes)
         d = "y" if kfes == 1 else "z"
-        inc_amp0 = (1, 0) if kfes == 1 else (0,1)
-        lf1 = engine.new_lf(fes)                
-        Ht = jwH_port(self, real = True, amp = inc_amp0,  eps=eps,
-                    mur = mur, ky = ky, kz = kz,  direction=d, normalize=True)
+        inc_amp0 = (1, 0) if kfes == 1 else (0, 1)
+        lf1 = engine.new_lf(fes)
+        Ht = jwH_port(self, real=True, amp=inc_amp0,  eps=eps,
+                      mur=mur, ky=ky, kz=kz,  direction=d, normalize=True)
         Ht = self.restrict_coeff(Ht, engine)
         intg = mfem.BoundaryLFIntegrator(Ht)
         lf1.AddBoundaryIntegrator(intg)
         lf1.Assemble()
 
         lf1i = engine.new_lf(fes)
-        Ht = jwH_port(self, real = False, amp = inc_amp0,  eps=eps,
-                    mur = mur, ky = ky, kz = kz,  direction=d, normalize=True)
+        Ht = jwH_port(self, real=False, amp=inc_amp0,  eps=eps,
+                      mur=mur, ky=ky, kz=kz,  direction=d, normalize=True)
         Ht = self.restrict_coeff(Ht, engine)
         intg = mfem.BoundaryLFIntegrator(Ht)
         lf1i.AddBoundaryIntegrator(intg)
@@ -297,8 +306,8 @@ class EM1D_Port(EM1D_Bdry):
         #v1 *= -1
 
         lf2 = engine.new_lf(fes)
-        Et = E_port(self, real = True, amp = inc_amp0,  eps=eps,
-                     mur = mur, ky = ky, kz = kz,  direction=d, normalize=True)
+        Et = E_port(self, real=True, amp=inc_amp0,  eps=eps,
+                    mur=mur, ky=ky, kz=kz,  direction=d, normalize=True)
 
         Et = self.restrict_coeff(Et, engine)
         intg = mfem.DomainLFIntegrator(Et)
@@ -310,8 +319,8 @@ class EM1D_Port(EM1D_Bdry):
         arr = self.get_restriction_array(engine)
         x.ProjectBdrCoefficient(Et,  arr)
 
-        v2 = LF2PyVec(lf2, None, horizontal = True)
-        x  = LF2PyVec(x, None)
+        v2 = LF2PyVec(lf2, None, horizontal=True)
+        x = LF2PyVec(x, None)
 
         # output formats of InnerProduct
         # are slightly different in parallel and serial
@@ -328,13 +337,6 @@ class EM1D_Port(EM1D_Bdry):
         t3 = IdentityPyMat(1)
 
         v2 = v2.transpose()
-           
-        #return (None, v2, t3, t4, True)
+
+        # return (None, v2, t3, t4, True)
         return (v1, v2, t3, t4, True)
-
-
-           
-
-  
-
-        

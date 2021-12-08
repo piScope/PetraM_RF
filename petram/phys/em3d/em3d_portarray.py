@@ -360,10 +360,10 @@ class EM3D_PortArray(EM3D_Bdry):
 
         if len(inc_amp) == 1:
             inc_amp = [inc_amp[0]]*num_ports
-        elif len(inc_amp) !=  num_ports:
+        elif len(inc_amp) != num_ports:
             assert False, "Number of ports are not the same as number of incoming amplitude"
         else:
-            pass # looks good
+            pass  # looks good
         return inc_amp, num_ports
 
     def add_lf_contribution(self, engine, b, real=True, kfes=0):
@@ -376,8 +376,6 @@ class EM3D_PortArray(EM3D_Bdry):
         inc_amp, inc_phase, inc_dphase, eps, mur = self.vt.make_value_or_expression(
             self)
 
-
-
         C_Et, C_jwHt = self.get_coeff_cls()
 
         sels = self._sel_index
@@ -387,14 +385,14 @@ class EM3D_PortArray(EM3D_Bdry):
 
         inc_amp, num_ports = self._fixup_inc_amp(inc_amp)
         ph = inc_phase
-        
+
         dprint1("Power, Phase: ", inc_amp, inc_phase)
-        
+
         for kport in range(num_ports):
             sel = self._sel_index[kport]
             params = self._port_params[kport]
             inc_a = inc_amp[kport]
-            
+
             self.set_portparams(params)
 
             inc_wave = inc_a * np.exp(1j * ph / 180. * np.pi)
@@ -425,7 +423,7 @@ class EM3D_PortArray(EM3D_Bdry):
             return False
         return True
 
-    def get_exter_NDoF(self):
+    def get_extra_NDoF(self):
         return len(self._sel_index)
         # (in future) must be number of modes on this port...
 
@@ -515,9 +513,9 @@ class EM3D_PortArray(EM3D_Bdry):
         inc_amp, num_ports = self._fixup_inc_amp(inc_amp)
         ph = inc_phase
         dphase = cycle(np.atleast_1d(inc_dphase))
-        
+
         dprint1("Power, Phase: ", inc_amp, inc_phase)
-        
+
         v1_arr = []
         v2_arr = []
         t4 = []
@@ -526,7 +524,7 @@ class EM3D_PortArray(EM3D_Bdry):
             sel = self._sel_index[kport]
             params = self._port_params[kport]
             inc_a = inc_amp[kport]
-            
+
             self.set_portparams(params)
             #dprint1("phasing ", ph, sel)
             v1, v2, t4_1 = self.do_add_extra_contribution(
