@@ -162,7 +162,7 @@ class C_jwHt_TEM(mfem.VectorPyCoefficient):
        self.real = real
        self.phase = phase  # phase !=0 for incoming wave
        self.a_vec, self.b_vec = bdry.a_vec, bdry.b_vec       
-       self.AA = omega*np.sqrt(epsilon0*eps/mu0/mur)
+       self.AA = omega*np.sqrt(epsilon0*eps/mu0/mur)*amp
        
    def EvalValue(self, x):
        Hy = 1j*self.AA
@@ -176,7 +176,7 @@ class C_jwHt_TEM(mfem.VectorPyCoefficient):
    coax port TEM
 '''
 def coax_norm(a, b, mur, eps):
-    return np.sqrt(2/np.pi/np.sqrt(epsilon0*eps/mu0/mur)/np.log(b/a))
+    return np.sqrt(1/np.pi/np.sqrt(epsilon0*eps/mu0/mur)/np.log(b/a))
     
 class C_Et_CoaxTEM(mfem.VectorPyCoefficient):
    def __init__(self, sdim, bdry, real = True, eps=1.0, mur=1.0):
