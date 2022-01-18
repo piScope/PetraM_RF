@@ -227,7 +227,7 @@ class EM2Da(PhysModule):
         from .em2da_pec       import EM2Da_PEC
         from .em2da_pmc       import EM2Da_PMC
         #from em2da_h       import EM2Da_H
-        #from em2da_surfj       import EM2Da_SurfJ
+        from .em2da_surfj      import EM2Da_SurfJ
         from .em2da_port      import EM2Da_Port
         from .em2da_e         import EM2Da_E
         from .em2da_cont      import EM2Da_Continuity
@@ -236,7 +236,8 @@ class EM2Da(PhysModule):
         
         return [EM2Da_PEC,
                 EM2Da_Port,
-                EM2Da_E,                              
+                EM2Da_E,
+                EM2Da_SurfJ,
                 EM2Da_PMC,
                 EM2Da_Continuity] + bdrs
     
