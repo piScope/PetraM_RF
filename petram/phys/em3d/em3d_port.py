@@ -378,7 +378,7 @@ class EM3D_Port(EM3D_Bdry):
         #
         #
         v1 = LF2PyVec(lf1, lf1i)
-        v1 *= -1
+        #v1 *= -1
         v2 = LF2PyVec(lf2, None, horizontal=True)
         #x  = LF2PyVec(x, None)
         #
@@ -392,7 +392,7 @@ class EM3D_Port(EM3D_Bdry):
         v2 = PyVec2PyMat(v2.transpose())
 
         t4 = Array2PyVec(t4)
-        t3 = IdentityPyMat(1)
+        t3 = IdentityPyMat(1, diag=-1)
 
         v2 = v2.transpose()
 

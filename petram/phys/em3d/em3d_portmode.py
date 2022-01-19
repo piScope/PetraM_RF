@@ -212,9 +212,9 @@ class C_Et_CoaxTEM(mfem.VectorPyCoefficient):
 #       E = nr/np.log(self.b/self.a)/rho
         E = nr/rho*self.AA
         if self.real:
-            return -E.real
+            return E.real
         else:
-            return -E.imag
+            return E.imag
 
 
 class C_jwHt_CoaxTEM(mfem.VectorPyCoefficient):
@@ -243,6 +243,6 @@ class C_jwHt_CoaxTEM(mfem.VectorPyCoefficient):
         #H = 1j*self.AA*H
         H = H * np.exp(1j*self.phase*np.pi/180.)
         if self.real:
-            return H.real
+            return -H.real
         else:
-            return H.imag
+            return -H.imag
