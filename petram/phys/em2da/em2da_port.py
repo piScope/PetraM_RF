@@ -457,7 +457,7 @@ class EM2Da_Port(EM2Da_Bdry):
             from mfem.common.chypre import LF2PyVec, PyVec2PyMat, Array2PyVec, IdentityPyMat
 
             v1 = LF2PyVec(lf1, lf1i)
-            v1 *= -1
+            #v1 *= -1
 
             lf2 = engine.new_lf(fes)
             Et = Ephi(self, real=True, eps=eps, mur=mur)
@@ -489,7 +489,7 @@ class EM2Da_Port(EM2Da_Bdry):
             v1 = PyVec2PyMat(v1)
             v2 = PyVec2PyMat(v2.transpose())
             t4 = Array2PyVec(t4)
-            t3 = IdentityPyMat(1)
+            t3 = IdentityPyMat(1, diag=-1)
 
             v2 = v2.transpose()
 

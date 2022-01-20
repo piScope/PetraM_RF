@@ -334,7 +334,7 @@ class EM1D_Port(EM1D_Bdry):
         v1 = PyVec2PyMat(v1)
         v2 = PyVec2PyMat(v2.transpose())
         t4 = Array2PyVec(t4)
-        t3 = IdentityPyMat(1)
+        t3 = IdentityPyMat(1, diag=-1)
 
         v2 = v2.transpose()
 
