@@ -206,6 +206,7 @@ class H_Ephi_phi(mfem.PyCoefficient):
 
 
 class EM2Da_Port(EM2Da_Bdry):
+    extra_diagnostic_print = True
     vt = Vtable(data)
 
     def __init__(self, mode='TE', mn='0,1', inc_amp='1',

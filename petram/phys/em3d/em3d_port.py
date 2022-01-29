@@ -58,6 +58,7 @@ data = (('inc_amp', VtableElement('inc_amp', type='complex',
 
 
 class EM3D_Port(EM3D_Bdry):
+    extra_diagnostic_print = True
     vt = Vtable(data)
 
     def __init__(self, mode='TE', mn='0,1', inc_amp='1',
