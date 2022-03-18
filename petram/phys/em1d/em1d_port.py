@@ -141,6 +141,7 @@ class jwH_port(mfem.PyCoefficient):
 
 
 class EM1D_Port(EM1D_Bdry):
+    extra_diagnostic_print = True
     vt = Vtable(data)
 
     def __init__(self, inc_amp='1, 0', inc_phase='0', port_idx=1):
@@ -334,6 +335,7 @@ class EM1D_Port(EM1D_Bdry):
         v1 = PyVec2PyMat(v1)
         v2 = PyVec2PyMat(v2.transpose())
         t4 = Array2PyVec(t4)
+        #t3 = IdentityPyMat(1, diag=-1)
         t3 = IdentityPyMat(1)
 
         v2 = v2.transpose()
