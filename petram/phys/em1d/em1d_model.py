@@ -162,6 +162,13 @@ class EM1D(PhysModule):
         return [(v[0], 'L2_FECollection'),
                 (v[1], 'H1_FECollection'),
                 (v[2], 'H1_FECollection'), ]
+    
+    def fes_order(self, idx):
+        self.vt_order.preprocess_params(self)        
+        if idx == 0:
+            return self.order -1
+        else:
+            return self.order            
 
     def _has_div_constraint(self):
         return False
