@@ -26,12 +26,13 @@ if use_parallel:
 else:
    import mfem.ser as mfem
 
+'''
 from petram.phys.coefficient import PyComplexMatrixInvCoefficient as ComplexMatrixInv
 from petram.phys.coefficient import PyComplexMatrixProductCoefficient as ComplexMatrixProduct
 from petram.phys.coefficient import PyComplexMatrixSumCoefficient as ComplexMatrixSum
 from petram.phys.coefficient import PyComplexMatrixSliceCoefficient as ComplexMatrixSlice
 from petram.phys.coefficient import PyComplexMatrixAdjCoefficient as ComplexMatrixAdj
-
+'''
 from petram.phys.vtable import VtableElement, Vtable   
 data =  (('epsilonr', VtableElement('epsilonr', type='complex',
                                      guilabel = 'epsilonr',
@@ -114,27 +115,46 @@ class EM2D_Anisotropic(EM2D_Domain, EM2D_Domain_helper):
     def get_coeffs_2(self):
         # e, m, s
         coeff1, coeff2, coeff3, kz = self.get_coeffs()
-        coeff4 = ComplexMatrixSum(coeff1, coeff3)
-        
+        '''
+        coeff4 = ComplexMatrixSum(coeff1, coeff3)      # -> coeff4 = coeff1 + coeff3
+        '''
+        coeff4 = coeff1 + coeff3
+
         if self.has_pml():
             coeff4 = self.make_PML_coeff(coeff4)
             coeff2 = self.make_PML_coeff(coeff2)
 
+        '''
         eps11 = ComplexMatrixSlice(coeff4, [0,1], [0,1])
         eps21 = ComplexMatrixSlice(coeff4, [0,1], [2])
         eps12 = ComplexMatrixSlice(coeff4, [2], [0,1])
         eps22 = ComplexMatrixSlice(coeff4, [2], [2])
+        '''
+        eps11 = coeff4[[0,1], [0,1]]
+        eps21 = coeff4[[0,1], 2]
+        eps12 = coeff4[2, [0,1]]
+        eps22 = coeff4[2,2]
+        
         eps = [eps11, eps12, eps21, eps22]
-            
-        tmp = ComplexMatrixInv(coeff2)
 
-        mu11 = ComplexMatrixSlice(tmp, [0,1], [0,1])
-        mu11 = ComplexMatrixAdj(mu11)        
-        #mu21 = ComplexMatrixSlice(tmp, [0,1], [2])
-        #mu12 = ComplexMatrixSlice(tmp, [2], [0,1])
+        '''
+        tmp = ComplexMatrixInv(coeff2)
+        '''
+        tmp = coeff2.inv()
+
+        '''
+        mu11 = ComplexMatrixSlice(tmp, [0,1], [0,1])   #-> mul1 = tmp[[0,1], [0,1]]
+        mu11 = ComplexMatrixAdj(mu11)                  #-> mul1 = mul1.adj()
         mu22 = ComplexMatrixSlice(tmp, [2], [2])                        
-        k2_over_mu11 =   ComplexMatrixProduct(mu11, kz*kz)
+        k2_over_mu11 =   ComplexMatrixProduct(mu11, kz*kz)  #-> k2_over_mul1 = mul1*(kz*kz)
         ik_over_mu11 =   ComplexMatrixProduct(mu11, 1j*kz)
+        '''
+        mu11 = tmp[[0,1], [0,1]]
+        mu11 = mu11.adj()
+        mu22 = tmp[2,2]
+        k2_over_mu11 =   mu11*(kz*kz)
+        ik_over_mu11 =   mu11*(1j*kz)
+        
         mu = [mu11, mu22, k2_over_mu11, ik_over_mu11]
 
         return eps, mu, kz

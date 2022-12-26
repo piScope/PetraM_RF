@@ -47,7 +47,7 @@ data =  (('stretch', VtableElement('stretch', type='complex',
                                      no_func=True,                                   
                                      tip = "streach order" )),)
 
-from petram.phys.coefficient import CC_Matrix
+from petram.phys.pycomplex_coefficient import CC_Matrix
 from petram.phys.phys_const import mu0, epsilon0
 
 class EM2D_PML(EM2D_Domain, ABC):
@@ -67,20 +67,16 @@ class LinearPML(CC_Matrix):
         self.S = S
         self.order = order
         self.inv = inv
-        self.K = mfem.DenseMatrix(self.width, self.height)        
         super(LinearPML, self).__init__(coeff)
       
-    def Eval(self, K, T, ip):
+    def eval(self, T, ip):
         ptx = T.Transform(ip)
        
         invS = self.Eval_invS(ptx)
         detS = self.Eval_detS(ptx)       
 
-        if self.coeffs.is_matrix():          
-            K_m = self.coeffs.Eval(self.K, T, ip)
-        else:
-            K_m = self.coeffs.Eval(T, ip)
-
+        K_m = self.coeffs.eval(T, ip)
+        
         detS_inv_S_x_inv_S = (invS*detS).dot(K_m).dot(invS)
 
         if self.inv:

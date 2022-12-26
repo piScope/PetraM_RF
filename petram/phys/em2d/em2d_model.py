@@ -321,7 +321,7 @@ class EM2D(PhysModule):
                       ['Ex', 'Ey', 'Ez'])
 
         addc_expression(v, 'B', suffix, ind_vars,
-                                 '-1j/omega*(-1j*kz*Ez + gradEy)',
+                                 '-1j/omega*(-1j*kz*Ey + gradEy)',
                                  ['m_mode', 'E', 'omega'], 0)
         addc_expression(v, 'B', suffix, ind_vars,
                                  '-1j/omega*(1j*kz*Ex - gradEx)',
