@@ -152,8 +152,8 @@ class EM2D_Anisotropic(EM2D_Domain, EM2D_Domain_helper):
         mu11 = tmp[[0,1], [0,1]]
         mu11 = mu11.adj()
         mu22 = tmp[2,2]
-        k2_over_mu11 =   mu11*(kz*kz)
-        ik_over_mu11 =   mu11*(1j*kz)
+        k2_over_mu11 = mu11*(kz*kz)
+        ik_over_mu11 = mu11*(1j*kz)
         
         mu = [mu11, mu22, k2_over_mu11, ik_over_mu11]
 
