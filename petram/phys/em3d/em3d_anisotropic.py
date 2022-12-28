@@ -35,7 +35,6 @@ data =  (('epsilonr', VtableElement('epsilonr', type='complex',
                                      tip = "contuctivity" )),)
 
 from petram.phys.coefficient import MCoeff
-from petram.phys.coefficient import PyComplexMatrixInvCoefficient as ComplexMatrixInv
 from petram.phys.em3d.em3d_const import mu0, epsilon0
 
 def Epsilon_Coeff(exprs, ind_vars, l, g, omega):
@@ -50,16 +49,6 @@ def Sigma_Coeff(exprs, ind_vars, l, g, omega):
     coeff = MCoeff(3, exprs, ind_vars, l, g, return_complex=True, scale=fac)
     return coeff
 
-''' 
-def InvMu_Coeff(exprs, ind_vars, l, g, omega, real):
-    fac = mu0
-    coeff = MCoeff(3, exprs, ind_vars, l, g, real=real, scale=fac)
-    if coeff is None: return None
-    if not real: return None
-    c2 = mfem.InverseMatrixCoefficient(coeff)
-    c2._coeff = coeff
-    return c2
-''' 
 def Mu_Coeff(exprs, ind_vars, l, g, omega):
     fac = mu0
     coeff = MCoeff(3, exprs, ind_vars, l, g, return_complex=True, scale=fac)
@@ -104,12 +93,11 @@ class EM3D_Anisotropic(EM3D_Domain):
         self.set_integrator_realimag_mode(real)
 
         if self.has_pml():
-            coeff1 = self.make_PML_epsilon(coeff1)
-            coeff2 = self.make_PML_invmu(coeff2)
-            coeff3 = self.make_PML_sigma(coeff3)
-        else:
-            coeff2 = ComplexMatrixInv(coeff2)
-            
+            coeff1 = self.make_PML_coeff(coeff1)
+            coeff2 = self.make_PML_coeff(coeff2)
+            coeff3 = self.make_PML_coeff(coeff3)
+        coeff2 = coeff2.inv()
+
         if self.allow_custom_intorder and self.add_intorder != 0:
             fes = a.FESpace()
             geom = fes.GetFE(0).GetGeomType()

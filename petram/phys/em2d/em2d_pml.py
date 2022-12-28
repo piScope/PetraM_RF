@@ -105,15 +105,6 @@ class LinearPML(CC_Matrix):
         ret = self.Eval_S(x)
         return ret[0]*ret[1]
 
-    @property
-    def width(self):
-        return 3
-
-    @property
-    def height(self):
-        return 3
-
-
 def linear_pml_func1(ptx, K_m):
     Sd = np.array([1+0j, 1., 1.])
 
@@ -129,7 +120,6 @@ def linear_pml_func1(ptx, K_m):
     detS_inv_S_x_inv_S = (invS*detS).dot(K_m).dot(invS)
 
     return detS_inv_S_x_inv_S
-
 
 def linear_pml_func2(ptx):
     Sd = np.array([1+0j, 1., 1.])
