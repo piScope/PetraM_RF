@@ -76,7 +76,7 @@ class LinearPML(CC_Matrix):
         self.pml_width = pml_width
         self.S = S
         self.order = order
-        self.inv = inv
+        self.return_inv = inv
         super(LinearPML, self).__init__(coeff)
       
     def Eval(self, K, T, ip):
@@ -93,7 +93,7 @@ class LinearPML(CC_Matrix):
 
         detS_inv_S_x_inv_S = (invS*detS).dot(K_m).dot(invS)
 
-        if self.inv:
+        if self.return_inv:
             detS_inv_S_x_inv_S = np.linalg.inv(detS_inv_S_x_inv_S)
 
         return detS_inv_S_x_inv_S
