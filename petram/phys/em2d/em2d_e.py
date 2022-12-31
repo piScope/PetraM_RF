@@ -21,7 +21,7 @@ else:
 data = (('E', VtableElement('E', type='complex',
                             guilabel='Electric field',
                             suffix=('x', 'y', 'z'),
-                            default=np.array([0, 0, 0]),
+                            default=np.array([0., 0., 0.]),
                             tip="essential BC")),)
 
 '''
@@ -61,7 +61,7 @@ class EM2D_E(EM2D_Bdry):
         else:
             dprint1("Apply Ess.(imag)" + str(self._sel_index))
 
-        Exyz = self.vt.make_value_or_expression(self)
+        Exyz = self.vt.make_value_or_expression(self)[0]
         mesh = engine.get_mesh(mm=self)
         ibdr = mesh.bdr_attributes.ToList()
         bdr_attr = [0]*mesh.bdr_attributes.Max()
