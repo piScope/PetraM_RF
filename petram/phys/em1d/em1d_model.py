@@ -189,7 +189,7 @@ class EM1D(PhysModule):
     def panel1_param(self):
         panels = super(EM1D, self).panel1_param()
         panels.extend([self.make_param_panel('freq',  self.freq_txt),
-                       ["indpendent vars.", self.ind_vars, 0, {}],
+                       ["independent vars.", self.ind_vars, 0, {}],
                        ["dep. vars. suffix", self.dep_vars_suffix, 0, {}],
                        ["dep. vars.", ','.join(self.dep_vars), 2, {}],
                        ["derived vars.", ','.join(self.der_vars), 2, {}],
