@@ -197,7 +197,7 @@ class EM3D(PhysModule):
         panels = super(EM3D, self).panel1_param()
         a, b = self.get_var_suffix_var_name_panel()        
         panels.extend([self.make_param_panel('freq',  self.freq_txt),
-                ["indpendent vars.", self.ind_vars, 0, {}],
+                ["independent vars.", self.ind_vars, 0, {}],
                 a,
                 ["dep. vars.", ','.join(self.dep_vars), 2, {}],
                 ["derived vars.", ','.join(EM3D.der_var_base), 2, {}],

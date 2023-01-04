@@ -137,7 +137,7 @@ class EC3D(PhysModule):
     def panel1_param(self):
         panels = super(EC3D, self).panel1_param()
         panels.extend([
-                ["indpendent vars.", self.ind_vars, 0, {}],
+                ["independent vars.", self.ind_vars, 0, {}],
                 ["dep. vars. suffix", self.dep_vars_suffix, 0, {}],
                 ["dep. vars.", ','.join(self.dep_vars), 2, {}],
                 ["derived vars.", ','.join(EC3D.der_var_base), 2, {}],
