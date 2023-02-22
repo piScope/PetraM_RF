@@ -42,7 +42,8 @@ class Ez(PhysCoefficient):
        if self.real:  return v.real
        else: return v.imag
 '''
-
+def bdry_constraints():
+   return [EM2D_E]
 
 class EM2D_E(EM2D_Bdry):
     has_essential = True

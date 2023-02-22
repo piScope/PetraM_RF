@@ -33,6 +33,8 @@ def jwJ_Coeff(exprs, ind_vars, l, g, omega):
     fac = 1j * omega
     return VCoeff(3, exprs, ind_vars, l, g, return_complex=True, scale=fac)
 
+def domain_constraints():
+   return [EM2D_ExtJ]
 
 class EM2D_ExtJ(EM2D_Domain):
     is_secondary_condition = True  # does not count this class for persing "remaining"

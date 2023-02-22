@@ -223,36 +223,27 @@ class EM2D(PhysModule):
         from petram.phys.phys_const import mu0, epsilon0, q0        
         self._global_ns['mu0'] = mu0
         self._global_ns['epsilon0'] = epsilon0
-            
+
+    _possible_constraints = None
+    @classmethod
+    def _set_possible_constraints(cls):
+        from petram.helper.phys_module_util import get_phys_constraints
+        constraints = get_phys_constraints('em2d')
+        cls._possible_constraints = constraints
+        
     def get_possible_bdry(self):
-        from petram.phys.em2d.em2d_pec       import EM2D_PEC
-        from petram.phys.em2d.em2d_pmc       import EM2D_PMC
-        from petram.phys.em2d.em2d_z         import EM2D_Impedance
-        from petram.phys.em2d.em2d_h         import EM2D_H
-        #from em2d_surfj      import EM2D_SurfJ
-        #from .em2d_port      import EM2D_Port
-        from petram.phys.em2d.em2d_e         import EM2D_E
-        from petram.phys.em2d.em2d_cont      import EM2D_Continuity
-        
+        if EM2D._possible_constraints is None:
+            self._set_possible_constraints()       
         bdrs = super(EM2D, self).get_possible_bdry()
-        
-        return [EM2D_PEC,
-                #EM2D_Port,
-                EM2D_E,                                
-                EM2D_PMC,
-                EM2D_H,
-                EM2D_Impedance,
-                EM2D_Continuity] + bdrs
-    
+        return EM2D._possible_constraints['bdry'] + bdrs
+
     def get_possible_domain(self):
-        from .em2d_anisotropic  import EM2D_Anisotropic
-        from .em2d_vac          import EM2D_Vac
-        from .em2d_extj         import EM2D_ExtJ
-
-        doms = super(EM2D, self).get_possible_domain()
-        
-        return [EM2D_Vac, EM2D_Anisotropic, EM2D_ExtJ] + doms
-
+        if EM2D._possible_constraints is None:
+            self._set_possible_constraints()
+            
+        doms = super(EM2D, self).get_possible_domain()        
+        return EM2D._possible_constraints['domain'] + doms
+    
     def get_possible_edge(self):
         return []                
 

@@ -75,6 +75,8 @@ def Mu_Coeff(exprs, ind_vars, l, g, omega):
 
 from petram.phys.em2d.em2d_base import EM2D_Bdry, EM2D_Domain, EM2D_Domain_helper
 
+def domain_constraints():
+   return [EM2D_Anisotropic]
 class EM2D_Anisotropic(EM2D_Domain, EM2D_Domain_helper):
     vt  = Vtable(data)
     #nlterms = ['epsilonr']
