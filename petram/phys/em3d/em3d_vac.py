@@ -55,6 +55,8 @@ def Mu_Coeff(exprs, ind_vars, l, g, omega):
     coeff = SCoeff(exprs, ind_vars, l, g, return_complex=True, scale=fac)
     return coeff
 
+def domain_constraints():
+   return [EM3D_Vac]
 
 class EM3D_Vac(EM3D_Domain):
     vt = Vtable(data)

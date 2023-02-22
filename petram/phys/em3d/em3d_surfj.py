@@ -57,6 +57,8 @@ class Jsurf(VectorPhysCoefficient):
        if self.real:  return v.real
        else: return v.imag
 
+def bdry_constraints():
+   return [EM3D_SurfJ]
 
 class EM3D_SurfJ(EM3D_Bdry):
     is_essential = False

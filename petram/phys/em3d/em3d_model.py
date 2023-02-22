@@ -234,7 +234,28 @@ class EM3D(PhysModule):
         from petram.phys.em3d.em3d_const import mu0, epsilon0
         self._global_ns['mu0'] = mu0
         self._global_ns['epsilon0'] = epsilon0
+
+    _possible_constraints = None
+    @classmethod
+    def _set_possible_constraints(cls):
+        from petram.helper.phys_module_util import get_phys_constraints
+        constraints = get_phys_constraints('em2d')
+        cls._possible_constraints = constraints
+        
+    def get_possible_bdry(self):
+        if EM3D._possible_constraints is None:
+            self._set_possible_constraints()       
+        bdrs = super(EM3D, self).get_possible_bdry()
+        return EM3D._possible_constraints['bdry'] + bdrs
+
+    def get_possible_domain(self):
+        if EM3D._possible_constraints is None:
+            self._set_possible_constraints()
             
+        doms = super(EM3D, self).get_possible_domain()        
+        return EM3D._possible_constraints['domain'] + doms
+
+    '''
     def get_possible_bdry(self):
         from .em3d_pec         import EM3D_PEC
         from .em3d_pmc         import EM3D_PMC
@@ -258,15 +279,23 @@ class EM3D(PhysModule):
         doms = super(EM3D, self).get_possible_domain()
         
         return [EM3D_Vac, EM3D_Anisotropic, EM3D_ExtJ, EM3D_Div] + doms
-
+    '''
+    
     def get_possible_edge(self):
         return []                
 
+    '''
     def get_possible_pair(self):
 
         from .em3d_floquet     import EM3D_Floquet
 
         return [EM3D_Floquet]
+    '''
+    def get_possible_pair(self):
+        if EM3D._possible_constraints is None:
+            self._set_possible_constraints()
+        return EM3D._possible_constraints['pair']
+    
     '''
     def get_possible_point(self):
         return []

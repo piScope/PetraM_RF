@@ -33,6 +33,9 @@ class Jext(VectorPhysCoefficient):
        if self.real:  return v.real
        else: return v.imag
 
+def domain_constraints():
+   return [EM3D_ExtJ]
+       
 class EM3D_ExtJ(EM3D_Domain):
     is_secondary_condition = True
     has_3rd_panel = False    

@@ -84,6 +84,8 @@ data = (('inc_amp', VtableElement('inc_amp',
                               default=1.0,
                               tip="relative permeability")),)
 
+def bdry_constraints():
+   return [EM3D_PortArray]
 
 class EM3D_PortArray(EM3D_Bdry):
     vt = Vtable(data)

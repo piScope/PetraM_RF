@@ -53,6 +53,9 @@ def Mu_Coeff(exprs, ind_vars, l, g, omega):
     fac = mu0
     coeff = MCoeff(3, exprs, ind_vars, l, g, return_complex=True, scale=fac)
     return coeff
+
+def domain_constraints():
+   return [EM3D_Anisotropic]
  
 class EM3D_Anisotropic(EM3D_Domain):
     allow_custom_intorder = True

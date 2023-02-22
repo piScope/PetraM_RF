@@ -29,6 +29,8 @@ class Et(VectorPhysCoefficient):
        if self.real:  return v.real
        else: return v.imag
 '''   
+def bdry_constraints():
+   return [EM3D_E]
 
 class EM3D_E(EM3D_Bdry):
     has_essential = True
