@@ -86,6 +86,9 @@ class InvMu(PhysCoefficient):
 
        if self.real:  return v.real
        else: return v.imag
+
+def domain_constraints():
+   return [EM1D_Vac]
        
 class EM1D_Vac(EM1D_Domain):
     vt  = Vtable(data)

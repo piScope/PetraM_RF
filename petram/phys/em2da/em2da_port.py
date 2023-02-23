@@ -204,6 +204,8 @@ class H_Ephi_rz(mfem.VectorPyCoefficient):
 class H_Ephi_phi(mfem.PyCoefficient):
     pass
 
+def bdry_constraints():
+   return [EM2Da_Port]
 
 class EM2Da_Port(EM2Da_Bdry):
     extra_diagnostic_print = True

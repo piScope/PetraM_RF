@@ -235,22 +235,15 @@ class EM3D(PhysModule):
         self._global_ns['mu0'] = mu0
         self._global_ns['epsilon0'] = epsilon0
 
-    _possible_constraints = None
-    @classmethod
-    def _set_possible_constraints(cls):
-        from petram.helper.phys_module_util import get_phys_constraints
-        constraints = get_phys_constraints('em2d')
-        cls._possible_constraints = constraints
-        
     def get_possible_bdry(self):
         if EM3D._possible_constraints is None:
-            self._set_possible_constraints()       
+            self._set_possible_constraints('em3d')       
         bdrs = super(EM3D, self).get_possible_bdry()
         return EM3D._possible_constraints['bdry'] + bdrs
 
     def get_possible_domain(self):
         if EM3D._possible_constraints is None:
-            self._set_possible_constraints()
+            self._set_possible_constraints('em3d')
             
         doms = super(EM3D, self).get_possible_domain()        
         return EM3D._possible_constraints['domain'] + doms

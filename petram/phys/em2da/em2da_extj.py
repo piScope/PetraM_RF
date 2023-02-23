@@ -45,6 +45,9 @@ class Jext_t(PhysCoefficient):  # i \omega Jext_phi
        v = 1j * self.omega * v[1]
        if self.real:  return v.real
        else: return v.imag
+       
+def domain_constraints():
+   return [EM2Da_ExtJ]
 
 class EM2Da_ExtJ(EM2Da_Domain):
     is_secondary_condition = True  # does not count this class for persing "remaining"

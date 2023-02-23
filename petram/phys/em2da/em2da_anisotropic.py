@@ -225,6 +225,9 @@ class InvMu_m2_o_r(PhysCoefficient):
        v = 1/mu0/v/x[0]*self.tmode*self.tmode
        if self.real:  return v.real
        else: return v.imag
+
+def domain_constraints():
+   return [EM2Da_Anisotropic]
        
 class EM2Da_Anisotropic(EM2Da_Domain):
     vt  = Vtable(data)

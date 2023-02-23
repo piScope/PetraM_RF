@@ -228,32 +228,18 @@ class EM1D(PhysModule):
         self._global_ns['mu0'] = mu0
         self._global_ns['epsilon0'] = epsilon0
 
-    def get_possible_bdry(self):
-        from .em1d_pec import EM1D_PEC
-        from .em1d_pmc import EM1D_PMC
-        #from em1d_h       import EM1D_H
-        #from em1d_surfj       import EM1D_SurfJ
-        from .em1d_port import EM1D_Port
-        from .em1d_e import EM1D_E
-        from .em1d_cont import EM1D_Continuity
-
-        bdrs = super(EM1D, self).get_possible_bdry()
-
-        return [EM1D_PEC,
-                EM1D_Port,
-                EM1D_E,
-                EM1D_PMC,
-                EM1D_Continuity] + bdrs
-
     def get_possible_domain(self):
-        from .em1d_anisotropic import EM1D_Anisotropic
-        from .em1d_vac import EM1D_Vac
-        from .em1d_extj import EM1D_ExtJ
-
-        doms = super(EM1D, self).get_possible_domain()
-        #from em3d_div       import EM3D_Div
-
-        return [EM1D_Vac, EM1D_Anisotropic, EM1D_ExtJ] + doms
+        if EM1D._possible_constraints is None:
+            self._set_possible_constraints('em1d')
+            
+        doms = super(EM1D, self).get_possible_domain()        
+        return EM1D._possible_constraints['domain'] + doms
+        
+    def get_possible_bdry(self):
+        if EM1D._possible_constraints is None:
+            self._set_possible_constraints('em1d')
+        bdrs = super(EM1D, self).get_possible_bdry()
+        return EM1D._possible_constraints['bdry'] + bdrs
 
     def get_possible_edge(self):
         return []

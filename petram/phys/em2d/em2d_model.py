@@ -224,22 +224,15 @@ class EM2D(PhysModule):
         self._global_ns['mu0'] = mu0
         self._global_ns['epsilon0'] = epsilon0
 
-    _possible_constraints = None
-    @classmethod
-    def _set_possible_constraints(cls):
-        from petram.helper.phys_module_util import get_phys_constraints
-        constraints = get_phys_constraints('em2d')
-        cls._possible_constraints = constraints
-        
     def get_possible_bdry(self):
         if EM2D._possible_constraints is None:
-            self._set_possible_constraints()       
+            self._set_possible_constraints('em2d')
         bdrs = super(EM2D, self).get_possible_bdry()
         return EM2D._possible_constraints['bdry'] + bdrs
 
     def get_possible_domain(self):
         if EM2D._possible_constraints is None:
-            self._set_possible_constraints()
+            self._set_possible_constraints('em2d')
             
         doms = super(EM2D, self).get_possible_domain()        
         return EM2D._possible_constraints['domain'] + doms
@@ -248,8 +241,11 @@ class EM2D(PhysModule):
         return []                
 
     def get_possible_pair(self):
-        from .em2d_floquet     import EM2D_Floquet
-        return [EM2D_Floquet]
+        if EM2D._possible_constraints is None:
+            self._set_possible_constraints('em2d')
+            
+        pairs = super(EM2D, self).get_possible_pair()        
+        return EM2D._possible_constraints['pair'] + pairs
 
     def get_possible_point(self):
         return []

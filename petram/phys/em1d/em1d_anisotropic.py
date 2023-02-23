@@ -124,6 +124,9 @@ def make_sigma(*args, **kwargs):
         if real:  v = v.real
         else: v = v.imag
         return PhysConstant(float(v))
+     
+def domain_constraints():
+   return [EM1D_Anisotropic]
 
 class EM1D_Anisotropic(EM1D_Vac):
     vt  = Vtable(data)

@@ -62,6 +62,8 @@ data = (('inc_amp', VtableElement('inc_amp', type='complex',
                              no_func=True,
                              tip="wave number in the z direction")),)
 
+def bdry_constraints():
+   return [EM1D_Port]
 
 class E_port(mfem.PyCoefficient):
     def __init__(self, bdry, real=True, amp=(1.0, 0.0),  eps=1.0,
