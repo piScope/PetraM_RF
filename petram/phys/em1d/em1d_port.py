@@ -157,6 +157,7 @@ class EM1D_Port(EM1D_Bdry):
         v['port_idx'] = 1
         v['sel_readonly'] = False
         v['sel_index'] = []
+        v['isTimeDependent_RHS'] = True
         self.vt.attribute_set(v)
         return v
 

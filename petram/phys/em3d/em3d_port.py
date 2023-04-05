@@ -91,6 +91,7 @@ class EM3D_Port(EM3D_Bdry):
         v['mur'] = 1.0
         v['sel_readonly'] = False
         v['sel_index'] = []
+        v['isTimeDependent_RHS'] = True
         return v
 
     def panel1_param(self):
