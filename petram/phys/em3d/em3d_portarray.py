@@ -148,6 +148,13 @@ class EM3D_PortArray(EM3D_Bdry):
         self.mn = [int(x) for x in v[2].split(',')]
         self.vt.import_panel_value(self, v[3:])
 
+    def verify_setting(self):
+        if self.isTimeDependent_RHS:
+            flag = True
+        else:
+            flag = False
+        return flag, 'Varying RHS is not set', 'This potntially causes an error with PortScan. Set it Time/NL Dep. panel '
+
     def update_param(self):
         self.vt.preprocess_params(self)
         inc_amp, inc_phase, inc_dphase, eps, mur = self.vt.make_value_or_expression(

@@ -173,6 +173,13 @@ class EM1D_Port(EM1D_Bdry):
         self.port_idx = v[0]
         self.vt.import_panel_value(self, v[1:])
 
+    def verify_setting(self):
+        if self.isTimeDependent_RHS:
+            flag = True
+        else:
+            flag = False
+        return flag, 'Varying RHS is not set', 'This potntially causes an error with PortScan. Set it Time/NL Dep. panel '
+
     def update_param(self):
         self.update_inc_amp_phase()
 

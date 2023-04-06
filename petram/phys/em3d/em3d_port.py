@@ -129,6 +129,13 @@ class EM3D_Port(EM3D_Bdry):
         value.append(self.isTimeDependent_RHS)
         return value
 
+    def verify_setting(self):
+        if self.isTimeDependent_RHS:
+            flag = True
+        else:
+            flag = False
+        return flag, 'Varying RHS is not set', 'This potntially causes an error with PortScan. Set it Time/NL Dep. panel '
+
     def update_param(self):
         self.vt.preprocess_params(self)
         inc_amp, inc_phase, eps, mur = self.vt.make_value_or_expression(self)
