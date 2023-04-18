@@ -388,14 +388,14 @@ class EM3D(PhysModule):
 
             # Js : surface current (n x B / mu)
             addc_expression(v, 'Js', suffix, ind_vars,
-                            '(inv(mur).dot(cross(B, [nx, ny, nz]))/mu0)[0]',
+                            'cross([nx, ny, nz], inv(mur).dot(B))/mu0)[0]',
                             ['ny', 'nz' 'By', 'Bz', 'mu0'], 0)
             addc_expression(v, 'Js', suffix, ind_vars,
-                           '(inv(mur).dot(cross(B, [nx, ny, nz]))/mu0)[1]',
+                            'cross([nx, ny, nz], inv(mur).dot(B))/mu0)[1]',
 #                           '(nz * Bx - nx * Bz)/mu0*inv(mur)',
                             ['nx', 'nz' 'Bx', 'Bz', 'mu0'], 1)
             addc_expression(v, 'Js', suffix, ind_vars,
-                           '(inv(mur).dot(cross(B, [nx, ny, nz]))/mu0)[2]',
+                            'cross([nx, ny, nz], inv(mur).dot(B))/mu0)[2]',
 #                           '(nx * By - ny * Bx)/mu0*inv(mur)',
                             ['nx', 'ny' 'Bx', 'By', 'mu0'], 2)
             
