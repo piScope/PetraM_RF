@@ -292,7 +292,7 @@ class EM2Da_Vac(EM2Da_Domain):
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'mur')
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'sigma')
         
-        add_constant(v, 'm_mode', suffix, np.float(tmode),
+        add_constant(v, 'm_mode', suffix, np.float64(tmode),
                      domains = self._sel_index,
                      gdomain = self._global_ns)
         

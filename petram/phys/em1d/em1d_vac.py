@@ -232,11 +232,11 @@ class EM1D_Vac(EM1D_Domain):
         
         if len(self._sel_index) == 0: return
 
-        add_constant(v, 'ky', suffix, np.float(ky),
+        add_constant(v, 'ky', suffix, np.float64(ky),
                      domains = self._sel_index,
                      gdomain = self._global_ns)
         
-        add_constant(v, 'kz', suffix, np.float(kz),
+        add_constant(v, 'kz', suffix, np.float64(kz),
                      domains = self._sel_index,
                      gdomain = self._global_ns)
 

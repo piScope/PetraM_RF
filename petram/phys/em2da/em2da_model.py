@@ -281,8 +281,8 @@ class EM2Da(PhysModule):
         from petram.helper.variables import TestVariable
         #v['debug_test'] =  TestVariable()
         freq, omega = self.get_freq_omega()
-        add_constant(v, 'omega', suffix, np.float(omega),)
-        add_constant(v, 'freq', suffix, np.float(freq),)
+        add_constant(v, 'omega', suffix, np.float64(omega),)
+        add_constant(v, 'freq', suffix, np.float64(freq),)
         add_constant(v, 'mu0', '', self._global_ns['mu0'])
         add_constant(v, 'e0', '', self._global_ns['e0'])
         
