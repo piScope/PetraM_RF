@@ -389,13 +389,13 @@ class EM3D(PhysModule):
             # Js : surface current (n x B / mu)
             addc_expression(v, 'Js', suffix, ind_vars,
                             '(cross([nx, ny, nz], inv(mur).dot(B))/mu0)[0]',
-                            ['ny', 'nz' 'By', 'Bz', 'mu0'], 0)
+                            ['nx', 'ny', 'nz', 'B', 'mur', 'mu0'], 0)
             addc_expression(v, 'Js', suffix, ind_vars,
                             '(cross([nx, ny, nz], inv(mur).dot(B))/mu0)[1]',
-                            ['nx', 'nz' 'Bx', 'Bz', 'mu0'], 1)
+                            ['nx', 'ny', 'nz','B', 'mur', 'mu0'], 1)
             addc_expression(v, 'Js', suffix, ind_vars,
                             '(cross([nx, ny, nz], inv(mur).dot(B))/mu0)[2]',
-                            ['nx', 'ny' 'Bx', 'By', 'mu0'], 2)
+                            ['nx', 'ny', 'nz', 'B', 'mur', 'mu0'], 2)
             
             
         elif name.startswith('psi'):
