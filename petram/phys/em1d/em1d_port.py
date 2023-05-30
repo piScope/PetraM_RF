@@ -173,6 +173,23 @@ class EM1D_Port(EM1D_Bdry):
         self.port_idx = v[0]
         self.vt.import_panel_value(self, v[1:])
 
+    def panel4_param(self):
+        ll = super(EM1D_Port, self).panel4_param()
+        ll.append(['Varying (in time/for loop) RHS', False, 3, {"text": ""}])
+        return ll
+
+    def panel4_tip(self):
+        return None
+
+    def import_panel4_value(self, value):
+        super(EM1D_Port, self).import_panel4_value(value[:-1])
+        self.isTimeDependent_RHS = value[-1]
+
+    def get_panel4_value(self):
+        value = super(EM1D_Port, self).get_panel4_value()
+        value.append(self.isTimeDependent_RHS)
+        return value
+
     def verify_setting(self):
         if self.isTimeDependent_RHS:
             flag = True
