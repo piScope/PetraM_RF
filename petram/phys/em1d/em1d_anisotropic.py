@@ -8,7 +8,7 @@ import numpy as np
 
 from petram.phys.phys_model  import PhysCoefficient
 from petram.phys.em1d.em1d_base import EM1D_Bdry, EM1D_Domain
-from petram.phys.em1d.em1d_vac import EM1D_Vac, EM1D_Domain
+from petram.phys.em1d.em1d_vac import EM1D_Vac
 
 import petram.debug as debug
 dprint1, dprint2, dprint3 = debug.init_dprints('EM1D_Vac')
