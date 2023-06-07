@@ -22,32 +22,23 @@ data = (('E', VtableElement('E', type='complex',
                             default=np.array([0, 0, 0]),
                             tip="essential BC")),)
 
-
-class Vtable_mod(Vtable):
-    # this is for backword compatibility. previously E_(xyz)_txt was not used.
-    def make_value_or_expression(self, obj, keys=None):
-        if not hasattr(obj, "_had_data_transfer"):
-            if hasattr(obj, "E_x") and isinstance(obj.E_x, str) and obj.E_x_txt != obj.E_x:
-                print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! making adjustment")
-                obj.E_x_txt = obj.E_x
-            if hasattr(self, "E_y") and isinstance(obj.E_y, str) and obj.E_y_txt != obj.E_y:
-                obj.E_y_txt = obj.E_y
-            if hasattr(obj, "E_z") and isinstance(obj.E_z, str) and obj.E_z_txt != obj.E_z:
-                obj.E_z_txt = obj.E_z
-            obj._had_data_transfer = True
-        return Vtable.make_value_or_expression(self, obj, keys=keys)
-
-
 def bdry_constraints():
     return [EM3D_E]
 
 
 class EM3D_E(EM3D_Bdry):
     has_essential = True
-    vt = Vtable_mod(data)
+    vt = Vtable(data)
 
     def attribute_set(self, v):
         super(EM3D_E, self).attribute_set(v)
+
+        # old file may not contain E_x_txt
+        if not hasattr(self, "E_x_txt") and hasattr(self, "E_x"):
+            dprint1("making adjustment for backward compatilibty")
+            setattr(self, "E_x_txt", str(self.E_x))
+            setattr(self, "E_y_txt", str(self.E_y))
+            setattr(self, "E_z_txt", str(self.E_z))
         return v
 
     def get_essential_idx(self, kfes):
@@ -69,7 +60,8 @@ class EM3D_E(EM3D_Bdry):
         ind_vars = self.get_root_phys().ind_vars
         l = self._local_ns
         g = self._global_ns
-        coeff1 = VCoeff(3, Exyz, ind_vars, l, g, return_complex=True)
+
+        coeff1 = VCoeff(3, Exyz[0], ind_vars, l, g, return_complex=True)
         #f_name = self._make_f_name()
         # coeff1 = Et(3, f_name,  self.get_root_phys().ind_vars,
         #            self._local_ns, self._global_ns,
