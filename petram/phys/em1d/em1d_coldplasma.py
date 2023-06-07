@@ -120,7 +120,7 @@ class EM1D_ColdPlasma(EM1D_Vac):
             return - 1j*omega * np.zeros((3,3), dtype=np.complex128)
             
 
-        from .dispersion_cold import epsilonr_pl_cold, epsilonr_pl_cold_std
+        from petram.phys.em3d.dispersion_cold import epsilonr_pl_cold, epsilonr_pl_cold_std
 
         params = {'omega': omega, 'masses': masses, 'charges': charges, }
 #                  'epsilonr_pl_cold': epsilonr_pl_cold,}
@@ -148,7 +148,7 @@ class EM1D_ColdPlasma(EM1D_Vac):
             coeff4 = NumbaCoefficient(mfem_coeff4)
             return coeff1, coeff2, coeff3, coeff4
         else:
-            return coeff1, coeff2, coeff3
+            return coeff1, coeff2, coeff3, ky, kz
 
     def add_bf_contribution(self, engine, a, real=True, kfes=0):
         if kfes != 0:
@@ -158,19 +158,57 @@ class EM1D_ColdPlasma(EM1D_Vac):
         else:
             dprint1("Add BF contribution(imag)" + str(self._sel_index))
 
-        coeff1, _coeff2, coeff3 = self.get_coeffs()
+        coeff1, coeff2, coeff3, ky, kz = self.get_coeffs()
         self.set_integrator_realimag_mode(real)
 
         #if self.has_pml():
         #    coeff1 = self.make_PML_coeff(coeff1)
         #    coeff2 = self.make_PML_coeff(coeff2)
         #    coeff3 = self.make_PML_coeff(coeff3)
-        #coeff2 = coeff2.inv()
+
         ec = coeff1[kfes, kfes]
         sc = coeff3[kfes, kfes]        
 
-        super(EM1D_Anisotropic, self).add_bf_contribution(engine, a, real=real,
-                                                          kfes=kfes, ecsc=(ec,sc))
+        self.add_integrator(engine, 'epsilonr', ec, a.AddDomainIntegrator,
+                            mfem.MassIntegrator)
+        self.add_integrator(engine, 'sigma', sc, a.AddDomainIntegrator,
+                            mfem.MassIntegrator)
+
+        coeff4 = 1./coeff2[0, 0]
+        #
+        #
+        #
+        if kfes == 0: # Ex
+            imu = coeff4*(ky**2 + kz**2)
+            #imu = InvMu(m,  self.get_root_phys().ind_vars,
+            #                self._local_ns, self._global_ns,
+            #                real = real, factor = ky**2 + kz**2)
+            print("imu",imu)
+            self.add_integrator(engine, 'mur', imu, a.AddDomainIntegrator,
+                                mfem.MassIntegrator)
+          
+        elif kfes == 1 or kfes == 2: # Ey and Ez
+            imu = coeff4
+            #imu = InvMu(m,  self.get_root_phys().ind_vars,
+            #                self._local_ns, self._global_ns,
+            #                real = real)
+            self.add_integrator(engine, 'mur', imu, a.AddDomainIntegrator,
+                                mfem.DiffusionIntegrator)
+
+            if kfes == 1: fac = kz*kz
+            if kfes == 2: fac = ky*ky
+
+            imu = coeff4*fac
+            #imu = InvMu(m,  self.get_root_phys().ind_vars,
+            #                self._local_ns, self._global_ns,
+            #                real = real, factor = fac)
+
+            self.add_integrator(engine, 'mur', imu, a.AddDomainIntegrator,
+                                mfem.MassIntegrator)
+
+        
+        #super(EM1D_ColdPlasma, self).add_bf_contribution(engine, a, real=real,
+        #                                                  kfes=kfes, ecsc=(eca,sc))
 
     def add_mix_contribution(self, engine, mbf, r, c, is_trans, real = True):
         if real:
@@ -180,11 +218,11 @@ class EM1D_ColdPlasma(EM1D_Vac):
             dprint1("Add mixed contribution(imag)" + "(" + str(r) + "," + str(c) +')'
                     +str(self._sel_index))
        
-        coeff1, _coeff2, coeff3 = self.get_coeffs()
+        coeff1, coeff2, coeff3, ky, kz = self.get_coeffs()
         self.set_integrator_realimag_mode(real)
 
-        super(EM1D_Anisotropic, self).add_mix_contribution(engine, mbf, r, c, is_trans,
-                                                           real = real)
+        #super(EM1D_ColdPlasma, self).add_mix_contribution(engine, mbf, r, c, is_trans,
+        #                                                   real = real)
         ec = coeff1[r, c]        
         sc = coeff3[r, c]
 
@@ -192,6 +230,51 @@ class EM1D_ColdPlasma(EM1D_Vac):
                             mfem.MixedScalarMassIntegrator)
         self.add_integrator(engine, 'sigma', sc, mbf.AddDomainIntegrator,
                                 mfem.MixedScalarMassIntegrator)
+        
+        coeff4 = 1./coeff2[0, 0]
+        if r == 0 and c == 1:
+            imu = coeff4*(1j*ky)
+            #imu = InvMu(m,  self.get_root_phys().ind_vars,
+            #            self._local_ns, self._global_ns,
+            #            real = real, factor=1j*ky)
+            itg = mfem.MixedScalarDerivativeIntegrator
+        elif r == 0 and c == 2:
+            imu = coeff4*(-1j*kz)            
+            #imu = InvMu(m,  self.get_root_phys().ind_vars,
+            #            self._local_ns, self._global_ns,
+            #            real = real, factor=1j*kz)
+            itg = mfem.MixedScalarDerivativeIntegrator
+        elif r == 1 and c == 0:
+            imu = coeff4*(1j*ky)
+            #imu = InvMu(m,  self.get_root_phys().ind_vars,
+            #            self._local_ns, self._global_ns,
+            #            real = real, factor=1j*ky)
+            itg = mfem.MixedScalarWeakDerivativeIntegrator
+        elif r == 1 and c == 2:
+            imu = coeff4*(-ky*ky)
+            #imu = InvMu(m,  self.get_root_phys().ind_vars,
+            #            self._local_ns, self._global_ns,
+            #            real = real, factor=-ky*kz)
+            itg = mfem.MixedScalarMassIntegrator
+        elif r == 2 and c == 0:
+            imu = coeff4*(-1j*kz)
+            #imu = InvMu(m,  self.get_root_phys().ind_vars,
+            #            self._local_ns, self._global_ns,
+            #            real = real, factor=1j*kz)
+            itg = mfem.MixedScalarWeakDerivativeIntegrator
+        elif r == 2 and c == 1:
+            imu = coeff4*(-ky*kz)
+            #imu = InvMu(m,  self.get_root_phys().ind_vars,
+            #            self._local_ns, self._global_ns,
+            #            real = real, factor=-ky*kz)
+            itg = mfem.MixedScalarMassIntegrator
+        else:
+            assert False, "Something is wrong..if it comes here;D"
+
+           
+        self.add_integrator(engine, 'mur', imu,
+                            mbf.AddDomainIntegrator, itg)
+        
 
     def add_domain_variables(self, v, n, suffix, ind_vars, solr, soli=None):
         from petram.helper.variables import add_expression, add_constant
