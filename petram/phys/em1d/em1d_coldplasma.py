@@ -69,7 +69,6 @@ def domain_constraints():
 class EM1D_ColdPlasma(EM1D_Vac):
     allow_custom_intorder = False
     vt = Vtable(data)
-    #nlterms = ['epsilonr']
 
     def __init__(self, **kargs):
         super(EM1D_ColdPlasma, self).__init__(**kargs)
@@ -85,7 +84,7 @@ class EM1D_ColdPlasma(EM1D_Vac):
     def compile_coeffs(self):
         self._jited_coeff = self.get_coeffs()
 
-    def get_coeffs(self, real=True):
+    def get_coeffs(self):
         freq, omega = self.get_root_phys().get_freq_omega()
         B, dens_e, t_e, dens_i, masses, charges, ky, kz = self.vt.make_value_or_expression(
             self)
@@ -231,9 +230,9 @@ class EM1D_ColdPlasma(EM1D_Vac):
         coeff1, coeff2, coeff3, coeff4, ky, kz = self.jited_coeff
 
         c1 = NumbaCoefficientVariable(coeff1, complex=True, shape=(3, 3))
-        c2 = NumbaCoefficientVariable(coeff1, complex=True, shape=(3, 3))
-        c3 = NumbaCoefficientVariable(coeff1, complex=True, shape=(3, 3))
-        c4 = NumbaCoefficientVariable(coeff1, complex=True, shape=(3, 3))
+        c2 = NumbaCoefficientVariable(coeff2, complex=True, shape=(3, 3))
+        c3 = NumbaCoefficientVariable(coeff3, complex=True, shape=(3, 3))
+        c4 = NumbaCoefficientVariable(coeff4, complex=True, shape=(3, 3))
 
         ss = str(hash(self.fullname()))
         v["_e_"+ss] = c1
@@ -255,3 +254,11 @@ class EM1D_ColdPlasma(EM1D_Vac):
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'epsilonr')
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'mur')
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'sigma')
+        
+        add_constant(v, 'ky', suffix, np.float64(kz),
+                     domains = self._sel_index,
+                     gdomain = self._global_ns)
+        add_constant(v, 'kz', suffix, np.float64(kz),
+                     domains = self._sel_index,
+                     gdomain = self._global_ns)
+        

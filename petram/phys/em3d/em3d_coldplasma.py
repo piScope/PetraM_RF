@@ -186,9 +186,9 @@ class EM3D_ColdPlasma(EM3D_Domain):
         coeff1, coeff2, coeff3, coeff4 = self.jited_coeff
 
         c1 = NumbaCoefficientVariable(coeff1, complex=True, shape=(3, 3))
-        c2 = NumbaCoefficientVariable(coeff1, complex=True, shape=(3, 3))
-        c3 = NumbaCoefficientVariable(coeff1, complex=True, shape=(3, 3))
-        c4 = NumbaCoefficientVariable(coeff1, complex=True, shape=(3, 3))
+        c2 = NumbaCoefficientVariable(coeff2, complex=True, shape=(3, 3))
+        c3 = NumbaCoefficientVariable(coeff3, complex=True, shape=(3, 3))
+        c4 = NumbaCoefficientVariable(coeff4, complex=True, shape=(3, 3))
 
         ss = str(hash(self.fullname()))
         v["_e_"+ss] = c1

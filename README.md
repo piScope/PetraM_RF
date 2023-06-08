@@ -22,7 +22,6 @@ This module provides various Frequency domain RF interface to Petra-M.
  *    EM3D_Continuity  : Continuitiy
  *    EM3D_Impedance   : Impedance BC Continuitiy (Leontovich)
 
-
   Pair:
  *    EM3D_Floquet     : Periodic boundary condition
 
@@ -48,6 +47,7 @@ This module provides various Frequency domain RF interface to Petra-M.
  *    EM2D_Vac         : scalar dielectric
  *    EM2D_ExtJ        : external current
  *    EM2D_PML         : PML cartesian streaching
+ *    EM2D_ColdPlasma  : Cold magnetised plasma
 
   Boundary:
  *    EM2D_PEC         : Perfect electric conductor
