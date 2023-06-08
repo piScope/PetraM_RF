@@ -74,6 +74,7 @@ def Mu_Coeff(ind_vars, l, g, omega):
     return coeff
 '''
 
+
 def domain_constraints():
     return [EM3D_ColdPlasma]
 
@@ -93,75 +94,25 @@ class EM3D_ColdPlasma(EM3D_Domain):
         else:
             return False
 
-    def get_coeffs(self, real=True, return_stix=False):
+    @property
+    def jited_coeff(self):
+        return self._jited_coeff
+
+    def compile_coeffs(self):
+        self._jited_coeff = self.get_coeffs()
+
+    def get_coeffs(self):
         from .em3d_const import mu0, epsilon0
         freq, omega = self.get_root_phys().get_freq_omega()
         B, dens_e, t_e, dens_i, masses, charges = self.vt.make_value_or_expression(
             self)
-
-        Da = 1.66053906660e-27      # atomic mass unit (u or Dalton) (kg)        
-        masses = np.array(masses, dtype=np.float64) * Da
-        charges = np.array(charges, dtype=np.int64)
-
-        num_ions = len(masses)
         ind_vars = self.get_root_phys().ind_vars
-        l = self._local_ns
-        g = self._global_ns
 
-        B_coeff = VCoeff(3, [B], ind_vars, l, g,
-                         return_complex=False, return_mfem_constant=True)
-        dens_e_coeff = SCoeff([dens_e, ], ind_vars, l, g,
-                              return_complex=False, return_mfem_constant=True)
-        t_e_coeff = SCoeff([t_e, ], ind_vars, l, g,
-                           return_complex=False, return_mfem_constant=True)
-        dens_i_coeff = VCoeff(num_ions, [dens_i, ], ind_vars, l, g,
-                              return_complex=False, return_mfem_constant=True)
-
-        def epsilonr(ptx, B, dens_e, t_e, dens_i):
-            out = -epsilon0 * omega * omega*epsilonr_pl_cold(
-                omega, B, dens_i, masses, charges, t_e, dens_e)
-            return out
-
-        def sdp(ptx, B, dens_e, t_e, dens_i):
-            out = epsilonr_pl_cold_std(omega, B, dens_i, masses, charges, t_e, dens_e)
-            return out
-        
-        def mur(ptx):
-            return mu0*np.eye(3, dtype=np.complex128)
-        
-        def sigma(ptx):
-            return - 1j*omega * np.zeros((3,3), dtype=np.complex128)
-            
-
-        from .dispersion_cold import epsilonr_pl_cold, epsilonr_pl_cold_std
-
-        params = {'omega': omega, 'masses': masses, 'charges': charges, }
-#                  'epsilonr_pl_cold': epsilonr_pl_cold,}
-        numba_debug = False if myid != 0 else get_numba_debug()
-
-        dependency = (B_coeff, dens_e_coeff, t_e_coeff, dens_i_coeff)
-        dependency = [(x.mfem_numba_coeff if isinstance(B_coeff, NumbaCoefficient) else x)
-                      for x in dependency]
-
-        jitter = mfem.jit.matrix(sdim=3, shape=(3, 3), complex=True, params=params,
-                                 debug=numba_debug, dependency=dependency)
-        mfem_coeff1 = jitter(epsilonr)
-
-        jitter2 = mfem.jit.matrix(sdim=3, shape=(3, 3), complex=True, params=params,
-                                 debug=numba_debug)
-        mfem_coeff2 = jitter2(mur)
-        mfem_coeff3 = jitter2(sigma)
-        
-        coeff1 = NumbaCoefficient(mfem_coeff1)
-        coeff2 = NumbaCoefficient(mfem_coeff2)
-        coeff3 = NumbaCoefficient(mfem_coeff3)
-
-        if return_stix:
-            mfem_coeff4 = jitter(sdp)
-            coeff4 = NumbaCoefficient(mfem_coeff4)
-            return coeff1, coeff2, coeff3, coeff4
-        else:
-            return coeff1, coeff2, coeff3
+        from petram.phys.rf_dispersion_coldplasma import build_coefficients
+        coeff1, coeff2, coeff3, coeff4 = build_coefficients(ind_vars, omega, B, dens_e, t_e,
+                                                            dens_i, masses, charges,
+                                                            self._global_ns, self._local_ns,)
+        return coeff1, coeff2, coeff3, coeff4
 
     def add_bf_contribution(self, engine, a, real=True, kfes=0):
         if kfes != 0:
@@ -171,7 +122,7 @@ class EM3D_ColdPlasma(EM3D_Domain):
         else:
             dprint1("Add BF contribution(imag)" + str(self._sel_index))
 
-        coeff1, coeff2, coeff3 = self.get_coeffs()
+        coeff1, coeff2, coeff3, coeff4 = self.jited_coeff
         self.set_integrator_realimag_mode(real)
 
         if self.has_pml():
@@ -229,16 +180,15 @@ class EM3D_ColdPlasma(EM3D_Domain):
         from petram.helper.variables import (NativeCoefficientGenBase,
                                              NumbaCoefficientVariable)
 
-        
         if len(self._sel_index) == 0:
             return
-    
-        coeff1, coeff2, coeff3, coeff4 = self.get_coeffs(return_stix=True)
 
-        c1 = NumbaCoefficientVariable(coeff1, complex=True, shape=(3,3))
-        c2 = NumbaCoefficientVariable(coeff1, complex=True, shape=(3,3))
-        c3 = NumbaCoefficientVariable(coeff1, complex=True, shape=(3,3))
-        c4 = NumbaCoefficientVariable(coeff1, complex=True, shape=(3,3))        
+        coeff1, coeff2, coeff3, coeff4 = self.jited_coeff
+
+        c1 = NumbaCoefficientVariable(coeff1, complex=True, shape=(3, 3))
+        c2 = NumbaCoefficientVariable(coeff1, complex=True, shape=(3, 3))
+        c3 = NumbaCoefficientVariable(coeff1, complex=True, shape=(3, 3))
+        c4 = NumbaCoefficientVariable(coeff1, complex=True, shape=(3, 3))
 
         ss = str(hash(self.fullname()))
         v["_e_"+ss] = c1
@@ -249,15 +199,18 @@ class EM3D_ColdPlasma(EM3D_Domain):
         self.do_add_matrix_expr(v, suffix, ind_vars, 'epsilonr', ["_e_"+ss])
         self.do_add_matrix_expr(v, suffix, ind_vars, 'mur', ["_m_"+ss])
         self.do_add_matrix_expr(v, suffix, ind_vars, 'sigma', ["_s_"+ss])
-        self.do_add_matrix_expr(v, suffix, ind_vars, 'Sstix', ["_spd_"+ss+"[0,0]"])
-        self.do_add_matrix_expr(v, suffix, ind_vars, 'Dstix', ["1j*_spd_"+ss+"[0,1]"])         
-        self.do_add_matrix_expr(v, suffix, ind_vars, 'Pstix', ["_spd_"+ss+"[2,2]"])        
-        
+        self.do_add_matrix_expr(v, suffix, ind_vars,
+                                'Sstix', ["_spd_"+ss+"[0,0]"])
+        self.do_add_matrix_expr(v, suffix, ind_vars, 'Dstix', [
+                                "1j*_spd_"+ss+"[0,1]"])
+        self.do_add_matrix_expr(v, suffix, ind_vars,
+                                'Pstix', ["_spd_"+ss+"[2,2]"])
+
         var = ['x', 'y', 'z']
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'epsilonr')
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'mur')
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'sigma')
-        
+
         '''
         e, m, s = self.vt.make_value_or_expression(self)
         m = [(1+0j), 0j, 0j, 0j, (1+0j), 0j, 0j, 0j, (1+0j)]

@@ -82,7 +82,7 @@ class EM1D_ColdPlasma(EM1D_Vac):
     def jited_coeff(self):
         return self._jited_coeff
 
-    def compile_coeffs(self, n_matrix):
+    def compile_coeffs(self):
         self._jited_coeff = self.get_coeffs()
 
     def get_coeffs(self, real=True):
@@ -91,71 +91,10 @@ class EM1D_ColdPlasma(EM1D_Vac):
             self)
         ind_vars = self.get_root_phys().ind_vars
 
-        from petram.phys.em3d.dispersion_cold import build_coefficients
+        from petram.phys.rf_dispersion_coldplasma import build_coefficients
         coeff1, coeff2, coeff3, coeff4 = build_coefficients(ind_vars, omega, B, dens_e, t_e,
                                                             dens_i, masses, charges,
                                                             self._global_ns, self._local_ns,)
-        '''
-        Da = 1.66053906660e-27      # atomic mass unit (u or Dalton) (kg)        
-        masses = np.array(masses, dtype=np.float64) * Da
-        charges = np.array(charges, dtype=np.int64)
-
-        num_ions = len(masses)
-        ind_vars = self.get_root_phys().ind_vars
-        l = self._local_ns
-        g = self._global_ns
-
-        B_coeff = VCoeff(3, [B], ind_vars, l, g,
-                         return_complex=False, return_mfem_constant=True)
-        dens_e_coeff = SCoeff([dens_e, ], ind_vars, l, g,
-                              return_complex=False, return_mfem_constant=True)
-        t_e_coeff = SCoeff([t_e, ], ind_vars, l, g,
-                           return_complex=False, return_mfem_constant=True)
-        dens_i_coeff = VCoeff(num_ions, [dens_i, ], ind_vars, l, g,
-                              return_complex=False, return_mfem_constant=True)
-
-        def epsilonr(ptx, B, dens_e, t_e, dens_i):
-            out = -epsilon0 * omega * omega*epsilonr_pl_cold(
-                omega, B, dens_i, masses, charges, t_e, dens_e)
-            return out
-
-        def sdp(ptx, B, dens_e, t_e, dens_i):
-            out = epsilonr_pl_cold_std(omega, B, dens_i, masses, charges, t_e, dens_e)
-            return out
-        
-        def mur(ptx):
-            return mu0*np.eye(3, dtype=np.complex128)
-        
-        def sigma(ptx):
-            return - 1j*omega * np.zeros((3,3), dtype=np.complex128)
-
-        params = {'omega': omega, 'masses': masses, 'charges': charges, }
-#                  'epsilonr_pl_cold': epsilonr_pl_cold,}
-        numba_debug = False if myid != 0 else get_numba_debug()
-
-        dependency = (B_coeff, dens_e_coeff, t_e_coeff, dens_i_coeff)
-        dependency = [(x.mfem_numba_coeff if isinstance(B_coeff, NumbaCoefficient) else x)
-                      for x in dependency]
-
-        jitter = mfem.jit.matrix(sdim=3, shape=(3, 3), complex=True, params=params,
-                                 debug=numba_debug, dependency=dependency)
-        mfem_coeff1 = jitter(epsilonr)
-
-        jitter2 = mfem.jit.matrix(sdim=3, shape=(3, 3), complex=True, params=params,
-                                 debug=numba_debug)
-        mfem_coeff2 = jitter2(mur)
-        mfem_coeff3 = jitter2(sigma)
-        
-        coeff1 = NumbaCoefficient(mfem_coeff1)
-        coeff2 = NumbaCoefficient(mfem_coeff2)
-        coeff3 = NumbaCoefficient(mfem_coeff3)
-
-        if return_stix:
-            mfem_coeff4 = jitter(sdp)
-            coeff4 = NumbaCoefficient(mfem_coeff4)
-            return coeff1, coeff2, coeff3, coeff4
-        else:
-        '''
         return coeff1, coeff2, coeff3, coeff4, ky, kz
 
     def add_bf_contribution(self, engine, a, real=True, kfes=0):
@@ -289,7 +228,7 @@ class EM1D_ColdPlasma(EM1D_Vac):
         if len(self._sel_index) == 0:
             return
 
-        coeff1, coeff2, coeff3, coeff4, ky, kz = self.get_coeffs()
+        coeff1, coeff2, coeff3, coeff4, ky, kz = self.jited_coeff
 
         c1 = NumbaCoefficientVariable(coeff1, complex=True, shape=(3, 3))
         c2 = NumbaCoefficientVariable(coeff1, complex=True, shape=(3, 3))
