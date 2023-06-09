@@ -1,8 +1,5 @@
 '''
-   Vacuum region:
-      However, can have arbitrary scalar epsilon_r, mu_r, sigma
-
-
+   Cold plasma:
 '''
 import numpy as np
 
@@ -46,12 +43,14 @@ data = (('B', VtableElement('bext', type='array',
                                    default="1, 1",
                                    no_func=True,
                                    tip="ion charges normalized by q(=1.60217662e-19 [C])")),
-                                   tip = "contuctivity" )),
         ('t_mode', VtableElement('t_mode', type="int",
-                                     guilabel = 'm',
-                                     default = 0.0, 
-                                     tip = "mode number" )),)
+                                 guilabel = 'm',
+                                 default = 0.0, 
+                                 tip = "mode number" )),)
 
+from petram.phys.numba_coefficient import (func_to_numba_coeff_scalar,
+                                           func_to_numba_coeff_vector,
+                                           func_to_numba_coeff_matrix)
 from petram.phys.phys_const import mu0, epsilon0
 
 '''
@@ -67,176 +66,6 @@ Expansion of matrix is as follows
   Erz = Er e_r + Ez e_z
   Ephx = - rho Ephi
 '''
-class M_RZ(MatrixPhysCoefficient):
-    def __init__(self, *args, **kwargs):
-        self.omega = kwargs.pop('omega', 1.0)
-        super(M_RZ, self).__init__(*args, **kwargs)
-    def EvalValue(self, x):
-        val = Coefficient_Evaluator.EvalValue(self, x).reshape(3,3)
-        val = self.apply_factor(x, val)
-        return val[[0,2], :][:, [0, 2]]
-        
-class M_12(VectorPhysCoefficient):
-    def __init__(self, *args, **kwargs):
-        self.omega = kwargs.pop('omega', 1.0)
-        super(M_12, self).__init__(*args, **kwargs)
-    def EvalValue(self, x):
-        val = Coefficient_Evaluator.EvalValue(self, x).reshape(3,3)
-        val = self.apply_factor(x, val)        
-        return val[[0, 2], [1]]
-
-class M_21(VectorPhysCoefficient):
-    def __init__(self, *args, **kwargs):
-        self.omega = kwargs.pop('omega', 1.0)
-        super(M_21, self).__init__(*args, **kwargs)
-    def EvalValue(self, x):
-        val = Coefficient_Evaluator.EvalValue(self, x).reshape(3,3)
-        val = self.apply_factor(x, val)        
-        return val[[1], [0,2]]
-
-class M_PHI(PhysCoefficient):
-    def __init__(self, *args, **kwargs):
-        kwargs['isArray'] = True       
-        self.omega = kwargs.pop('omega', 1.0)
-        super(M_PHI, self).__init__(*args, **kwargs)
-    def EvalValue(self, x):
-        val = Coefficient_Evaluator.EvalValue(self, x).reshape(3,3)
-        val = self.apply_factor(x, val)
-        return val[1, 1]
-
-class eps_o_r(object):
-    def apply_factor(self, x, v):
-        v = - v * epsilon0 * self.omega * self.omega / x[0]
-        if self.real:  return v.real
-        else: return v.imag
-class eps_x_r(object):
-    def apply_factor(self, x, v):
-        v = - v * epsilon0 * self.omega * self.omega * x[0]
-        if self.real:  return v.real
-        else: return v.imag
-class eps(object):
-    def apply_factor(self, x, v):
-        v = - v * epsilon0 * self.omega * self.omega
-        if self.real:  return v.real
-        else: return v.imag
-class neg_eps(object):
-    def apply_factor(self, x, v):
-        v = v * epsilon0 * self.omega * self.omega
-        if self.real:  return v.real
-        else: return v.imag
-
-class sigma_o_r(object):
-    def apply_factor(self, x, v):
-        v = - 1j * self.omega * v / x[0]       
-        if self.real:  return v.real
-        else: return v.imag
-class sigma_x_r(object):
-    def apply_factor(self, x, v):
-        v = - 1j * self.omega * v * x[0]              
-        if self.real:  return v.real
-        else: return v.imag
-class sigma(object):
-    def apply_factor(self, x, v):
-        v = - 1j * self.omega * v
-        if self.real:  return v.real
-        else: return v.imag
-class neg_sigma(object):
-    def apply_factor(self, x, v):
-        v = 1j * self.omega * v
-        if self.real:  return v.real
-        else: return v.imag
-        
-#class Epsilon_o_r_rz(M_RZ, eps_o_r):
-#    pass
-class Epsilon_o_r_phi(M_PHI, eps_o_r):
-    pass
-#class Sigma_o_r_rz(M_RZ, sigma_o_r):
-#    pass
-class Sigma_o_r_phi(M_PHI, sigma_o_r):
-    pass
- 
-class Epsilon_x_r_rz(M_RZ, eps_x_r):
-    pass
-class Epsilon_x_r_phi(M_PHI, eps_x_r):
-    pass
-class Sigma_x_r_rz(M_RZ, sigma_x_r):
-    pass
-class Sigma_x_r_phi(M_PHI, sigma_x_r):
-    pass
- 
-class Epsilon_21(M_21, neg_eps):
-    pass
-    '''
-    def EvalValue(self, x):
-        val = super(Epsilon_21, self).EvalValue(x)
-        print val
-        return val
-    '''
-class Epsilon_12(M_12, neg_eps):
-    pass   
-class Sigma_12(M_12, neg_sigma):
-    pass
-class Sigma_21(M_21, neg_sigma):
-    pass
-
-class InvMu_x_r(PhysCoefficient):
-   '''
-      r/mu0/mur
-   '''
-   def __init__(self, *args, **kwargs):
-       super(InvMu_x_r, self).__init__(*args, **kwargs)
-
-   def EvalValue(self, x):
-       from .em2da_const import mu0, epsilon0      
-       v = super(InvMu_x_r, self).EvalValue(x)
-       v = 1/mu0/v*x[0]
-       if self.real:  return v.real
-       else: return v.imag
-       
-class InvMu_o_r(PhysCoefficient):
-   '''
-      1/mu0/mur/r
-   '''
-   def __init__(self, *args, **kwargs):
-       self.tmode = kwargs.pop('tmode', 0.0)      
-       super(InvMu_o_r, self).__init__(*args, **kwargs)
-  
-   def EvalValue(self, x):
-       from .em2da_const import mu0, epsilon0      
-       v = super(InvMu_o_r, self).EvalValue(x)
-       v = 1./mu0/v/x[0]
-       if self.real:  return v.real
-       else: return v.imag
-       
-class iInvMu_m_o_r(PhysCoefficient):
-   '''
-      -1j/mu0/mur/r
-   '''
-   def __init__(self, *args, **kwargs):
-       self.tmode = kwargs.pop('tmode', 1.0)      
-       super(iInvMu_m_o_r, self).__init__(*args, **kwargs)
-  
-   def EvalValue(self, x):
-       from .em2da_const import mu0, epsilon0      
-       v = super(iInvMu_m_o_r, self).EvalValue(x)
-       v = 1j/mu0/v/x[0]*self.tmode
-       if self.real:  return v.real
-       else: return v.imag
-       
-class InvMu_m2_o_r(PhysCoefficient):
-   '''
-      1./mu0/mur/r/m^2
-   '''
-   def __init__(self, *args, **kwargs):
-       self.tmode = kwargs.pop('tmode', 1.0)      
-       super(InvMu_m2_o_r, self).__init__(*args, **kwargs)
-  
-   def EvalValue(self, x):
-       from .em2da_const import mu0, epsilon0      
-       v = super(InvMu_m2_o_r, self).EvalValue(x)
-       v = 1/mu0/v/x[0]*self.tmode*self.tmode
-       if self.real:  return v.real
-       else: return v.imag
 
 def domain_constraints():
    return [EM2Da_ColdPlasma]
@@ -289,17 +118,17 @@ class EM2Da_ColdPlasma(EM2Da_Domain):
         eps11 = coeff4[[0, 2], [0, 2]]
         eps22 = coeff4[1, 1]
 
-        def invmu_o_x(ptx, invmu_in):
-            return invmu_in[0,0]*ptx[0]
+        def invmu_x_r(ptx, invmu):
+            return invmu[0,0]*ptx[0]
         def invmu_o_r(ptx, invmu_in):
-            return invmu_in[0,0]/ptx[0]*tmode
-        def invmu_o_r_2(ptx, invmu_in):
-            return invmu_in[0,0]/ptx[0]*tmode*tmode
+            return invmu[0,0]/ptx[0]
+        def invmu_o_r_tt(ptx, invmu_in):
+            return invmu[0,0]/ptx[0]*tmode*tmode
 
          
-        def se_x_r_rz(ptx, coeff4_in):         
+        def eps11_x_r(ptx, eps11):         
             return eps11*ptx[0]
-        def se_o_r_phi(ptx, coeff4_in):         
+        def eps22_o_r(ptx, eps22):
             return eps22/ptx[0]
 
         if kfes == 0: ## ND element (Epoloidal)
@@ -307,21 +136,27 @@ class EM2Da_ColdPlasma(EM2Da_Domain):
                 dprint1("Add ND contribution(real)" + str(self._sel_index))
             else:
                 dprint1("Add ND contribution(imag)" + str(self._sel_index))
+
+
+            se_x_r_rz = func_to_numba_coeff_matrix(eps11_x_r, shape=(2,2),
+                                                   complex=True,
+                                                   depencency=(eps11,))
+            imu_x_r = func_to_numba_coeff_scalar(invmu_x_r, 
+                                                 complex=True,
+                                                 depencency=(invmu,))
             
             self.add_integrator(engine, 'mur', imu_x_r,
                                 a.AddDomainIntegrator,
                                 mfem.CurlCurlIntegrator)
-            self.add_integrator(engine, 'epsilonr', e_x_r,
-                                a.AddDomainIntegrator,
-                                mfem.VectorFEMassIntegrator)
-            self.add_integrator(engine, 'sigma', s_x_r,
+            self.add_integrator(engine, 'sigma_epsilonr', se_x_r_rz,
                                 a.AddDomainIntegrator,
                                 mfem.VectorFEMassIntegrator)
             
             if tmode != 0:
-                imu_o_r_2 = InvMu_m2_o_r(m,  self.get_root_phys().ind_vars,
-                                      self._local_ns, self._global_ns,
-                                      real = real, tmode = tmode)
+                imu_o_r_2 = func_to_numba_coeff_scalar(invmu_o_r_tt, 
+                                                       complex=True,
+                                                        depencency=(invmu,))
+                
                 self.add_integrator(engine, 'mur', imu_o_r_2,
                                     a.AddDomainIntegrator,
                                     mfem.VectorFEMassIntegrator)
@@ -331,14 +166,19 @@ class EM2Da_ColdPlasma(EM2Da_Domain):
                 dprint1("Add H1 contribution(real)" + str(self._sel_index))
             else:
                 dprint1("Add H1 contribution(imag)" + str(self._sel_index))
+
+                
+            se_o_r = func_to_numba_coeff_scalar(eps22_o_r, 
+                                                complex=True,
+                                                depencency=(eps22,))
+            imv_o_r_1 = func_to_numba_coeff_scalar(invmu_o_r,
+                                                   complex=True,
+                                                   depencency=(invmu,))
             
             self.add_integrator(engine, 'mur', imv_o_r_1,
                                 a.AddDomainIntegrator,
                                 mfem.DiffusionIntegrator)
-            self.add_integrator(engine, 'epsilonr', e_o_r,
-                                a.AddDomainIntegrator,
-                                mfem.MassIntegrator)
-            self.add_integrator(engine, 'sigma', s_o_r,
+            self.add_integrator(engine, 'epsilonr', se_o_r,
                                 a.AddDomainIntegrator,
                                 mfem.MassIntegrator)
         else:
@@ -421,34 +261,32 @@ class EM2Da_ColdPlasma(EM2Da_Domain):
         eps21 = coeff4[[0, 2], 1]
         eps12 = coeff4[1, [0, 2]]
 
-        def iinvmu_o_r(ptx, invmu_in):
-            return 1j*invmu_in[0,0]/ptx[0]*tmode
+        def iinvmu_o_r_t(ptx, invmu):
+            return 1j*invmu[0,0]/ptx[0]*tmode
          
         se_21 = - esp21
         se_12 = - esp12
         
         if r == 1 and c == 0:
-
-
+            imv_o_r_3 = func_to_numba_coeff_scalar(iinvmu_o_r_t
+                                                   complex=True,
+                                                   depencency=(invmu,))
 
             #if  is_trans:
             # (a_vec dot u_vec, v_scalar)                        
             itg = mfem.MixedDotProductIntegrator
-            self.add_integrator(engine, 'epsilon', e,
-                                mbf.AddDomainIntegrator, itg)
-            self.add_integrator(engine, 'sigma', s,
+            self.add_integrator(engine, 'sigma_epsilon_21', se21,
                                 mbf.AddDomainIntegrator, itg)
             # (-a u_vec, div v_scalar)            
             itg =  mfem.MixedVectorWeakDivergenceIntegrator
             self.add_integrator(engine, 'mur', imv_o_r_3,
                                 mbf.AddDomainIntegrator, itg)
-            #print r, c, mbf
+
         else:
             itg = mfem.MixedVectorProductIntegrator
-            self.add_integrator(engine, 'epsilon', e,
+            self.add_integrator(engine, 'sigma_epsilon_12', se12,
                              mbf.AddDomainIntegrator, itg)
-            self.add_integrator(engine, 'sigma', s,
-                             mbf.AddDomainIntegrator, itg)
+
             # (a grad u_scalar, v_vec)
 
             itg =  mfem.MixedVectorGradientIntegrator
@@ -502,22 +340,41 @@ class EM2Da_ColdPlasma(EM2Da_Domain):
         '''
         
     def add_domain_variables(self, v, n, suffix, ind_vars, solr, soli = None):
+
         from petram.helper.variables import add_expression, add_constant
 
-        e, m, s, tmode = self.vt.make_value_or_expression(self)
+        coeff1, coeff2, coeff3, coeff_stix, t_mode = self.jited_coeff
 
-        self.do_add_matrix_expr(v, suffix, ind_vars, 'epsilonr', e)
-        self.do_add_scalar_expr(v, suffix, ind_vars, 'smur', m, add_diag=3)
-        self.do_add_matrix_expr(v, suffix, ind_vars, 'sigma', s)
+        c1 = NumbaCoefficientVariable(coeff1, complex=True, shape=(3, 3))
+        c2 = NumbaCoefficientVariable(coeff2, complex=True, shape=(3, 3))
+        c3 = NumbaCoefficientVariable(coeff3, complex=True, shape=(3, 3))
+        c4 = NumbaCoefficientVariable(coeff_stix, complex=True, shape=(3, 3))
 
-        var = ['r', 'phi', 'z']
+        ss = str(hash(self.fullname()))
+        v["_e_"+ss] = c1
+        v["_m_"+ss] = c2
+        v["_s_"+ss] = c3
+        v["_spd_"+ss] = c4
+
+        self.do_add_matrix_expr(v, suffix, ind_vars, 'epsilonr', ["_e_"+ss])
+        self.do_add_matrix_expr(v, suffix, ind_vars, 'mur', ["_m_"+ss])
+        self.do_add_matrix_expr(v, suffix, ind_vars, 'sigma', ["_s_"+ss])
+        self.do_add_matrix_expr(v, suffix, ind_vars,
+                                'Sstix', ["_spd_"+ss+"[0,0]"])
+        self.do_add_matrix_expr(v, suffix, ind_vars, 'Dstix', [
+                                "1j*_spd_"+ss+"[0,1]"])
+        self.do_add_matrix_expr(v, suffix, ind_vars,
+                                'Pstix', ["_spd_"+ss+"[2,2]"])
+
+        var = ['x', 'y', 'z']
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'epsilonr')
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'mur')
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'sigma')
 
-        add_constant(v, 'm_mode', suffix, np.float64(tmode), 
-                     domains = self._sel_index,
-                     gdomain = self._global_ns)
+        add_constant(v, 't_mode', suffix, np.float64(kz),
+                     domains=self._sel_index,
+                     gdomain=self._global_ns)
+
 
 
 
