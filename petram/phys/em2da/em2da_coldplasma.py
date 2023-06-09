@@ -19,22 +19,35 @@ if use_parallel:
 else:
    import mfem.ser as mfem
    
-from petram.phys.vtable import VtableElement, Vtable   
-data =  (('epsilonr', VtableElement('epsilonr', type='complex',
-                                     guilabel = 'epsilonr',
-                                     suffix =[('r', 'phi', 'z'), ('r', 'phi', 'z')],
-                                     default = np.eye(3, 3),
-                                     tip = "relative permittivity" )),
-         ('mur', VtableElement('mur', type='complex',
-                                     guilabel = 'mur',
-                                     default = 1.0, 
-                                     tip = "relative permeability" )),
-         ('sigma', VtableElement('sigma', type='complex',
-                                     guilabel = 'sigma',
-                                     suffix =[('r', 'phi', 'z'), ('r', 'phi', 'z')],
-                                     default = np.zeros((3, 3)),
-                                     tip = "contuctivity" )),
-         ('t_mode', VtableElement('t_mode', type='int',
+from petram.phys.vtable import VtableElement, Vtable
+data = (('B', VtableElement('bext', type='array',
+                            guilabel='magnetic field',
+                            default="=[0,0,0]",
+                            tip="external magnetic field")),
+        ('dens_e', VtableElement('dens_e', type='float',
+                                 guilabel='electron density(m-3)',
+                                 default="1e19",
+                                 tip="electron density")),
+        ('temperature', VtableElement('temperature', type='float',
+                                      guilabel='electron temp.(eV)',
+                                      default="10.",
+                                      tip="electron temperature used for collisions")),
+        ('dens_i', VtableElement('dens_i', type='array',
+                                 guilabel='ion densities(m-3)',
+                                 default="0.9e19, 0.1e19",
+                                 tip="ion densities")),
+        ('mass', VtableElement('mass', type='array',
+                               guilabel='ion masses(/Da)',
+                               default="2, 1",
+                               no_func=True,
+                               tip="mass. use  m_h, m_d, m_t, or u")),
+        ('charge_q', VtableElement('charge_q', type='array',
+                                   guilabel='ion charges(/q)',
+                                   default="1, 1",
+                                   no_func=True,
+                                   tip="ion charges normalized by q(=1.60217662e-19 [C])")),
+                                   tip = "contuctivity" )),
+        ('t_mode', VtableElement('t_mode', type="int",
                                      guilabel = 'm',
                                      default = 0.0, 
                                      tip = "mode number" )),)
@@ -247,8 +260,42 @@ class EM2Da_ColdPlasma(EM2Da_Domain):
            flag2 : take conj
         '''
         return [(0, 1, 1, 1), (1, 0, 1, 1),]#(0, 1, -1, 1)]
+     
+    @property
+    def jited_coeff(self):
+        return self._jited_coeff
 
+    def compile_coeffs(self):
+        self._jited_coeff = self.get_coeffs()
+
+    def get_coeffs(self):
+        freq, omega = self.get_root_phys().get_freq_omega()
+        B, dens_e, t_e, dens_i, masses, charges, tmode = self.vt.make_value_or_expression(
+            self)
+        ind_vars = self.get_root_phys().ind_vars
+
+        from petram.phys.rf_dispersion_coldplasma import build_coefficients
+        coeff1, coeff2, coeff3, coeff4 = build_coefficients(ind_vars, omega, B, dens_e, t_e,
+                                                            dens_i, masses, charges,
+                                                            self._global_ns, self._local_ns,)
+        return coeff1, coeff2, coeff3, coeff4, tmode
+        
     def add_bf_contribution(self, engine, a, real = True, kfes=0):
+
+        coeff1, coeff2, coeff3, coeff_stix, kz = self.jited_coeff
+        invmu = coeff2.inv()
+        coeff4 = coeff1 + coeff3
+
+        eps11 = coeff4[[0, 1], [0, 1]]
+        eps21 = coeff4[[0, 1], 2]
+        eps12 = coeff4[2, [0, 1]]
+        eps22 = coeff4[2, 2]
+
+        def invmu_o_x(ptx):
+            return invmu[0,0]*ptx[0]
+        def se_x_r_rz(ptx):         
+            return coeff4*ptx[0]
+        
         from .em2da_const import mu0, epsilon0
         freq, omega = self.get_root_phys().get_freq_omega()
         e, m, s, tmode = self.vt.make_value_or_expression(self)

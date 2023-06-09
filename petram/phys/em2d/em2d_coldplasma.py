@@ -29,13 +29,6 @@ if use_parallel:
 else:
     import mfem.ser as mfem
 
-'''
-from petram.phys.coefficient import PyComplexMatrixInvCoefficient as ComplexMatrixInv
-from petram.phys.coefficient import PyComplexMatrixProductCoefficient as ComplexMatrixProduct
-from petram.phys.coefficient import PyComplexMatrixSumCoefficient as ComplexMatrixSum
-from petram.phys.coefficient import PyComplexMatrixSliceCoefficient as ComplexMatrixSlice
-from petram.phys.coefficient import PyComplexMatrixAdjCoefficient as ComplexMatrixAdj
-'''
 data = (('B', VtableElement('bext', type='array',
                             guilabel='magnetic field',
                             default="=[0,0,0]",
