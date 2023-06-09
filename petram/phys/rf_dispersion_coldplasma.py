@@ -1,4 +1,4 @@
-from numba import njit, int64, float64, complex128, types
+from numba import njit, void, int64, float64, complex128, types
 
 from numpy import (pi, sin, cos, exp, sqrt, log, arctan2,
                    max, array, linspace, conj, transpose,
@@ -31,6 +31,16 @@ me = 9.10938356e-31
 iarray_ro = types.Array(int64, 1, 'C', readonly=True)
 darray_ro = types.Array(float64, 1, 'C', readonly=True)
 
+
+@njit(void(complex128[:,:], int64, int64))
+def print_mat(mat, r, c):
+    '''
+    routine for debugging
+    '''
+    for i in range(r):
+        for j in range(c):
+            print("mat r="+str(i) + ", z="+str(j) + " :" )
+            print(mat[i, j])
 
 @njit(complex128[:](float64, float64, float64, float64[:]))
 def SPD_el(w, Bnorm, dens, nu_eis):
@@ -132,7 +142,7 @@ def epsilonr_pl_cold(w, B, denses, masses, charges, Te, ne):
     A = dot(R1(ph), dot(M, R1(-ph)))
 
     ans = dot(R2(th), dot(A, R2(-th)))
-
+    #print_mat(ans, 3, 3)
     return ans
 
 
