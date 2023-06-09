@@ -286,23 +286,65 @@ class EM2Da_ColdPlasma(EM2Da_Domain):
         invmu = coeff2.inv()
         coeff4 = coeff1 + coeff3
 
-        eps11 = coeff4[[0, 1], [0, 1]]
-        eps21 = coeff4[[0, 1], 2]
-        eps12 = coeff4[2, [0, 1]]
-        eps22 = coeff4[2, 2]
+        eps11 = coeff4[[0, 2], [0, 2]]
+        eps22 = coeff4[1, 1]
 
-        def invmu_o_x(ptx):
-            return invmu[0,0]*ptx[0]
-        def se_x_r_rz(ptx):         
-            return coeff4*ptx[0]
-        
-        from .em2da_const import mu0, epsilon0
-        freq, omega = self.get_root_phys().get_freq_omega()
-        e, m, s, tmode = self.vt.make_value_or_expression(self)
-        if not isinstance(e, str): e = str(e)
-        if not isinstance(m, str): m = str(m)
-        if not isinstance(s, str): s = str(s)
+        def invmu_o_x(ptx, invmu_in):
+            return invmu_in[0,0]*ptx[0]
+        def invmu_o_r(ptx, invmu_in):
+            return invmu_in[0,0]/ptx[0]*tmode
+        def invmu_o_r_2(ptx, invmu_in):
+            return invmu_in[0,0]/ptx[0]*tmode*tmode
 
+         
+        def se_x_r_rz(ptx, coeff4_in):         
+            return eps11*ptx[0]
+        def se_o_r_phi(ptx, coeff4_in):         
+            return eps22/ptx[0]
+
+        if kfes == 0: ## ND element (Epoloidal)
+            if real:       
+                dprint1("Add ND contribution(real)" + str(self._sel_index))
+            else:
+                dprint1("Add ND contribution(imag)" + str(self._sel_index))
+            
+            self.add_integrator(engine, 'mur', imu_x_r,
+                                a.AddDomainIntegrator,
+                                mfem.CurlCurlIntegrator)
+            self.add_integrator(engine, 'epsilonr', e_x_r,
+                                a.AddDomainIntegrator,
+                                mfem.VectorFEMassIntegrator)
+            self.add_integrator(engine, 'sigma', s_x_r,
+                                a.AddDomainIntegrator,
+                                mfem.VectorFEMassIntegrator)
+            
+            if tmode != 0:
+                imu_o_r_2 = InvMu_m2_o_r(m,  self.get_root_phys().ind_vars,
+                                      self._local_ns, self._global_ns,
+                                      real = real, tmode = tmode)
+                self.add_integrator(engine, 'mur', imu_o_r_2,
+                                    a.AddDomainIntegrator,
+                                    mfem.VectorFEMassIntegrator)
+                
+        elif kfes == 1: ## H1 element (Etoroidal)
+            if real:
+                dprint1("Add H1 contribution(real)" + str(self._sel_index))
+            else:
+                dprint1("Add H1 contribution(imag)" + str(self._sel_index))
+            
+            self.add_integrator(engine, 'mur', imv_o_r_1,
+                                a.AddDomainIntegrator,
+                                mfem.DiffusionIntegrator)
+            self.add_integrator(engine, 'epsilonr', e_o_r,
+                                a.AddDomainIntegrator,
+                                mfem.MassIntegrator)
+            self.add_integrator(engine, 'sigma', s_o_r,
+                                a.AddDomainIntegrator,
+                                mfem.MassIntegrator)
+        else:
+            pass
+         
+        '''
         if kfes == 0: ## ND element (Epoloidal)
             if real:       
                 dprint1("Add ND contribution(real)" + str(self._sel_index))
@@ -362,6 +404,7 @@ class EM2Da_ColdPlasma(EM2Da_Domain):
                                 mfem.MassIntegrator)
         else:
             pass
+        '''
         
     def add_mix_contribution(self, engine, mbf, r, c, is_trans, real = True):
         if real:
@@ -371,14 +414,48 @@ class EM2Da_ColdPlasma(EM2Da_Domain):
             dprint1("Add mixed contribution(imag)" + "(" + str(r) + "," + str(c) +')'
                     +str(self._sel_index))
        
-        from .em2da_const import mu0, epsilon0
-        freq, omega = self.get_root_phys().get_freq_omega()
-        e, m, s, tmode = self.vt.make_value_or_expression(self)
-        #if tmode == 0: return
-        if not isinstance(e, str): e = str(e)
-        if not isinstance(m, str): m = str(m)
-        if not isinstance(s, str): s = str(s)
+        coeff1, coeff2, coeff3, coeff_stix, kz = self.jited_coeff
+        invmu = coeff2.inv()
+        coeff4 = coeff1 + coeff3
+
+        eps21 = coeff4[[0, 2], 1]
+        eps12 = coeff4[1, [0, 2]]
+
+        def iinvmu_o_r(ptx, invmu_in):
+            return 1j*invmu_in[0,0]/ptx[0]*tmode
+         
+        se_21 = - esp21
+        se_12 = - esp12
         
+        if r == 1 and c == 0:
+
+
+
+            #if  is_trans:
+            # (a_vec dot u_vec, v_scalar)                        
+            itg = mfem.MixedDotProductIntegrator
+            self.add_integrator(engine, 'epsilon', e,
+                                mbf.AddDomainIntegrator, itg)
+            self.add_integrator(engine, 'sigma', s,
+                                mbf.AddDomainIntegrator, itg)
+            # (-a u_vec, div v_scalar)            
+            itg =  mfem.MixedVectorWeakDivergenceIntegrator
+            self.add_integrator(engine, 'mur', imv_o_r_3,
+                                mbf.AddDomainIntegrator, itg)
+            #print r, c, mbf
+        else:
+            itg = mfem.MixedVectorProductIntegrator
+            self.add_integrator(engine, 'epsilon', e,
+                             mbf.AddDomainIntegrator, itg)
+            self.add_integrator(engine, 'sigma', s,
+                             mbf.AddDomainIntegrator, itg)
+            # (a grad u_scalar, v_vec)
+
+            itg =  mfem.MixedVectorGradientIntegrator
+            self.add_integrator(engine, 'mur', imv_o_r_3,
+                             mbf.AddDomainIntegrator, itg)
+           
+        '''
         imv_o_r_3 = iInvMu_m_o_r(m,  self.get_root_phys().ind_vars,
                               self._local_ns, self._global_ns,
                               real = real, tmode = -tmode)
@@ -412,7 +489,6 @@ class EM2Da_ColdPlasma(EM2Da_Domain):
                            self._local_ns, self._global_ns,
                            real = real, omega = omega)
 
-             #itg = mfem.MixedDotProductIntegrator
             itg = mfem.MixedVectorProductIntegrator
             self.add_integrator(engine, 'epsilon', e,
                              mbf.AddDomainIntegrator, itg)
@@ -423,7 +499,8 @@ class EM2Da_ColdPlasma(EM2Da_Domain):
             itg =  mfem.MixedVectorGradientIntegrator
             self.add_integrator(engine, 'mur', imv_o_r_3,
                              mbf.AddDomainIntegrator, itg)
-
+        '''
+        
     def add_domain_variables(self, v, n, suffix, ind_vars, solr, soli = None):
         from petram.helper.variables import add_expression, add_constant
 
