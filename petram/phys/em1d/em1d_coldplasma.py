@@ -124,18 +124,11 @@ class EM1D_ColdPlasma(EM1D_Vac):
         #
         if kfes == 0:  # Ex
             imu = coeff4*(ky**2 + kz**2)
-            # imu = InvMu(m,  self.get_root_phys().ind_vars,
-            #                self._local_ns, self._global_ns,
-            #                real = real, factor = ky**2 + kz**2)
-            print("imu", imu)
             self.add_integrator(engine, 'mur', imu, a.AddDomainIntegrator,
                                 mfem.MassIntegrator)
 
         elif kfes == 1 or kfes == 2:  # Ey and Ez
             imu = coeff4
-            # imu = InvMu(m,  self.get_root_phys().ind_vars,
-            #                self._local_ns, self._global_ns,
-            #                real = real)
             self.add_integrator(engine, 'mur', imu, a.AddDomainIntegrator,
                                 mfem.DiffusionIntegrator)
 
@@ -145,9 +138,6 @@ class EM1D_ColdPlasma(EM1D_Vac):
                 fac = ky*ky
 
             imu = coeff4*fac
-            # imu = InvMu(m,  self.get_root_phys().ind_vars,
-            #                self._local_ns, self._global_ns,
-            #                real = real, factor = fac)
 
             self.add_integrator(engine, 'mur', imu, a.AddDomainIntegrator,
                                 mfem.MassIntegrator)
