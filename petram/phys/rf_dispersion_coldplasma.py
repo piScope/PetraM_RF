@@ -187,7 +187,7 @@ def build_coefficients(ind_vars, omega, B, dens_e, t_e, dens_i, masses, charges,
     numba_debug = False if myid != 0 else get_numba_debug()
 
     dependency = (B_coeff, dens_e_coeff, t_e_coeff, dens_i_coeff)
-    dependency = [(x.mfem_numba_coeff if isinstance(B_coeff, NumbaCoefficient) else x)
+    dependency = [(x.mfem_numba_coeff if isinstance(x, NumbaCoefficient) else x)
                   for x in dependency]
 
     jitter = mfem.jit.matrix(sdim=3, shape=(3, 3), complex=True, params=params,

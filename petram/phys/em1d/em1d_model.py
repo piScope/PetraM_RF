@@ -154,11 +154,18 @@ class EM1D(PhysModule):
         ND
         RT
         '''
-        values = ['L2', 'H1', 'H1']
+        if self.use_h1_x:
+            values = ['H1', 'H1', 'H1']
+        else:
+            values = ['L2', 'H1', 'H1']
         return values[idx]
 
     def get_fec(self):
         v = self.dep_vars
+        if self.use_h1_x:
+            return [(v[0], 'H1_FECollection'),
+                    (v[1], 'H1_FECollection'),
+                    (v[2], 'H1_FECollection'), ]
         return [(v[0], 'L2_FECollection'),
                 (v[1], 'H1_FECollection'),
                 (v[2], 'H1_FECollection'), ]
@@ -166,6 +173,8 @@ class EM1D(PhysModule):
     def fes_order(self, idx):
         self.vt_order.preprocess_params(self)        
         if idx == 0:
+            if self.use_h1_x:
+                return self.order
             return self.order -1
         else:
             return self.order            
@@ -184,6 +193,7 @@ class EM1D(PhysModule):
         v["ndim"] = 1
         v["ind_vars"] = 'x'
         v["dep_vars_suffix"] = ''
+        v["use_h1_x"] = False
         return v
 
     def panel1_param(self):
@@ -193,7 +203,8 @@ class EM1D(PhysModule):
                        ["dep. vars. suffix", self.dep_vars_suffix, 0, {}],
                        ["dep. vars.", ','.join(self.dep_vars), 2, {}],
                        ["derived vars.", ','.join(self.der_vars), 2, {}],
-                       ["predefined ns vars.", txt_predefined, 2, {}]])
+                       ["predefined ns vars.", txt_predefined, 2, {}],
+                       ["use H1 for Ex", self.use_h1_x, 3, {"text":' '}],])
         return panels
 
     def get_panel1_value(self):
@@ -201,7 +212,7 @@ class EM1D(PhysModule):
         names2 = ','.join([x for x in self.der_vars])
         val = super(EM1D, self).get_panel1_value()
         val.extend([self.freq_txt, self.ind_vars, self.dep_vars_suffix,
-                    names, names2, txt_predefined])
+                    names, names2, txt_predefined, self.use_h1_x])
         return val
 
     def attribute_expr(self):
@@ -219,10 +230,16 @@ class EM1D(PhysModule):
 
     def import_panel1_value(self, v):
         v = super(EM1D, self).import_panel1_value(v)
+
         self.freq_txt = str(v[0])
         self.ind_vars = str(v[1])
         self.dep_vars_suffix = str(v[2])
+        self.use_h1_x = v[-1]
 
+        if self.use_h1_x:
+            self.element = 'H1_FECollection, H1_FECollection, H1_FECollection'
+        else:
+            self.element = 'L2_FECollection, H1_FECollection, H1_FECollection'
         from petram.phys.em1d.em1d_const import mu0, epsilon0
 
         self._global_ns['mu0'] = mu0

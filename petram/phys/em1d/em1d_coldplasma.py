@@ -142,9 +142,6 @@ class EM1D_ColdPlasma(EM1D_Vac):
             self.add_integrator(engine, 'mur', imu, a.AddDomainIntegrator,
                                 mfem.MassIntegrator)
 
-        # super(EM1D_ColdPlasma, self).add_bf_contribution(engine, a, real=real,
-        #                                                  kfes=kfes, ecsc=(eca,sc))
-
     def add_mix_contribution(self, engine, mbf, r, c, is_trans, real=True):
         if real:
             dprint1("Add mixed contribution(real)" + "(" + str(r) + "," + str(c) + ')'
@@ -169,39 +166,21 @@ class EM1D_ColdPlasma(EM1D_Vac):
         coeff4 = 1./coeff2[0, 0]
         if r == 0 and c == 1:
             imu = coeff4*(1j*ky)
-            # imu = InvMu(m,  self.get_root_phys().ind_vars,
-            #            self._local_ns, self._global_ns,
-            #            real = real, factor=1j*ky)
             itg = mfem.MixedScalarDerivativeIntegrator
         elif r == 0 and c == 2:
             imu = coeff4*(1j*kz)
-            # imu = InvMu(m,  self.get_root_phys().ind_vars,
-            #            self._local_ns, self._global_ns,
-            #            real = real, factor=1j*kz)
             itg = mfem.MixedScalarDerivativeIntegrator
         elif r == 1 and c == 0:
             imu = coeff4*(1j*ky)
-            # imu = InvMu(m,  self.get_root_phys().ind_vars,
-            #            self._local_ns, self._global_ns,
-            #            real = real, factor=1j*ky)
             itg = mfem.MixedScalarWeakDerivativeIntegrator
         elif r == 1 and c == 2:
             imu = coeff4*(-ky*ky)
-            # imu = InvMu(m,  self.get_root_phys().ind_vars,
-            #            self._local_ns, self._global_ns,
-            #            real = real, factor=-ky*kz)
             itg = mfem.MixedScalarMassIntegrator
         elif r == 2 and c == 0:
             imu = coeff4*(1j*kz)
-            # imu = InvMu(m,  self.get_root_phys().ind_vars,
-            #            self._local_ns, self._global_ns,
-            #            real = real, factor=1j*kz)
             itg = mfem.MixedScalarWeakDerivativeIntegrator
         elif r == 2 and c == 1:
             imu = coeff4*(-ky*kz)
-            # imu = InvMu(m,  self.get_root_phys().ind_vars,
-            #            self._local_ns, self._global_ns,
-            #            real = real, factor=-ky*kz)
             itg = mfem.MixedScalarMassIntegrator
         else:
             assert False, "Something is wrong..if it comes here;D"
