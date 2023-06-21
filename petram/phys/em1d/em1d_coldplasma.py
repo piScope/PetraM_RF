@@ -203,7 +203,7 @@ class EM1D_ColdPlasma(EM1D_Vac):
         c3 = NumbaCoefficientVariable(coeff3, complex=True, shape=(3, 3))
         c4 = NumbaCoefficientVariable(coeff4, complex=True, shape=(3, 3))
 
-        ss = str(hash(self.fullname()))
+        ss = str(abs(hash(self.fullname())))
         v["_e_"+ss] = c1
         v["_m_"+ss] = c2
         v["_s_"+ss] = c3
