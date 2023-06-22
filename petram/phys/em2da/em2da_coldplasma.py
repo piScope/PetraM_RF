@@ -107,7 +107,7 @@ class EM2Da_ColdPlasma(EM2Da_Domain):
             self)
         ind_vars = self.get_root_phys().ind_vars
 
-        from petram.phys.rf_dispersion_coldplasma import build_coefficients
+        from petram.phys.common.rf_dispersion_coldplasma import build_coefficients
         coeff1, coeff2, coeff3, coeff4 = build_coefficients(ind_vars, omega, B, dens_e, t_e,
                                                             dens_i, masses, charges,
                                                             self._global_ns, self._local_ns,)
