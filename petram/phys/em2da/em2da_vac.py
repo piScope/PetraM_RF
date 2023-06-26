@@ -31,7 +31,7 @@ data =  (('epsilonr', VtableElement('epsilonr', type='complex',
                                      guilabel = 'sigma',
                                      default = 0.0, 
                                      tip = "contuctivity" )),
-         ('t_mode', VtableElement('t_mode', type='int',
+         ('t_mode', VtableElement('t_mode', type='float',
                                      guilabel = 'm',
                                      default = 0.0, 
                                      tip = "mode number" )),)

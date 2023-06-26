@@ -50,12 +50,12 @@ data = (('B', VtableElement('bext', type='array',
                                    default="1, 1",
                                    no_func=True,
                                    tip="ion charges normalized by q(=1.60217662e-19 [C])")),
-        ('ky', VtableElement('ky', type='int',
+        ('ky', VtableElement('ky', type='float',
                              guilabel='ky',
                              default=0.,
                              no_func=True,
                              tip="wave number in the y direction")),
-        ('kz', VtableElement('kz', type='int',
+        ('kz', VtableElement('kz', type='float',
                              guilabel='kz',
                              default=0.0,
                              no_func=True,
@@ -129,7 +129,7 @@ class EM1D_ColdPlasma(EM1D_Vac):
 
         elif kfes == 1 or kfes == 2:  # Ey and Ez
             imu = coeff4
-            self.add_integrator(engine, 'mur', imu, a.AddDomainIntegrator,
+            self.add_integrator(engine, 'mur1', imu, a.AddDomainIntegrator,
                                 mfem.DiffusionIntegrator)
 
             if kfes == 1:
@@ -139,7 +139,7 @@ class EM1D_ColdPlasma(EM1D_Vac):
 
             imu = coeff4*fac
 
-            self.add_integrator(engine, 'mur', imu, a.AddDomainIntegrator,
+            self.add_integrator(engine, 'mur2', imu, a.AddDomainIntegrator,
                                 mfem.MassIntegrator)
 
     def add_mix_contribution(self, engine, mbf, r, c, is_trans, real=True):
@@ -174,7 +174,7 @@ class EM1D_ColdPlasma(EM1D_Vac):
             imu = coeff4*(1j*ky)
             itg = mfem.MixedScalarWeakDerivativeIntegrator
         elif r == 1 and c == 2:
-            imu = coeff4*(-ky*ky)
+            imu = coeff4*(-ky*kz)
             itg = mfem.MixedScalarMassIntegrator
         elif r == 2 and c == 0:
             imu = coeff4*(1j*kz)

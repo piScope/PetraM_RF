@@ -47,7 +47,7 @@ data = (('B', VtableElement('bext', type='array',
                                    default="1, 1",
                                    no_func=True,
                                    tip="ion charges normalized by q(=1.60217662e-19 [C])")),
-        ('t_mode', VtableElement('t_mode', type="int",
+        ('t_mode', VtableElement('t_mode', type="float",
                                  guilabel='m',
                                  default=0.0,
                                  tip="mode number")),)

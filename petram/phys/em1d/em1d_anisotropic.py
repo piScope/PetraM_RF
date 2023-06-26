@@ -11,7 +11,7 @@ from petram.phys.em1d.em1d_base import EM1D_Bdry, EM1D_Domain
 from petram.phys.em1d.em1d_vac import EM1D_Vac
 
 import petram.debug as debug
-dprint1, dprint2, dprint3 = debug.init_dprints('EM1D_Vac')
+dprint1, dprint2, dprint3 = debug.init_dprints('EM1D_Anisotropic')
 
 from petram.mfem_config import use_parallel
 if use_parallel:
@@ -34,12 +34,12 @@ data =  (('epsilonr', VtableElement('epsilonr', type='complex',
                                      suffix =[('x', 'y', 'z'), ('x', 'y', 'z')],
                                      default = np.zeros((3, 3)),
                                      tip = "contuctivity" )),
-         ('ky', VtableElement('ky', type='int',
+         ('ky', VtableElement('ky', type='float',
                                      guilabel = 'ky',
                                      default = 0. ,
                                      no_func = True, 
                                      tip = "wave number in the y direction" )),
-         ('kz', VtableElement('kz', type='int',
+         ('kz', VtableElement('kz', type='float',
                                      guilabel = 'kz',
                                      default = 0.0,
                                      no_func = True,                               

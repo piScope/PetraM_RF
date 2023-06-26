@@ -32,8 +32,8 @@ data = (('epsilonr', VtableElement('epsilonr', type='complex',
                                 guilabel='sigma',
                                 default=0.0,
                                 tip="contuctivity")),
-        ('ky', VtableElement('ky', type='float',
-                             guilabel='ky',
+        ('ky', VtableElement('ky', type='int',
+                             guilabel='float',
                              default=0.,
                              no_func=True,
                              tip="wave number` in the y direction")),
@@ -123,15 +123,15 @@ class EM1D_Vac(EM1D_Domain):
     def get_mixedbf_loc(self):
         '''
         r, c, and flag1, flag2 of MixedBilinearForm
-           flag1 : take transpose
-           flag2 : take conj
+           flag1 : take transpose if negative
+           flag2 : take conj if -1
         '''
-        return [(0, 1, 0, 0),
-                (1, 0, 0, 0),
-                (1, 2, 0, 0),
-                (2, 1, 0, 0),
-                (0, 2, 0, 0),
-                (2, 0, 0, 0), ]
+        return [(0, 1, 1, 1),
+                (1, 0, 1, 1),
+                (1, 2, 1, 1),
+                (2, 1, 1, 1),
+                (0, 2, 1, 1),
+                (2, 0, 1, 1), ]
 
     def add_bf_contribution(self, engine, a, real=True, kfes=0,
                             ecsc=None):

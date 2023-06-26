@@ -34,7 +34,7 @@ data =  (('epsilonr', VtableElement('epsilonr', type='complex',
                                      suffix =[('r', 'phi', 'z'), ('r', 'phi', 'z')],
                                      default = np.zeros((3, 3)),
                                      tip = "contuctivity" )),
-         ('t_mode', VtableElement('t_mode', type='int',
+         ('t_mode', VtableElement('t_mode', type='float',
                                      guilabel = 'm',
                                      default = 0.0, 
                                      tip = "mode number" )),)
