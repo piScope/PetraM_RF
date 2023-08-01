@@ -15,50 +15,64 @@ if use_parallel:
 else:
    import mfem.ser as mfem
 
-from petram.phys.vtable import VtableElement, Vtable      
+from petram.phys.vtable import VtableElement, Vtable
 data =  (('jext', VtableElement('jext', type='complex',
                              guilabel = 'External J',
                              suffix =('x', 'y', 'z'),
                              default = [0,0,0],
                              tip = "volumetric external current" )),)
-   
+
+'''
 class Jext(VectorPhysCoefficient):
    def __init__(self, *args, **kwargs):
        self.omega = kwargs.pop('omega', 1.0)
        super(Jext, self).__init__(*args, **kwargs)
    def EvalValue(self, x):
-       from .em3d_const import mu0, epsilon0      
+       from .em3d_const import mu0, epsilon0
        v = super(Jext, self).EvalValue(x)
        v = 1j * self.omega * v
        if self.real:  return v.real
        else: return v.imag
+'''
+from petram.phys.coefficient import VCoeff
+
+def JextCoeff(exprs, ind_vars, l, g, omega):
+    fac  = 1j * omega
+    coeff = VCoeff(3, exprs, ind_vars, l, g, return_complex=True, scale=fac)
+    return coeff
+
 
 def domain_constraints():
    return [EM3D_ExtJ]
-       
+
 class EM3D_ExtJ(EM3D_Domain):
     is_secondary_condition = True
-    has_3rd_panel = False    
+    has_3rd_panel = False
     vt  = Vtable(data)
-    
+
     def has_lf_contribution(self, kfes = 0):
         if kfes != 0: return False
         return True
 
     def add_lf_contribution(self, engine, b, real = True, kfes = 0):
-        if kfes != 0: return        
-        if real:       
+        if kfes != 0: return
+        if real:
             dprint1("Add LF contribution(real)" + str(self._sel_index))
         else:
             dprint1("Add LF contribution(imag)" + str(self._sel_index))
-            
+
+
+
         freq, omega = self.get_root_phys().get_freq_omega()
         f_name = self.vt.make_value_or_expression(self)
 
-        coeff1 = Jext(3, f_name[0],  self.get_root_phys().ind_vars,
-                            self._local_ns, self._global_ns,
-                            real = real, omega = omega)
-        
+        #coeff1 = Jext(3, f_name[0],  self.get_root_phys().ind_vars,
+        #                    self._local_ns, self._global_ns,
+        #                    real = real, omega = omega)
+        self.set_integrator_realimag_mode(real)
+        coeff1 = JextCoeff(f_name[0],  self.get_root_phys().ind_vars,
+                           self._local_ns, self._global_ns, omega)
+
         self.add_integrator(engine, 'jext', coeff1,
                             b.AddDomainIntegrator,
                             mfem.VectorFEDomainLFIntegrator)
