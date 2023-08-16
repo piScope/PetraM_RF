@@ -7,6 +7,7 @@
 import numpy as np
 
 from petram.phys.phys_model  import PhysCoefficient, PhysConstant
+from petram.phys.coefficient import SCoeff, MCoeff
 from petram.phys.em1d.em1d_base import EM1D_Bdry, EM1D_Domain
 
 import petram.debug as debug
@@ -44,10 +45,11 @@ data =  (('epsilonr', VtableElement('epsilonr', type='complex',
 
 from petram.phys.em1d.em1d_const import mu0, epsilon0
 
+'''       
 class Epsilon(PhysCoefficient):
-   '''
-    - omega^2 * epsilon0 * epsilonr
-   '''
+   #
+   #  - omega^2 * epsilon0 * epsilonr
+   #
    def __init__(self, *args, **kwargs):
        self.omega = kwargs.pop('omega', 1.0)
        super(Epsilon, self).__init__(*args, **kwargs)
@@ -59,9 +61,9 @@ class Epsilon(PhysCoefficient):
        else: return v.imag
        
 class Sigma(PhysCoefficient):
-   '''
-    -1j * omega * sigma
-   '''
+   #
+   # -1j * omega * sigma
+   #
    def __init__(self, *args, **kwargs):
        self.omega = kwargs.pop('omega', 1.0)
        super(Sigma, self).__init__(*args, **kwargs)
@@ -71,11 +73,11 @@ class Sigma(PhysCoefficient):
        v = -1j * self.omega * v
        if self.real:  return v.real
        else: return v.imag
-       
+
 class InvMu(PhysCoefficient):
-   '''
-      1/mu0/mur*(factor)
-   '''
+   #
+   #   1/mu0/mur*(factor)
+   #
    def __init__(self, *args, **kwargs):
        self._extra_fac = kwargs.pop("factor", 1.)
        super(InvMu, self).__init__(*args, **kwargs)
@@ -86,7 +88,24 @@ class InvMu(PhysCoefficient):
 
        if self.real:  return v.real
        else: return v.imag
+'''
+def Epsilon(exprs, ind_vars, l, g, omega=1):
+    # - omega^2 * epsilon0 * epsilonr
+    fac = -epsilon0 * omega * omega
+    coeff = SCoeff([exprs], ind_vars, l, g, return_complex=True, scale=fac)
+    return coeff
 
+
+def Sigma(exprs, ind_vars, l, g, omega=1):
+    # - 1j * self.omega * sigma
+    fac = - 1j * omega
+    coeff = SCoeff([exprs], ind_vars, l, g, return_complex=True, scale=fac)
+    return coeff
+       
+def InvMu(m, ind_vars, l, g, factor=1):
+    coeff = SCoeff([m], ind_vars, l, g, return_complex=True, scale=mu0)
+    return 1./coeff*factor
+       
 def domain_constraints():
    return [EM1D_Vac]
        
@@ -133,14 +152,16 @@ class EM1D_Vac(EM1D_Domain):
         if ecsc is None:
             sc = Sigma(s,  self.get_root_phys().ind_vars,
                               self._local_ns, self._global_ns,
-                              real = real, omega = omega)
+                              omega = omega)
             ec = Epsilon(e, self.get_root_phys().ind_vars,
                                 self._local_ns, self._global_ns,
-                                real = real, omega = omega)
+                              omega = omega)
         else:
             # anistropic case...
             ec, sc = ecsc
 
+        self.set_integrator_realimag_mode(real)
+        
         self.add_integrator(engine, 'epsilonr', sc, a.AddDomainIntegrator,
                             mfem.MassIntegrator)
         self.add_integrator(engine, 'sigma', ec, a.AddDomainIntegrator,
@@ -148,29 +169,28 @@ class EM1D_Vac(EM1D_Domain):
         if kfes == 0: # Ex
             imu = InvMu(m,  self.get_root_phys().ind_vars,
                             self._local_ns, self._global_ns,
-                            real = real, factor = ky**2 + kz**2)
+                            factor = ky**2 + kz**2)
             
             self.add_integrator(engine, 'mur', imu, a.AddDomainIntegrator,
                                 mfem.MassIntegrator)
-            
+
         elif kfes == 1 or kfes == 2: # Ey and Ez
             imu = InvMu(m,  self.get_root_phys().ind_vars,
-                            self._local_ns, self._global_ns,
-                            real = real)
+                            self._local_ns, self._global_ns)
+
             self.add_integrator(engine, 'mur', imu, a.AddDomainIntegrator,
                                 mfem.DiffusionIntegrator)
 
             if kfes == 1: fac = kz*kz
             if kfes == 2: fac = ky*ky            
-            
+
             imu = InvMu(m,  self.get_root_phys().ind_vars,
                             self._local_ns, self._global_ns,
-                            real = real, factor = fac)
+                            factor = fac)
 
             self.add_integrator(engine, 'mur', imu, a.AddDomainIntegrator,
                                 mfem.MassIntegrator)
 
-        
     def add_mix_contribution(self, engine, mbf, r, c, is_trans, real = True):
         if real:
             dprint1("Add mixed contribution(real)" + "(" + str(r) + "," + str(c) +')'
@@ -189,40 +209,38 @@ class EM1D_Vac(EM1D_Domain):
         if r == 0 and c == 1:
             imu = InvMu(m,  self.get_root_phys().ind_vars,
                         self._local_ns, self._global_ns,
-                        real = real, factor=1j*ky)
+                        factor=1j*ky)
             itg = mfem.MixedScalarDerivativeIntegrator
         elif r == 0 and c == 2:
             imu = InvMu(m,  self.get_root_phys().ind_vars,
                         self._local_ns, self._global_ns,
-                        real = real, factor=1j*kz)
+                        factor=1j*kz)
             itg = mfem.MixedScalarDerivativeIntegrator
         elif r == 1 and c == 0:
             imu = InvMu(m,  self.get_root_phys().ind_vars,
                         self._local_ns, self._global_ns,
-                        real = real, factor=1j*ky)
+                        factor=1j*ky)
             itg = mfem.MixedScalarWeakDerivativeIntegrator
         elif r == 1 and c == 2:
             imu = InvMu(m,  self.get_root_phys().ind_vars,
                         self._local_ns, self._global_ns,
-                        real = real, factor=-ky*kz)
+                        factor=-ky*kz)
             itg = mfem.MixedScalarMassIntegrator
         elif r == 2 and c == 0:
             imu = InvMu(m,  self.get_root_phys().ind_vars,
                         self._local_ns, self._global_ns,
-                        real = real, factor=1j*kz)
+                        factor=1j*kz)
             itg = mfem.MixedScalarWeakDerivativeIntegrator
         elif r == 2 and c == 1:
             imu = InvMu(m,  self.get_root_phys().ind_vars,
                         self._local_ns, self._global_ns,
-                        real = real, factor=-ky*kz)
+                        factor=-ky*kz)
             itg = mfem.MixedScalarMassIntegrator
         else:
             assert False, "Something is wrong..if it comes here;D"
-
            
         self.add_integrator(engine, 'mur', imu,
                             mbf.AddDomainIntegrator, itg)
-        
 
     def add_domain_variables(self, v, n, suffix, ind_vars, solr, soli = None):
         from petram.helper.variables import add_expression, add_constant
@@ -248,8 +266,6 @@ class EM1D_Vac(EM1D_Domain):
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'epsilonr')
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'mur')
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'sigma')
-
-
         
             
 
