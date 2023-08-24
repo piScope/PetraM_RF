@@ -62,8 +62,10 @@ data = (('inc_amp', VtableElement('inc_amp', type='complex',
                              no_func=True,
                              tip="wave number in the z direction")),)
 
+
 def bdry_constraints():
-   return [EM1D_Port]
+    return [EM1D_Port]
+
 
 class E_port(mfem.PyCoefficient):
     def __init__(self, bdry, real=True, amp=(1.0, 0.0),  eps=1.0,
@@ -95,10 +97,8 @@ class E_port(mfem.PyCoefficient):
 
     def EvalValue(self, x):
         if self.real:
-            # print "returning(real)", self.ret.real
             return self.ret.real
         else:
-            # print "returning(imag)", self.ret.real
             return self.ret.imag
 
 
@@ -122,17 +122,20 @@ class jwH_port(mfem.PyCoefficient):
         dprint1("propagation constant:" + str(beta))
         Ey, Ez = amp
         Ex = -(Ey*ky + Ez*kz)/beta
+
         if normalize:
             E_norm = np.sqrt(Ex*np.conj(Ex) + Ey*np.conj(Ey) + Ez*np.conj(Ez))
             Ex = Ex/E_norm
             Ey = Ey/E_norm
             Ez = Ez/E_norm
-        Hy = 1j*(- beta*Ez + kz*Ex)/mu0/mur
+        Hy = 1j*(-beta*Ez + kz*Ex)/mu0/mur
         Hz = 1j*(beta*Ey - ky*Ex)/mu0/mur
+
+        # return n x H (n is outward vector
         if direction == "y":
-            self.ret = -Hz * bdry.norm
+            self.ret = -Hz * (-bdry.norm)
         else:
-            self.ret = Hy * bdry.norm
+            self.ret = Hy * (-bdry.norm)
         self.ret = complex(self.ret)
 
     def EvalValue(self, x):
@@ -157,6 +160,7 @@ class EM1D_Port(EM1D_Bdry):
         v['port_idx'] = 1
         v['sel_readonly'] = False
         v['sel_index'] = []
+        v['isTimeDependent_RHS'] = True
         self.vt.attribute_set(v)
         return v
 
@@ -171,6 +175,30 @@ class EM1D_Port(EM1D_Bdry):
     def import_panel1_value(self, v):
         self.port_idx = v[0]
         self.vt.import_panel_value(self, v[1:])
+
+    def panel4_param(self):
+        ll = super(EM1D_Port, self).panel4_param()
+        ll.append(['Varying (in time/for loop) RHS', False, 3, {"text": ""}])
+        return ll
+
+    def panel4_tip(self):
+        return None
+
+    def import_panel4_value(self, value):
+        super(EM1D_Port, self).import_panel4_value(value[:-1])
+        self.isTimeDependent_RHS = value[-1]
+
+    def get_panel4_value(self):
+        value = super(EM1D_Port, self).get_panel4_value()
+        value.append(self.isTimeDependent_RHS)
+        return value
+
+    def verify_setting(self):
+        if self.isTimeDependent_RHS:
+            flag = True
+        else:
+            flag = False
+        return flag, 'Varying RHS is not set', 'This potntially causes an error with PortScan. Set it Time/NL Dep. panel '
 
     def update_param(self):
         self.update_inc_amp_phase()
@@ -240,7 +268,7 @@ class EM1D_Port(EM1D_Bdry):
 
         # note for the right hand side, we multiple -1 to ampulitude
 
-        coeff = jwH_port(self, real=real, amp=-inc_wave,  eps=eps,
+        coeff = jwH_port(self, real=real, amp=inc_wave,  eps=eps,
                          mur=mur, ky=ky, kz=kz,  direction=d)
         self.add_integrator(engine, 'inc_amp', coeff,
                             b.AddBoundaryIntegrator,
@@ -289,7 +317,7 @@ class EM1D_Port(EM1D_Bdry):
         inc_amp0 = (1, 0) if kfes == 1 else (0, 1)
         lf1 = engine.new_lf(fes)
         Ht = jwH_port(self, real=True, amp=inc_amp0,  eps=eps,
-                      mur=mur, ky=ky, kz=kz,  direction=d, normalize=True)
+                      mur=mur, ky=ky, kz=kz,  direction=d)  # , normalize=True)
         Ht = self.restrict_coeff(Ht, engine)
         intg = mfem.BoundaryLFIntegrator(Ht)
         lf1.AddBoundaryIntegrator(intg)
@@ -297,7 +325,7 @@ class EM1D_Port(EM1D_Bdry):
 
         lf1i = engine.new_lf(fes)
         Ht = jwH_port(self, real=False, amp=inc_amp0,  eps=eps,
-                      mur=mur, ky=ky, kz=kz,  direction=d, normalize=True)
+                      mur=mur, ky=ky, kz=kz,  direction=d)  # , normalize=True)
         Ht = self.restrict_coeff(Ht, engine)
         intg = mfem.BoundaryLFIntegrator(Ht)
         lf1i.AddBoundaryIntegrator(intg)
@@ -310,7 +338,7 @@ class EM1D_Port(EM1D_Bdry):
 
         lf2 = engine.new_lf(fes)
         Et = E_port(self, real=True, amp=inc_amp0,  eps=eps,
-                    mur=mur, ky=ky, kz=kz,  direction=d, normalize=True)
+                    mur=mur, ky=ky, kz=kz,  direction=d)  # , normalize=True)
 
         Et = self.restrict_coeff(Et, engine)
         intg = mfem.DomainLFIntegrator(Et)
@@ -322,23 +350,20 @@ class EM1D_Port(EM1D_Bdry):
         arr = self.get_restriction_array(engine)
         x.ProjectBdrCoefficient(Et,  arr)
 
+        t4 = np.array([[inc_amp[kfes-1]*np.exp(1j*inc_phase/180.*np.pi)]])
+
+        weight = mfem.InnerProduct(engine.x2X(x), engine.b2B(lf2))
+
         v2 = LF2PyVec(lf2, None, horizontal=True)
         x = LF2PyVec(x, None)
 
-        # output formats of InnerProduct
-        # are slightly different in parallel and serial
-        # in serial numpy returns (1,1) array, while in parallel
-        # MFEM returns a number. np.sum takes care of this.
-        tmp = np.sum(v2.dot(x))
-        #v2 *= -1/tmp
+        v2 *= 1/weight
 
-        t4 = np.array([[inc_amp[kfes-1]*np.exp(1j*inc_phase/180.*np.pi)]])
         # convert to a matrix form
         v1 = PyVec2PyMat(v1)
         v2 = PyVec2PyMat(v2.transpose())
         t4 = Array2PyVec(t4)
-        #t3 = IdentityPyMat(1, diag=-1)
-        t3 = IdentityPyMat(1)
+        t3 = IdentityPyMat(1, diag=-1)
 
         v2 = v2.transpose()
 

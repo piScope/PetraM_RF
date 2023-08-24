@@ -91,6 +91,7 @@ class EM3D_Port(EM3D_Bdry):
         v['mur'] = 1.0
         v['sel_readonly'] = False
         v['sel_index'] = []
+        v['isTimeDependent_RHS'] = True
         return v
 
     def panel1_param(self):
@@ -127,6 +128,13 @@ class EM3D_Port(EM3D_Bdry):
         value = super(EM3D_Port, self).get_panel4_value()
         value.append(self.isTimeDependent_RHS)
         return value
+
+    def verify_setting(self):
+        if self.isTimeDependent_RHS:
+            flag = True
+        else:
+            flag = False
+        return flag, 'Varying RHS is not set', 'This potntially causes an error with PortScan. Set it Time/NL Dep. panel '
 
     def update_param(self):
         self.vt.preprocess_params(self)

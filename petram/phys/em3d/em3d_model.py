@@ -217,7 +217,7 @@ class EM3D(PhysModule):
         return ["freq"], [float]
     
     def get_default_ns(self):
-        from petram.phys.em3d.em3d_const import mu0, epsilon0, q0
+        from petram.phys.phys_const import mu0, epsilon0, q0
         ns =  {'mu0': mu0,
                'e0': epsilon0,
                'q0': q0}
@@ -385,6 +385,17 @@ class EM3D(PhysModule):
             addc_expression(v, 'Jp', suffix, ind_vars,
                            '(-1j*(dot(epsilonr, E) - E)*freq*2*pi*e0)[2]',
                             ['epsilonr', 'E', 'freq'], 2)
+
+            # Js : surface current (n x B / mu)
+            addc_expression(v, 'Js', suffix, ind_vars,
+                            '(cross([nx, ny, nz], inv(mur).dot(B))/mu0)[0]',
+                            ['nx', 'ny', 'nz', 'B', 'mur', 'mu0'], 0)
+            addc_expression(v, 'Js', suffix, ind_vars,
+                            '(cross([nx, ny, nz], inv(mur).dot(B))/mu0)[1]',
+                            ['nx', 'ny', 'nz','B', 'mur', 'mu0'], 1)
+            addc_expression(v, 'Js', suffix, ind_vars,
+                            '(cross([nx, ny, nz], inv(mur).dot(B))/mu0)[2]',
+                            ['nx', 'ny', 'nz', 'B', 'mur', 'mu0'], 2)
             
             
         elif name.startswith('psi'):

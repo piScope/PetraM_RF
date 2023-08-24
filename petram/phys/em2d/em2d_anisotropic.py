@@ -49,7 +49,7 @@ data =  (('epsilonr', VtableElement('epsilonr', type='complex',
                                      suffix =[('x', 'y', 'z'), ('x', 'y', 'z')],
                                      default = np.zeros((3, 3)),
                                      tip = "contuctivity" )),
-         ('kz', VtableElement('kz', type='int',
+         ('kz', VtableElement('kz', type='float',
                                      guilabel = 'kz',
                                      default = 0.0,
                                      no_func = True,
@@ -263,7 +263,7 @@ class EM2D_Anisotropic(EM2D_Domain, EM2D_Domain_helper):
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'mur')
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'sigma')
         
-        add_constant(v, 'kz', suffix, np.float(kz),
+        add_constant(v, 'kz', suffix, np.float64(kz),
                      domains = self._sel_index,
                      gdomain = self._global_ns)
 

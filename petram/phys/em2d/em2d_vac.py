@@ -42,7 +42,7 @@ data = (('epsilonr', VtableElement('epsilonr', type='complex',
                                 guilabel='sigma',
                                 default=0.0,
                                 tip="contuctivity")),
-        ('kz', VtableElement('Nz', type='int',
+        ('kz', VtableElement('Nz', type='float',
                              guilabel='kz',
                              default=0.0,
                              no_func=True,
@@ -264,7 +264,7 @@ class EM2D_Vac(EM2D_Domain, EM2D_Domain_helper):
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'mur')
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'sigma')
 
-        add_constant(v, 'kz', suffix, np.float(kz),
+        add_constant(v, 'kz', suffix, np.float64(kz),
                      domains=self._sel_index,
                      gdomain=self._global_ns)
 
