@@ -199,7 +199,7 @@ class EM1D_Anisotropic(EM1D_Vac):
         '''
         
         ec, sc, ky, kz = self.get_coeffs2(kfes, kfes)
-        self.set_integrator_realimag_mode(real)        
+        self.set_integrator_realimag_mode(real)
 
         super(EM1D_Anisotropic, self).add_bf_contribution(engine, a, real=real,
                                                           kfes=kfes, ecsc=(ec, sc))
