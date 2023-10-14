@@ -186,11 +186,15 @@ def epsilonr_pl_cold_P(w, B, denses, masses, charges, Te, ne, has_e, has_i):
     if ne > 0. and has_e:
         Se, Pe, De = SPD_el(w, b_norm, ne, nu_eis)
         P += Pe
+        # D += De
+        # S += Se
 
     for dens, mass, charge in zip(denses, masses, charges):
         if dens > 0. and has_i:
             Si, Pi, Di = SPD_ion(w, b_norm, dens, mass, charge, nu_eis)
             P += Pi
+            # D += Di
+            # S += Si
 
     M = array([[S,   -1j*D, 0],
                [1j*D, S,    0],
@@ -259,7 +263,7 @@ def epsilonr_pl_cold(w, B, denses, masses, charges, Te, ne, has_e, has_i):
     A = dot(R1(ph), dot(M, R1(-ph)))
 
     ans = dot(R2(th), dot(A, R2(-th)))
-    #print_mat(ans, 3, 3)
+    # print_mat(ans, 3, 3)
     return ans
 
 
@@ -286,7 +290,7 @@ def epsilonr_pl_cold1(w, B, denses, masses, charges, Te, ne, has_e, has_i):
     A = dot(R1(ph), dot(M, R1(-ph)))
 
     ans = dot(R2(th), dot(A, R2(-th)))
-    #print_mat(ans, 3, 3)
+    # print_mat(ans, 3, 3)
     return ans
 
 
@@ -313,7 +317,7 @@ def epsilonr_pl_cold2(w, B, denses, masses, charges, Te, ne, has_e, has_i):
     A = dot(R1(ph), dot(M, R1(-ph)))
 
     ans = dot(R2(th), dot(A, R2(-th)))
-    #print_mat(ans, 3, 3)
+    # print_mat(ans, 3, 3)
     return ans
 
 
@@ -339,7 +343,7 @@ def epsilonr_pl_cold3(w, B, denses, masses, charges, Te, ne, has_e, has_i):
     A = dot(R1(ph), dot(M, R1(-ph)))
 
     ans = dot(R2(th), dot(A, R2(-th)))
-    #print_mat(ans, 3, 3)
+    # print_mat(ans, 3, 3)
     return ans
 
 
