@@ -66,6 +66,9 @@ def domain_constraints():
     return [EM1D_ColdPlasma]
 
 
+stix_options = ("1+SDP", "SDP", "SD", "P", "w/o xx")
+
+
 class EM1D_ColdPlasma(EM1D_Vac):
     allow_custom_intorder = False
     vt = Vtable(data)
@@ -76,6 +79,38 @@ class EM1D_ColdPlasma(EM1D_Vac):
 
     def get_possible_child(self):
         return []
+
+    def attribute_set(self, v):
+        EM1D_Vac.attribute_set(self, v)
+        v["stix_terms"] = stix_options[0]
+        v["has_electrons"] = True
+        v["has_ions"] = True
+        return v
+
+    def panel1_param(self):
+        panels = super(EM1D_ColdPlasma, self).panel1_param()
+        panels.extend([["Stix terms", None, 1,
+                        {"values": stix_options}],
+                       [None, self.has_electrons, 3,
+                        {"text": "include electron currents"}],
+                       [None, self.has_ions, 3,
+                        {"text": "include ion currents"}], ])
+
+        return panels
+
+    def get_panel1_value(self):
+        values = super(EM1D_ColdPlasma, self).get_panel1_value()
+        if self.stix_terms not in stix_options:
+            self.stix_terms = stix_options[0]
+        values.extend([self.stix_terms, self.has_electrons, self.has_ions])
+        return values
+
+    def import_panel1_value(self, v):
+        check = super(EM1D_ColdPlasma, self).import_panel1_value(v[:-3])
+        self.stix_terms = str(v[-3])
+        self.has_electrons = bool(v[-2])
+        self.has_ions = bool(v[-1])
+        return check
 
     @property
     def jited_coeff(self):
@@ -93,7 +128,10 @@ class EM1D_ColdPlasma(EM1D_Vac):
         from petram.phys.common.rf_dispersion_coldplasma import build_coefficients
         coeff1, coeff2, coeff3, coeff4 = build_coefficients(ind_vars, omega, B, dens_e, t_e,
                                                             dens_i, masses, charges,
-                                                            self._global_ns, self._local_ns,)
+                                                            self._global_ns, self._local_ns,
+                                                            terms=self.stix_terms,
+                                                            has_e=self.has_electrons,
+                                                            has_i=self.has_ions)
         return coeff1, coeff2, coeff3, coeff4, ky, kz
 
     def add_bf_contribution(self, engine, a, real=True, kfes=0):
@@ -117,6 +155,9 @@ class EM1D_ColdPlasma(EM1D_Vac):
                             mfem.MassIntegrator)
         self.add_integrator(engine, 'sigma', sc, a.AddDomainIntegrator,
                             mfem.MassIntegrator)
+
+        if self.stix_terms != stix_options[0]:
+            return
 
         coeff4 = 1./coeff2[0, 0]
         #
@@ -162,6 +203,9 @@ class EM1D_ColdPlasma(EM1D_Vac):
                             mfem.MixedScalarMassIntegrator)
         self.add_integrator(engine, 'sigma', sc, mbf.AddDomainIntegrator,
                             mfem.MixedScalarMassIntegrator)
+
+        if self.stix_terms != stix_options[0]:
+            return
 
         coeff4 = 1./coeff2[0, 0]
         if r == 0 and c == 1:
@@ -223,11 +267,10 @@ class EM1D_ColdPlasma(EM1D_Vac):
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'epsilonr')
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'mur')
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'sigma')
-        
+
         add_constant(v, 'ky', suffix, np.float64(kz),
-                     domains = self._sel_index,
-                     gdomain = self._global_ns)
+                     domains=self._sel_index,
+                     gdomain=self._global_ns)
         add_constant(v, 'kz', suffix, np.float64(kz),
-                     domains = self._sel_index,
-                     gdomain = self._global_ns)
-        
+                     domains=self._sel_index,
+                     gdomain=self._global_ns)

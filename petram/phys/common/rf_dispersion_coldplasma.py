@@ -1,4 +1,4 @@
-from numba import njit, void, int64, float64, complex128, types
+from numba import njit, void, int32, int64, float64, complex128, types
 
 from numpy import (pi, sin, cos, exp, sqrt, log, arctan2,
                    max, array, linspace, conj, transpose,
@@ -32,15 +32,16 @@ iarray_ro = types.Array(int64, 1, 'C', readonly=True)
 darray_ro = types.Array(float64, 1, 'C', readonly=True)
 
 
-@njit(void(complex128[:,:], int64, int64))
+@njit(void(complex128[:, :], int64, int64))
 def print_mat(mat, r, c):
     '''
     routine for debugging
     '''
     for i in range(r):
         for j in range(c):
-            print("mat r="+str(i) + ", z="+str(j) + " :" )
+            print("mat r="+str(i) + ", z="+str(j) + " :")
             print(mat[i, j])
+
 
 @njit(complex128[:](float64, float64, float64, float64[:]))
 def SPD_el(w, Bnorm, dens, nu_eis):
@@ -75,10 +76,13 @@ def f_collisions(denses, charges, Te, ne):
     '''
     electron-ion collision
     '''
+    nu_eis = zeros(len(charges))
+    if ne == 0:
+        return nu_eis
+
     vt_e = sqrt(2*Te*q_base/me)
     LAMBDA = 1+12*pi*(e0*Te*q_base)**(3./2)/(q_base**3 * sqrt(ne))
 
-    nu_eis = zeros(len(charges))
     for k in range(len(charges)):
         ni = denses[k]
         qi = charges[k]*q_base
@@ -88,8 +92,8 @@ def f_collisions(denses, charges, Te, ne):
     return nu_eis
 
 
-@njit(complex128[:, ::1](float64, float64[:], float64[:], darray_ro, iarray_ro, float64, float64))
-def epsilonr_pl_cold_std(w, B, denses, masses, charges, Te, ne):
+@njit(complex128[:, ::1](float64, float64[:], float64[:], darray_ro, iarray_ro, float64, float64, int32, int32))
+def epsilonr_pl_cold_std(w, B, denses, masses, charges, Te, ne, has_e, has_i):
     b_norm = sqrt(B[0]**2+B[1]**2+B[2]**2)
     nu_eis = f_collisions(denses, charges, Te, ne)
 
@@ -97,16 +101,18 @@ def epsilonr_pl_cold_std(w, B, denses, masses, charges, Te, ne):
     P = 1 + 0j
     D = 0j
 
-    Se, Pe, De = SPD_el(w, b_norm, ne, nu_eis)
-    S += Se
-    P += Pe
-    D += De
+    if ne > 0. and has_e:
+        Se, Pe, De = SPD_el(w, b_norm, ne, nu_eis)
+        S += Se
+        P += Pe
+        D += De
 
     for dens, mass, charge in zip(denses, masses, charges):
-        Si, Pi, Di = SPD_ion(w, b_norm, dens, mass, charge, nu_eis)
-        S += Si
-        P += Pi
-        D += Di
+        if dens > 0. and has_i:
+            Si, Pi, Di = SPD_ion(w, b_norm, dens, mass, charge, nu_eis)
+            S += Si
+            P += Pi
+            D += Di
 
     M = array([[S,   -1j*D, 0],
                [1j*D, S,    0],
@@ -114,9 +120,120 @@ def epsilonr_pl_cold_std(w, B, denses, masses, charges, Te, ne):
     return M
 
 
-@njit(complex128[:, :](float64, float64[:], float64[:], darray_ro, iarray_ro, float64, float64))
-def epsilonr_pl_cold(w, B, denses, masses, charges, Te, ne):
-    M = epsilonr_pl_cold_std(w, B, denses, masses, charges, Te, ne)
+@njit(complex128[:, ::1](float64, float64[:], float64[:], darray_ro, iarray_ro, float64, float64, int32, int32))
+def epsilonr_pl_cold_SDP(w, B, denses, masses, charges, Te, ne, has_e, has_i):
+    b_norm = sqrt(B[0]**2+B[1]**2+B[2]**2)
+    nu_eis = f_collisions(denses, charges, Te, ne)
+
+    S = 0j
+    P = 0j
+    D = 0j
+
+    if ne > 0. and has_e:
+        Se, Pe, De = SPD_el(w, b_norm, ne, nu_eis)
+        S += Se
+        P += Pe
+        D += De
+
+    for dens, mass, charge in zip(denses, masses, charges):
+        if dens > 0. and has_i:
+            Si, Pi, Di = SPD_ion(w, b_norm, dens, mass, charge, nu_eis)
+            S += Si
+            P += Pi
+            D += Di
+
+    M = array([[S,   -1j*D, 0],
+               [1j*D, S,    0],
+               [0,   0,    P]])
+    return M
+
+
+@njit(complex128[:, ::1](float64, float64[:], float64[:], darray_ro, iarray_ro, float64, float64, int32, int32))
+def epsilonr_pl_cold_SD(w, B, denses, masses, charges, Te, ne, has_e, has_i):
+    b_norm = sqrt(B[0]**2+B[1]**2+B[2]**2)
+    nu_eis = f_collisions(denses, charges, Te, ne)
+
+    S = 0j
+    P = 0j
+    D = 0j
+
+    if ne > 0. and has_e:
+        Se, Pe, De = SPD_el(w, b_norm, ne, nu_eis)
+        S += Se
+        D += De
+
+    for dens, mass, charge in zip(denses, masses, charges):
+        if dens > 0. and has_i:
+            Si, Pi, Di = SPD_ion(w, b_norm, dens, mass, charge, nu_eis)
+            S += Si
+            D += Di
+
+    M = array([[S,   -1j*D, 0],
+               [1j*D, S,    0],
+               [0,   0,    P]])
+    return M
+
+
+@njit(complex128[:, ::1](float64, float64[:], float64[:], darray_ro, iarray_ro, float64, float64, int32, int32))
+def epsilonr_pl_cold_P(w, B, denses, masses, charges, Te, ne, has_e, has_i):
+    b_norm = sqrt(B[0]**2+B[1]**2+B[2]**2)
+    nu_eis = f_collisions(denses, charges, Te, ne)
+
+    S = 0j
+    P = 0j
+    D = 0j
+
+    if ne > 0. and has_e:
+        Se, Pe, De = SPD_el(w, b_norm, ne, nu_eis)
+        P += Pe
+
+    for dens, mass, charge in zip(denses, masses, charges):
+        if dens > 0. and has_i:
+            Si, Pi, Di = SPD_ion(w, b_norm, dens, mass, charge, nu_eis)
+            P += Pi
+
+    M = array([[S,   -1j*D, 0],
+               [1j*D, S,    0],
+               [0,   0,    P]])
+    return M
+
+
+@njit(complex128[:, ::1](float64, float64[:], float64[:], darray_ro, iarray_ro, float64, float64, int32, int32))
+def epsilonr_pl_cold_woxx(w, B, denses, masses, charges, Te, ne, has_e, has_i):
+    b_norm = sqrt(B[0]**2+B[1]**2+B[2]**2)
+    nu_eis = f_collisions(denses, charges, Te, ne)
+
+    S = 0j
+    P = 0j
+    D = 0j
+
+    if ne > 0. and has_e:
+        Se, Pe, De = SPD_el(w, b_norm, ne, nu_eis)
+        S += Se
+        P += Pe
+        D += De
+
+    for dens, mass, charge in zip(denses, masses, charges):
+        if dens > 0. and has_i:
+            Si, Pi, Di = SPD_ion(w, b_norm, dens, mass, charge, nu_eis)
+            S += Si
+            P += Pi
+            D += Di
+
+    M = array([[0.,   -1j*D, 0],
+               [1j*D, S,    0],
+               [0,   0,    P]])
+
+    return M
+
+
+@njit(complex128[:, :](float64, float64[:], float64[:], darray_ro, iarray_ro, float64, float64, int32, int32))
+def epsilonr_pl_cold(w, B, denses, masses, charges, Te, ne, has_e, has_i):
+    '''
+    standard SPD stix
+    '''
+    M = epsilonr_pl_cold_std(w, B, denses, masses,
+                             charges, Te, ne, has_e, has_i)
 
     def R1(ph):
         return array([[cos(ph), 0.,  sin(ph)],
@@ -146,7 +263,115 @@ def epsilonr_pl_cold(w, B, denses, masses, charges, Te, ne):
     return ans
 
 
-def build_coefficients(ind_vars, omega, B, dens_e, t_e, dens_i, masses, charges, g_ns, l_ns):
+@njit(complex128[:, :](float64, float64[:], float64[:], darray_ro, iarray_ro, float64, float64, int32, int32))
+def epsilonr_pl_cold1(w, B, denses, masses, charges, Te, ne, has_e, has_i):
+    '''
+    stix SDP w/o 1
+    '''
+    M = epsilonr_pl_cold_SDP(w, B, denses, masses,
+                             charges, Te, ne, has_e, has_i)
+
+    def R1(ph):
+        return array([[cos(ph), 0.,  sin(ph)],
+                      [0,       1.,   0],
+                      [-sin(ph), 0,  cos(ph)]], dtype=complex128)
+
+    def R2(th):
+        return array([[cos(th), -sin(th), 0],
+                      [sin(th), cos(th), 0],
+                      [0, 0,  1.]], dtype=complex128)
+
+    th = arctan2(B[1], B[0])
+    ph = arctan2(B[0]*cos(th)+B[1]*sin(th), B[2])
+    A = dot(R1(ph), dot(M, R1(-ph)))
+
+    ans = dot(R2(th), dot(A, R2(-th)))
+    #print_mat(ans, 3, 3)
+    return ans
+
+
+@njit(complex128[:, :](float64, float64[:], float64[:], darray_ro, iarray_ro, float64, float64, int32, int32))
+def epsilonr_pl_cold2(w, B, denses, masses, charges, Te, ne, has_e, has_i):
+    '''
+    stix SD only
+    '''
+    M = epsilonr_pl_cold_SD(w, B, denses, masses,
+                            charges, Te, ne, has_e, has_i)
+
+    def R1(ph):
+        return array([[cos(ph), 0.,  sin(ph)],
+                      [0,       1.,   0],
+                      [-sin(ph), 0,  cos(ph)]], dtype=complex128)
+
+    def R2(th):
+        return array([[cos(th), -sin(th), 0],
+                      [sin(th), cos(th), 0],
+                      [0, 0,  1.]], dtype=complex128)
+
+    th = arctan2(B[1], B[0])
+    ph = arctan2(B[0]*cos(th)+B[1]*sin(th), B[2])
+    A = dot(R1(ph), dot(M, R1(-ph)))
+
+    ans = dot(R2(th), dot(A, R2(-th)))
+    #print_mat(ans, 3, 3)
+    return ans
+
+
+@njit(complex128[:, :](float64, float64[:], float64[:], darray_ro, iarray_ro, float64, float64, int32, int32))
+def epsilonr_pl_cold3(w, B, denses, masses, charges, Te, ne, has_e, has_i):
+    '''
+    stix P only
+    '''
+    M = epsilonr_pl_cold_P(w, B, denses, masses, charges, Te, ne, has_e, has_i)
+
+    def R1(ph):
+        return array([[cos(ph), 0.,  sin(ph)],
+                      [0,       1.,   0],
+                      [-sin(ph), 0,  cos(ph)]], dtype=complex128)
+
+    def R2(th):
+        return array([[cos(th), -sin(th), 0],
+                      [sin(th), cos(th), 0],
+                      [0, 0,  1.]], dtype=complex128)
+
+    th = arctan2(B[1], B[0])
+    ph = arctan2(B[0]*cos(th)+B[1]*sin(th), B[2])
+    A = dot(R1(ph), dot(M, R1(-ph)))
+
+    ans = dot(R2(th), dot(A, R2(-th)))
+    #print_mat(ans, 3, 3)
+    return ans
+
+
+@njit(complex128[:, :](float64, float64[:], float64[:], darray_ro, iarray_ro, float64, float64, int32, int32))
+def epsilonr_pl_cold4(w, B, denses, masses, charges, Te, ne, has_e, has_i):
+    '''
+    stix w/o xx
+    '''
+    M = epsilonr_pl_cold_woxx(w, B, denses, masses,
+                              charges, Te, ne, has_e, has_i)
+
+    def R1(ph):
+        return array([[cos(ph), 0.,  sin(ph)],
+                      [0,       1.,   0],
+                      [-sin(ph), 0,  cos(ph)]], dtype=complex128)
+
+    def R2(th):
+        return array([[cos(th), -sin(th), 0],
+                      [sin(th), cos(th), 0],
+                      [0, 0,  1.]], dtype=complex128)
+
+    th = arctan2(B[1], B[0])
+    ph = arctan2(B[0]*cos(th)+B[1]*sin(th), B[2])
+    A = dot(R1(ph), dot(M, R1(-ph)))
+
+    ans = dot(R2(th), dot(A, R2(-th)))
+
+    return ans
+
+
+def build_coefficients(ind_vars, omega, B, dens_e, t_e, dens_i, masses, charges, g_ns, l_ns,
+                       terms="1+SDP", has_e=True, has_i=True):
 
     Da = 1.66053906660e-27      # atomic mass unit (u or Dalton) (kg)
 
@@ -166,14 +391,42 @@ def build_coefficients(ind_vars, omega, B, dens_e, t_e, dens_i, masses, charges,
     dens_i_coeff = VCoeff(num_ions, [dens_i, ], ind_vars, l, g,
                           return_complex=False, return_mfem_constant=True)
 
-    def epsilonr(ptx, B, dens_e, t_e, dens_i):
-        out = -epsilon0 * omega * omega*epsilonr_pl_cold(
-            omega, B, dens_i, masses, charges, t_e, dens_e)
-        return out
+    if terms == "1+SDP":
+        def epsilonr(ptx, B, dens_e, t_e, dens_i):
+            out = -epsilon0 * omega * omega*epsilonr_pl_cold(
+                omega, B, dens_i, masses, charges, t_e, dens_e, has_e, has_i)
+            return out
+
+    elif terms == "SDP":
+        def epsilonr(ptx, B, dens_e, t_e, dens_i):
+            out = -epsilon0 * omega * omega*epsilonr_pl_cold1(
+                omega, B, dens_i, masses, charges, t_e, dens_e, has_e, has_i)
+            return out
+
+    elif terms == "SD":
+        def epsilonr(ptx, B, dens_e, t_e, dens_i):
+            out = -epsilon0 * omega * omega*epsilonr_pl_cold2(
+                omega, B, dens_i, masses, charges, t_e, dens_e, has_e, has_i)
+            return out
+
+    elif terms == "P":
+        def epsilonr(ptx, B, dens_e, t_e, dens_i):
+            out = -epsilon0 * omega * omega*epsilonr_pl_cold3(
+                omega, B, dens_i, masses, charges, t_e, dens_e, has_e, has_i)
+            return out
+
+    elif terms == "w/o xx":
+        def epsilonr(ptx, B, dens_e, t_e, dens_i):
+            out = -epsilon0 * omega * omega*epsilonr_pl_cold4(
+                omega, B, dens_i, masses, charges, t_e, dens_e, has_e, has_i)
+            return out
+
+    else:
+        assert False, "unknown STIX term option"
 
     def sdp(ptx, B, dens_e, t_e, dens_i):
-        out = epsilonr_pl_cold_std(
-            omega, B, dens_i, masses, charges, t_e, dens_e)
+        out = epsilonr_pl_cold(
+            omega, B, dens_i, masses, charges, t_e, dens_e, True, True)
         return out
 
     def mur(ptx):
@@ -182,8 +435,9 @@ def build_coefficients(ind_vars, omega, B, dens_e, t_e, dens_i, masses, charges,
     def sigma(ptx):
         return - 1j*omega * np.zeros((3, 3), dtype=np.complex128)
 
-    params = {'omega': omega, 'masses': masses, 'charges': charges, }
-    #                  'epsilonr_pl_cold': epsilonr_pl_cold,}
+    params = {'omega': omega, 'masses': masses, 'charges': charges,
+              'has_e': int(has_e), 'has_i': int(has_i)}
+
     numba_debug = False if myid != 0 else get_numba_debug()
 
     dependency = (B_coeff, dens_e_coeff, t_e_coeff, dens_i_coeff)
