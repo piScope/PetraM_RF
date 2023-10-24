@@ -1,6 +1,7 @@
 '''
    cold plasma.
 '''
+from petram.phys.common.rf_dispersion_coldplasma import stix_options
 import numpy as np
 
 from petram.mfem_config import use_parallel, get_numba_debug
@@ -23,6 +24,7 @@ if use_parallel:
 else:
     import mfem.ser as mfem
     myid = 0
+
 
 data = (('B', VtableElement('bext', type='array',
                             guilabel='magnetic field',
@@ -64,9 +66,6 @@ data = (('B', VtableElement('bext', type='array',
 
 def domain_constraints():
     return [EM1D_ColdPlasma]
-
-
-stix_options = ("1+SDP", "SDP", "SD", "P", "w/o xx")
 
 
 class EM1D_ColdPlasma(EM1D_Vac):

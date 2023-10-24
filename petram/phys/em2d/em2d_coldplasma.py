@@ -29,6 +29,8 @@ if use_parallel:
 else:
     import mfem.ser as mfem
 
+from petram.phys.common.rf_dispersion_coldplasma import stix_options
+
 data = (('B', VtableElement('bext', type='array',
                             guilabel='magnetic field',
                             default="=[0,0,0]",
