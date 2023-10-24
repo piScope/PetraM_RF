@@ -113,10 +113,9 @@ def epsilonr_pl_cold_std(w, B, denses, masses, charges, Te, ne, has_e, has_i):
             S += Si
             P += Pi
             D += Di
-
-    M = array([[S,   -1j*D, 0],
-               [1j*D, S,    0],
-               [0,   0,    P]])
+    M = array([[S,   -1j*D, 0j],
+               [1j*D, S,    0j],
+               [0j,   0j,   P]])
     return M
 
 

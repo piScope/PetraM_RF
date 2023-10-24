@@ -68,7 +68,7 @@ def domain_constraints():
 
 class EM2D_ColdPlasma(EM2D_Domain, EM2D_Domain_helper):
     vt = Vtable(data)
-    #nlterms = ['epsilonr']
+    # nlterms = ['epsilonr']
 
     def get_possible_child(self):
         from .em2d_pml import EM2D_LinearPML
@@ -92,6 +92,39 @@ class EM2D_ColdPlasma(EM2D_Domain, EM2D_Domain_helper):
            flag2 : take conj
         '''
         return [(0, 1, 1, 1), (1, 0, 1, 1), ]  # (0, 1, -1, 1)]
+
+    def attribute_set(self, v):
+        EM2D_Domain.attribute_set(self, v)
+
+        v["stix_terms"] = stix_options[0]
+        v["has_electrons"] = True
+        v["has_ions"] = True
+        return v
+
+    def panel1_param(self):
+        panels = super(EM2D_ColdPlasma, self).panel1_param()
+        panels.extend([["Stix terms", None, 1,
+                        {"values": stix_options}],
+                       [None, self.has_electrons, 3,
+                        {"text": "include electron currents"}],
+                       [None, self.has_ions, 3,
+                        {"text": "include ion currents"}], ])
+
+        return panels
+
+    def get_panel1_value(self):
+        values = super(EM2D_ColdPlasma, self).get_panel1_value()
+        if self.stix_terms not in stix_options:
+            self.stix_terms = stix_options[0]
+        values.extend([self.stix_terms, self.has_electrons, self.has_ions])
+        return values
+
+    def import_panel1_value(self, v):
+        check = super(EM2D_ColdPlasma, self).import_panel1_value(v[:-3])
+        self.stix_terms = str(v[-3])
+        self.has_electrons = bool(v[-2])
+        self.has_ions = bool(v[-1])
+        return check
 
     @property
     def jited_coeff(self):
@@ -144,7 +177,7 @@ class EM2D_ColdPlasma(EM2D_Domain, EM2D_Domain_helper):
         return eps, mu, kz
 
     def add_bf_contribution(self, engine, a, real=True, kfes=0):
-        #freq, omega = self.get_root_phys().get_freq_omega()
+        # freq, omega = self.get_root_phys().get_freq_omega()
         eps, mu, kz = self.get_coeffs_2()
 
         self.set_integrator_realimag_mode(real)
@@ -160,6 +193,9 @@ class EM2D_ColdPlasma(EM2D_Domain, EM2D_Domain_helper):
             elif kfes == 1:
                 dprint1("Add H1 contribution(imag)" + str(self._sel_index))
 
+        if self.stix_terms != stix_options[0]:
+            mu = mu*1e6
+
         self.call_bf_add_integrator(eps,  mu, kz,  engine, a, kfes)
 
     def add_mix_contribution(self, engine, mbf, r, c, is_trans, real=True):
@@ -170,10 +206,14 @@ class EM2D_ColdPlasma(EM2D_Domain, EM2D_Domain_helper):
             dprint1("Add mixed contribution(imag)" + "(" + str(r) + "," + str(c) + ')'
                     + str(self._sel_index))
 
-        #freq, omega = self.get_root_phys().get_freq_omega()
+        # freq, omega = self.get_root_phys().get_freq_omega()
         eps, mu, kz = self.get_coeffs_2()
 
         self.set_integrator_realimag_mode(real)
+
+        if self.stix_terms != stix_options[0]:
+            mu = mu*1e6
+
         self.call_mix_add_integrator(eps, mu, engine, mbf, r, c, is_trans)
 
     def add_domain_variables(self, v, n, suffix, ind_vars, solr, soli=None):
