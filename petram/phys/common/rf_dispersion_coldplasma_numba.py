@@ -10,7 +10,7 @@ q_base = 1.60217662e-19
 qe = -q_base
 me = 9.10938356e-31
 
-iarray_ro = types.Array(int64, 1, 'C', readonly=True)
+iarray_ro = types.Array(int32, 1, 'C', readonly=True)
 darray_ro = types.Array(float64, 1, 'C', readonly=True)
 
 
@@ -74,8 +74,8 @@ def f_collisions(denses, charges, Te, ne):
     return nu_eis
 
 
-@njit(complex128[:, ::1](float64, float64[:], float64[:], darray_ro, iarray_ro, float64, float64, int32, int32))
-def epsilonr_pl_cold_std(w, B, denses, masses, charges, Te, ne, has_e, has_i):
+@njit(complex128[:, ::1](float64, float64[:], float64[:], darray_ro, iarray_ro, float64, float64))
+def epsilonr_pl_cold_std(w, B, denses, masses, charges, Te, ne):
     b_norm = sqrt(B[0]**2+B[1]**2+B[2]**2)
     nu_eis = f_collisions(denses, charges, Te, ne)
 
@@ -83,14 +83,14 @@ def epsilonr_pl_cold_std(w, B, denses, masses, charges, Te, ne, has_e, has_i):
     P = 1 + 0j
     D = 0j
 
-    if ne > 0. and has_e:
+    if ne > 0.:
         Se, Pe, De = SPD_el(w, b_norm, ne, nu_eis)
         S += Se
         P += Pe
         D += De
 
     for dens, mass, charge in zip(denses, masses, charges):
-        if dens > 0. and has_i:
+        if dens > 0.:
             Si, Pi, Di = SPD_ion(w, b_norm, dens, mass, charge, nu_eis)
             S += Si
             P += Pi
@@ -101,124 +101,62 @@ def epsilonr_pl_cold_std(w, B, denses, masses, charges, Te, ne, has_e, has_i):
     return M
 
 
-@njit(complex128[:, ::1](float64, float64[:], float64[:], darray_ro, iarray_ro, float64, float64, int32, int32))
-def epsilonr_pl_cold_SDP(w, B, denses, masses, charges, Te, ne, has_e, has_i):
+@njit(complex128[:, ::1](float64, float64[:], float64[:], darray_ro, iarray_ro, float64, float64, iarray_ro))
+def epsilonr_pl_cold_g(w, B, denses, masses, charges, Te, ne, terms):
+    '''
+    generalized Stix tensor
+    terms defined in rf_dispersion_coldplasma
+       stix_options = ("SDP", "SD", "P", "w/o xx", "None")
+    '''
+
     b_norm = sqrt(B[0]**2+B[1]**2+B[2]**2)
     nu_eis = f_collisions(denses, charges, Te, ne)
 
-    S = 0j
-    P = 0j
-    D = 0j
+    M = array([[1.+0j,   0., 0.],
+               [0.,   1.+0j, 0.j],
+               [0.,   0.,    1.+0j]])
 
-    if ne > 0. and has_e:
-        Se, Pe, De = SPD_el(w, b_norm, ne, nu_eis)
-        S += Se
-        P += Pe
-        D += De
+    if ne > 0. and terms[0] != 4:
+        S, P, D = SPD_el(w, b_norm, ne, nu_eis)
+        if terms[0] == 0:
+            M2 = array([[S, -1j*D, 0j], [1j*D, S, 0j], [0., 0., P]])
+        elif terms[0] == 1:
+            M2 = array([[S, -1j*D, 0j], [1j*D, S, 0j], [0., 0., 0j]])
+        elif terms[0] == 2:
+            M2 = array([[0j, 0j, 0j], [0j, 0j, 0j], [0., 0., P]])
+        elif terms[0] == 3:
+            M2 = array([[0j, -1j*D, 0j], [1j*D, S, 0j], [0j, 0., P]])
+        else:
+            M2 = array([[0j, 0j, 0j], [0j, 0j, 0j], [0., 0., 0j]])
+        M += M2
 
+    kion = 1
     for dens, mass, charge in zip(denses, masses, charges):
-        if dens > 0. and has_i:
-            Si, Pi, Di = SPD_ion(w, b_norm, dens, mass, charge, nu_eis)
-            S += Si
-            P += Pi
-            D += Di
+        if dens > 0. and terms[kion] != 4:
+            S, P, D = SPD_ion(w, b_norm, dens, mass, charge, nu_eis)
+            if terms[kion] == 0:
+                M2 = array([[S, -1j*D, 0j], [1j*D, S, 0j], [0., 0., P]])
+            elif terms[kion] == 1:
+                M2 = array([[S, -1j*D, 0j], [1j*D, S, 0j], [0., 0., 0j]])
+            elif terms[kion] == 2:
+                M2 = array([[0j, 0j, 0j], [0j, 0j, 0j], [0., 0., P]])
+            elif terms[kion] == 3:
+                M2 = array([[0j, -1j*D, 0j], [1j*D, S, 0j], [0j, 0., P]])
+            else:
+                M2 = array([[0j, 0j, 0j], [0j, 0j, 0j], [0., 0., 0j]])
+            M += M2
 
-    M = array([[S,   -1j*D, 0],
-               [1j*D, S,    0],
-               [0,   0,    P]])
-    return M
-
-
-@njit(complex128[:, ::1](float64, float64[:], float64[:], darray_ro, iarray_ro, float64, float64, int32, int32))
-def epsilonr_pl_cold_SD(w, B, denses, masses, charges, Te, ne, has_e, has_i):
-    b_norm = sqrt(B[0]**2+B[1]**2+B[2]**2)
-    nu_eis = f_collisions(denses, charges, Te, ne)
-
-    S = 0j
-    P = 0j
-    D = 0j
-
-    if ne > 0. and has_e:
-        Se, Pe, De = SPD_el(w, b_norm, ne, nu_eis)
-        S += Se
-        D += De
-
-    for dens, mass, charge in zip(denses, masses, charges):
-        if dens > 0. and has_i:
-            Si, Pi, Di = SPD_ion(w, b_norm, dens, mass, charge, nu_eis)
-            S += Si
-            D += Di
-
-    M = array([[S,   -1j*D, 0],
-               [1j*D, S,    0],
-               [0,   0,    P]])
-    return M
-
-
-@njit(complex128[:, ::1](float64, float64[:], float64[:], darray_ro, iarray_ro, float64, float64, int32, int32))
-def epsilonr_pl_cold_P(w, B, denses, masses, charges, Te, ne, has_e, has_i):
-    b_norm = sqrt(B[0]**2+B[1]**2+B[2]**2)
-    nu_eis = f_collisions(denses, charges, Te, ne)
-
-    S = 0j
-    P = 0j
-    D = 0j
-
-    if ne > 0. and has_e:
-        Se, Pe, De = SPD_el(w, b_norm, ne, nu_eis)
-        P += Pe
-        # D += De
-        # S += Se
-
-    for dens, mass, charge in zip(denses, masses, charges):
-        if dens > 0. and has_i:
-            Si, Pi, Di = SPD_ion(w, b_norm, dens, mass, charge, nu_eis)
-            P += Pi
-            # D += Di
-            # S += Si
-
-    M = array([[S,   -1j*D, 0],
-               [1j*D, S,    0],
-               [0,   0,    P]])
-    return M
-
-
-@njit(complex128[:, ::1](float64, float64[:], float64[:], darray_ro, iarray_ro, float64, float64, int32, int32))
-def epsilonr_pl_cold_woxx(w, B, denses, masses, charges, Te, ne, has_e, has_i):
-    b_norm = sqrt(B[0]**2+B[1]**2+B[2]**2)
-    nu_eis = f_collisions(denses, charges, Te, ne)
-
-    S = 0j
-    P = 0j
-    D = 0j
-
-    if ne > 0. and has_e:
-        Se, Pe, De = SPD_el(w, b_norm, ne, nu_eis)
-        S += Se
-        P += Pe
-        D += De
-
-    for dens, mass, charge in zip(denses, masses, charges):
-        if dens > 0. and has_i:
-            Si, Pi, Di = SPD_ion(w, b_norm, dens, mass, charge, nu_eis)
-            S += Si
-            P += Pi
-            D += Di
-
-    M = array([[0.,   -1j*D, 0],
-               [1j*D, S,    0],
-               [0,   0,    P]])
+        kion = kion + 1
 
     return M
 
 
-@njit(complex128[:, :](float64, float64[:], float64[:], darray_ro, iarray_ro, float64, float64, int32, int32))
-def epsilonr_pl_cold(w, B, denses, masses, charges, Te, ne, has_e, has_i):
+@njit(complex128[:, :](float64, float64[:], float64[:], darray_ro, iarray_ro, float64, float64))
+def epsilonr_pl_cold(w, B, denses, masses, charges, Te, ne):
     '''
     standard SPD stix
     '''
-    M = epsilonr_pl_cold_std(w, B, denses, masses,
-                             charges, Te, ne, has_e, has_i)
+    M = epsilonr_pl_cold_std(w, B, denses, masses, charges, Te, ne)
 
     def R1(ph):
         return array([[cos(ph), 0.,  sin(ph)],
@@ -248,93 +186,13 @@ def epsilonr_pl_cold(w, B, denses, masses, charges, Te, ne, has_e, has_i):
     return ans
 
 
-@njit(complex128[:, :](float64, float64[:], float64[:], darray_ro, iarray_ro, float64, float64, int32, int32))
-def epsilonr_pl_cold1(w, B, denses, masses, charges, Te, ne, has_e, has_i):
+@njit(complex128[:, :](float64, float64[:], float64[:], darray_ro, iarray_ro, float64, float64, iarray_ro))
+def epsilonr_pl_cold_generic(w, B, denses, masses, charges, Te, ne, terms):
     '''
-    stix SDP w/o 1
+    standard SPD stix
     '''
-    M = epsilonr_pl_cold_SDP(w, B, denses, masses,
-                             charges, Te, ne, has_e, has_i)
-
-    def R1(ph):
-        return array([[cos(ph), 0.,  sin(ph)],
-                      [0,       1.,   0],
-                      [-sin(ph), 0,  cos(ph)]], dtype=complex128)
-
-    def R2(th):
-        return array([[cos(th), -sin(th), 0],
-                      [sin(th), cos(th), 0],
-                      [0, 0,  1.]], dtype=complex128)
-
-    th = arctan2(B[1], B[0])
-    ph = arctan2(B[0]*cos(th)+B[1]*sin(th), B[2])
-    A = dot(R1(ph), dot(M, R1(-ph)))
-
-    ans = dot(R2(th), dot(A, R2(-th)))
-    # print_mat(ans, 3, 3)
-    return ans
-
-
-@njit(complex128[:, :](float64, float64[:], float64[:], darray_ro, iarray_ro, float64, float64, int32, int32))
-def epsilonr_pl_cold2(w, B, denses, masses, charges, Te, ne, has_e, has_i):
-    '''
-    stix SD only
-    '''
-    M = epsilonr_pl_cold_SD(w, B, denses, masses,
-                            charges, Te, ne, has_e, has_i)
-
-    def R1(ph):
-        return array([[cos(ph), 0.,  sin(ph)],
-                      [0,       1.,   0],
-                      [-sin(ph), 0,  cos(ph)]], dtype=complex128)
-
-    def R2(th):
-        return array([[cos(th), -sin(th), 0],
-                      [sin(th), cos(th), 0],
-                      [0, 0,  1.]], dtype=complex128)
-
-    th = arctan2(B[1], B[0])
-    ph = arctan2(B[0]*cos(th)+B[1]*sin(th), B[2])
-    A = dot(R1(ph), dot(M, R1(-ph)))
-
-    ans = dot(R2(th), dot(A, R2(-th)))
-    # print_mat(ans, 3, 3)
-    return ans
-
-
-@njit(complex128[:, :](float64, float64[:], float64[:], darray_ro, iarray_ro, float64, float64, int32, int32))
-def epsilonr_pl_cold3(w, B, denses, masses, charges, Te, ne, has_e, has_i):
-    '''
-    stix P only
-    '''
-    M = epsilonr_pl_cold_P(w, B, denses, masses, charges, Te, ne, has_e, has_i)
-
-    def R1(ph):
-        return array([[cos(ph), 0.,  sin(ph)],
-                      [0,       1.,   0],
-                      [-sin(ph), 0,  cos(ph)]], dtype=complex128)
-
-    def R2(th):
-        return array([[cos(th), -sin(th), 0],
-                      [sin(th), cos(th), 0],
-                      [0, 0,  1.]], dtype=complex128)
-
-    th = arctan2(B[1], B[0])
-    ph = arctan2(B[0]*cos(th)+B[1]*sin(th), B[2])
-    A = dot(R1(ph), dot(M, R1(-ph)))
-
-    ans = dot(R2(th), dot(A, R2(-th)))
-    # print_mat(ans, 3, 3)
-    return ans
-
-
-@njit(complex128[:, :](float64, float64[:], float64[:], darray_ro, iarray_ro, float64, float64, int32, int32))
-def epsilonr_pl_cold4(w, B, denses, masses, charges, Te, ne, has_e, has_i):
-    '''
-    stix w/o xx
-    '''
-    M = epsilonr_pl_cold_woxx(w, B, denses, masses,
-                              charges, Te, ne, has_e, has_i)
+    M = epsilonr_pl_cold_g(w, B, denses, masses,
+                           charges, Te, ne, terms)
 
     def R1(ph):
         return array([[cos(ph), 0.,  sin(ph)],

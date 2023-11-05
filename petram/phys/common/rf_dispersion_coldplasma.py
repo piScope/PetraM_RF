@@ -10,6 +10,7 @@ from petram.mfem_config import use_parallel, get_numba_debug
 from petram.phys.phys_const import mu0, epsilon0
 from petram.phys.numba_coefficient import NumbaCoefficient
 from petram.phys.coefficient import SCoeff, VCoeff, MCoeff
+from petram.phys.vtable import VtableElement, Vtable
 
 if use_parallel:
     import mfem.par as mfem
@@ -19,21 +20,49 @@ else:
     import mfem.ser as mfem
     myid = 0
 
-stix_options = ("1+SDP", "SDP", "SD", "P", "w/o xx")
+vtable_data = [('B', VtableElement('bext', type='array',
+                                   guilabel='magnetic field',
+                                   default="=[0,0,0]",
+                                   tip="external magnetic field")),
+               ('dens_e', VtableElement('dens_e', type='float',
+                                        guilabel='electron density(m-3)',
+                                        default="1e19",
+                                        tip="electron density")),
+               ('temperature', VtableElement('temperature', type='float',
+                                             guilabel='electron temp.(eV)',
+                                             default="10.",
+                                             tip="electron temperature used for collisions")),
+               ('dens_i', VtableElement('dens_i', type='array',
+                                        guilabel='ion densities(m-3)',
+                                        default="0.9e19, 0.1e19",
+                                        tip="ion densities")),
+               ('mass', VtableElement('mass', type='array',
+                                      guilabel='ion masses(/Da)',
+                                      default="2, 1",
+                                      no_func=True,
+                                      tip="mass. normalized by atomic mass unit")),
+               ('charge_q', VtableElement('charge_q', type='array',
+                                          guilabel='ion charges(/q)',
+                                          default="1, 1",
+                                          no_func=True,
+                                          tip="ion charges normalized by q(=1.60217662e-19 [C])")), ]
+
+stix_options = ("SDP", "SD", "P", "w/o xx", "None")
+default_stix_option = "(default) include all"
+
 
 def build_coefficients(ind_vars, omega, B, dens_e, t_e, dens_i, masses, charges, g_ns, l_ns,
-                       terms="1+SDP", has_e=True, has_i=True):
+                       terms=default_stix_option):
 
-    from petram.phys.common.rf_dispersion_coldplasma_numba import (epsilonr_pl_cold,
-                                                                   epsilonr_pl_cold1,
-                                                                   epsilonr_pl_cold2,
-                                                                   epsilonr_pl_cold3,
-                                                                   epsilonr_pl_cold4,)
+    from petram.phys.common.rf_dispersion_coldplasma_numba import (epsilonr_pl_cold_std,
+                                                                   epsilonr_pl_cold_g,
+                                                                   epsilonr_pl_cold,
+                                                                   epsilonr_pl_cold_generic,)
 
     Da = 1.66053906660e-27      # atomic mass unit (u or Dalton) (kg)
 
     masses = np.array(masses, dtype=np.float64) * Da
-    charges = np.array(charges, dtype=np.int64)
+    charges = np.array(charges, dtype=np.int32)
 
     num_ions = len(masses)
     l = l_ns
@@ -48,52 +77,40 @@ def build_coefficients(ind_vars, omega, B, dens_e, t_e, dens_i, masses, charges,
     dens_i_coeff = VCoeff(num_ions, [dens_i, ], ind_vars, l, g,
                           return_complex=False, return_mfem_constant=True)
 
-    if terms == "1+SDP":
+    params = {'omega': omega, 'masses': masses, 'charges': charges, }
+    if terms == default_stix_option:
+
         def epsilonr(ptx, B, dens_e, t_e, dens_i):
             out = -epsilon0 * omega * omega*epsilonr_pl_cold(
-                omega, B, dens_i, masses, charges, t_e, dens_e, has_e, has_i)
+                omega, B, dens_i, masses, charges, t_e, dens_e)
             return out
 
-    elif terms == "SDP":
-        def epsilonr(ptx, B, dens_e, t_e, dens_i):
-            out = -epsilon0 * omega * omega*epsilonr_pl_cold1(
-                omega, B, dens_i, masses, charges, t_e, dens_e, has_e, has_i)
-            return out
-
-    elif terms == "SD":
-        def epsilonr(ptx, B, dens_e, t_e, dens_i):
-            out = -epsilon0 * omega * omega*epsilonr_pl_cold2(
-                omega, B, dens_i, masses, charges, t_e, dens_e, has_e, has_i)
-            return out
-
-    elif terms == "P":
-        def epsilonr(ptx, B, dens_e, t_e, dens_i):
-            out = -epsilon0 * omega * omega*epsilonr_pl_cold3(
-                omega, B, dens_i, masses, charges, t_e, dens_e, has_e, has_i)
-            return out
-
-    elif terms == "w/o xx":
-        def epsilonr(ptx, B, dens_e, t_e, dens_i):
-            out = -epsilon0 * omega * omega*epsilonr_pl_cold4(
-                omega, B, dens_i, masses, charges, t_e, dens_e, has_e, has_i)
+        def sdp(ptx, B, dens_e, t_e, dens_i):
+            out = epsilonr_pl_cold_std(
+                omega, B, dens_i, masses, charges, t_e, dens_e)
             return out
 
     else:
-        assert False, "unknown STIX term option"
+        from petram.phys.common.rf_stix_terms_panel import value2int
+        terms = value2int(len(charges), terms)
+        terms = np.array(terms, dtype=np.int32)
+        params["sterms"] = terms
 
-    def sdp(ptx, B, dens_e, t_e, dens_i):
-        out = epsilonr_pl_cold(
-            omega, B, dens_i, masses, charges, t_e, dens_e, True, True)
-        return out
+        def epsilonr(ptx, B, dens_e, t_e, dens_i):
+            out = -epsilon0 * omega * omega*epsilonr_pl_cold_generic(
+                omega, B, dens_i, masses, charges, t_e, dens_e, sterms)
+            return out
+
+        def sdp(ptx, B, dens_e, t_e, dens_i):
+            out = epsilonr_pl_cold_g(
+                omega, B, dens_i, masses, charges, t_e, dens_e, sterms)
+            return out
 
     def mur(ptx):
         return mu0*np.eye(3, dtype=np.complex128)
 
     def sigma(ptx):
         return - 1j*omega * np.zeros((3, 3), dtype=np.complex128)
-
-    params = {'omega': omega, 'masses': masses, 'charges': charges,
-              'has_e': int(has_e), 'has_i': int(has_i)}
 
     numba_debug = False if myid != 0 else get_numba_debug()
 
