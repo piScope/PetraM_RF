@@ -1,6 +1,10 @@
 '''
    Cold plasma:
 '''
+from petram.phys.common.rf_dispersion_coldplasma import (stix_options,
+                                                         default_stix_option,
+                                                         vtable_data)
+
 from petram.phys.phys_const import mu0, epsilon0
 from petram.phys.numba_coefficient import (func_to_numba_coeff_scalar,
                                            func_to_numba_coeff_vector,
@@ -21,36 +25,12 @@ if use_parallel:
 else:
     import mfem.ser as mfem
 
-data = (('B', VtableElement('bext', type='array',
-                            guilabel='magnetic field',
-                            default="=[0,0,0]",
-                            tip="external magnetic field")),
-        ('dens_e', VtableElement('dens_e', type='float',
-                                 guilabel='electron density(m-3)',
-                                 default="1e19",
-                                 tip="electron density")),
-        ('temperature', VtableElement('temperature', type='float',
-                                      guilabel='electron temp.(eV)',
-                                      default="10.",
-                                      tip="electron temperature used for collisions")),
-        ('dens_i', VtableElement('dens_i', type='array',
-                                 guilabel='ion densities(m-3)',
-                                 default="0.9e19, 0.1e19",
-                                 tip="ion densities")),
-        ('mass', VtableElement('mass', type='array',
-                               guilabel='ion masses(/Da)',
-                               default="2, 1",
-                               no_func=True,
-                               tip="mass. normalized by atomic mass unit")),
-        ('charge_q', VtableElement('charge_q', type='array',
-                                   guilabel='ion charges(/q)',
-                                   default="1, 1",
-                                   no_func=True,
-                                   tip="ion charges normalized by q(=1.60217662e-19 [C])")),
-        ('t_mode', VtableElement('t_mode', type="float",
-                                 guilabel='m',
-                                 default=0.0,
-                                 tip="mode number")),)
+
+vtable_data.extend([
+    ('t_mode', VtableElement('t_mode', type="float",
+                             guilabel='m',
+                             default=0.0,
+                             tip="mode number")),])
 
 
 '''
@@ -73,7 +53,7 @@ def domain_constraints():
 
 
 class EM2Da_ColdPlasma(EM2Da_Domain):
-    vt = Vtable(data)
+    vt = Vtable(vtable_data)
 
     def has_bf_contribution(self, kfes):
         if kfes == 0:
@@ -94,6 +74,43 @@ class EM2Da_ColdPlasma(EM2Da_Domain):
         '''
         return [(0, 1, 1, 1), (1, 0, 1, 1), ]  # (0, 1, -1, 1)]
 
+    def attribute_set(self, v):
+        EM2Da_Domain.attribute_set(self, v)
+        v["stix_terms"] = default_stix_option
+        return v
+
+    def config_terms(self, evt):
+        from petram.phys.common.rf_stix_terms_panel import ask_rf_stix_terms
+        _B, _dens_e, _t_e, _dens_i, _masses, charges, _tmode = self.vt.make_value_or_expression(
+            self)
+
+        num_ions = len(charges)
+        win = evt.GetEventObject()
+        value = ask_rf_stix_terms(win, num_ions, self.stix_terms)
+        self.stix_terms = value
+
+    def stix_terms_txt(self):
+        return self.stix_terms
+
+    def panel1_param(self):
+        panels = super(EM2Da_ColdPlasma, self).panel1_param()
+        panels.extend([["Stix terms", "", 2, None],
+                       [None, None, 341, {"label": "Customize terms",
+                                          "func": "config_terms",
+                                          "sendevent": True,
+                                          "noexpand": True}], ])
+
+        return panels
+
+    def get_panel1_value(self):
+        values = super(EM2Da_ColdPlasma, self).get_panel1_value()
+        values.extend([self.stix_terms_txt(), self])
+        return values
+
+    def import_panel1_value(self, v):
+        check = super(EM2Da_ColdPlasma, self).import_panel1_value(v[:-2])
+        return check
+
     @property
     def jited_coeff(self):
         return self._jited_coeff
@@ -110,7 +127,8 @@ class EM2Da_ColdPlasma(EM2Da_Domain):
         from petram.phys.common.rf_dispersion_coldplasma import build_coefficients
         coeff1, coeff2, coeff3, coeff4 = build_coefficients(ind_vars, omega, B, dens_e, t_e,
                                                             dens_i, masses, charges,
-                                                            self._global_ns, self._local_ns,)
+                                                            self._global_ns, self._local_ns,
+                                                            terms=self.stix_terms)
         return coeff1, coeff2, coeff3, coeff4, tmode
 
     def add_bf_contribution(self, engine, a, real=True, kfes=0):
