@@ -51,6 +51,17 @@ stix_options = ("SDP", "SD", "DP", "P", "w/o xx", "None")
 default_stix_option = "(default) include all"
 
 
+def value2int(num_ions, value):
+    '''
+    GUI value to interger
+    '''
+    if value == default_stix_option:
+        return [0]*(num_ions+1)
+
+    panelvalue = [x.split(":")[-1].strip() for x in value.split(",")]
+    return [stix_options.index(x) for x in panelvalue]
+
+
 def build_coefficients(ind_vars, omega, B, dens_e, t_e, dens_i, masses, charges, g_ns, l_ns,
                        terms=default_stix_option):
 
@@ -91,7 +102,6 @@ def build_coefficients(ind_vars, omega, B, dens_e, t_e, dens_i, masses, charges,
             return out
 
     else:
-        from petram.phys.common.rf_stix_terms_panel import value2int
         terms = value2int(len(charges), terms)
         terms = np.array(terms, dtype=np.int32)
         params["sterms"] = terms

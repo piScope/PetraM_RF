@@ -77,15 +77,6 @@ def value2panelvalue(num_ions, value):
     panelvalue = [x.split(":")[-1].strip() for x in value.split(",")]
     return panelvalue
 
-
-def value2int(num_ions, value):
-    if value == default_stix_option:
-        return [0]*(num_ions+1)
-
-    panelvalue = [x.split(":")[-1].strip() for x in value.split(",")]
-    return [stix_options.index(x) for x in panelvalue]
-
-
 def panelvalue2value(panelvalue):
     num_ions = len(panelvalue) - 1
     names = ["electrons"]
