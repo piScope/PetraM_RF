@@ -94,11 +94,12 @@ class EM3D_ColdPlasma(EM3D_Domain):
         ind_vars = self.get_root_phys().ind_vars
 
         from petram.phys.common.rf_dispersion_coldplasma import build_coefficients
-        coeff1, coeff2, coeff3, coeff4 = build_coefficients(ind_vars, omega, B, dens_e, t_e,
+        coeff1, coeff2, coeff3, coeff4, coeff5 = build_coefficients(ind_vars, omega, B, dens_e, t_e,
                                                             dens_i, masses, charges,
                                                             self._global_ns, self._local_ns,
-                                                            terms=self.stix_terms)
-        return coeff1, coeff2, coeff3, coeff4
+                                                            sdim=3, terms=self.stix_terms)
+
+        return coeff1, coeff2, coeff3, coeff4, coeff5
 
     def has_bf_contribution(self, kfes):
         if kfes == 0:
@@ -114,7 +115,7 @@ class EM3D_ColdPlasma(EM3D_Domain):
         else:
             dprint1("Add BF contribution(imag)" + str(self._sel_index))
 
-        coeff1, coeff2, coeff3, coeff4 = self.jited_coeff
+        coeff1, coeff2, coeff3, coeff4, _coeff_nuei = self.jited_coeff
         self.set_integrator_realimag_mode(real)
 
         if self.has_pml():
@@ -175,7 +176,7 @@ class EM3D_ColdPlasma(EM3D_Domain):
         if len(self._sel_index) == 0:
             return
 
-        coeff1, coeff2, coeff3, coeff4 = self.jited_coeff
+        coeff1, coeff2, coeff3, coeff4, coeff_nuei = self.jited_coeff
 
         c1 = NumbaCoefficientVariable(coeff1, complex=True, shape=(3, 3))
         c2 = NumbaCoefficientVariable(coeff2, complex=True, shape=(3, 3))
@@ -198,6 +199,11 @@ class EM3D_ColdPlasma(EM3D_Domain):
         self.do_add_matrix_expr(v, suffix, ind_vars,
                                 'Pstix', ["_spd_"+ss+"[2,2]"])
 
+        for idx, coeff in enumerate(coeff_nuei):
+            c5 = NumbaCoefficientVariable(coeff)
+            v["_nuei"+str(idx+1)+"_"+ss] = c5
+            self.do_add_scalar_expr(v, suffix, ind_vars, 'nuei'+str(idx+1),
+                                    "_nuei"+str(idx+1)+"_"+ss)
         var = ['x', 'y', 'z']
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'epsilonr')
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'mur')

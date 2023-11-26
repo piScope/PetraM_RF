@@ -63,12 +63,13 @@ def value2int(num_ions, value):
 
 
 def build_coefficients(ind_vars, omega, B, dens_e, t_e, dens_i, masses, charges, g_ns, l_ns,
-                       terms=default_stix_option):
+                       sdim=3, terms=default_stix_option):
 
     from petram.phys.common.rf_dispersion_coldplasma_numba import (epsilonr_pl_cold_std,
                                                                    epsilonr_pl_cold_g,
                                                                    epsilonr_pl_cold,
-                                                                   epsilonr_pl_cold_generic,)
+                                                                   epsilonr_pl_cold_generic,
+                                                                   f_collisions)
 
     Da = 1.66053906660e-27      # atomic mass unit (u or Dalton) (kg)
 
@@ -122,17 +123,22 @@ def build_coefficients(ind_vars, omega, B, dens_e, t_e, dens_i, masses, charges,
     def sigma(ptx):
         return - 1j*omega * np.zeros((3, 3), dtype=np.complex128)
 
+    def nuei(ptx, dens_e, t_e, dens_i):
+        # iidx : index of ions
+        nuei = f_collisions(dens_i, charges, t_e, dens_e)
+        return nuei[iidx]
+
     numba_debug = False if myid != 0 else get_numba_debug()
 
     dependency = (B_coeff, dens_e_coeff, t_e_coeff, dens_i_coeff)
     dependency = [(x.mfem_numba_coeff if isinstance(x, NumbaCoefficient) else x)
                   for x in dependency]
 
-    jitter = mfem.jit.matrix(sdim=3, shape=(3, 3), complex=True, params=params,
+    jitter = mfem.jit.matrix(sdim=sdim, shape=(3, 3), complex=True, params=params,
                              debug=numba_debug, dependency=dependency)
     mfem_coeff1 = jitter(epsilonr)
 
-    jitter2 = mfem.jit.matrix(sdim=3, shape=(3, 3), complex=True, params=params,
+    jitter2 = mfem.jit.matrix(sdim=sdim, shape=(3, 3), complex=True, params=params,
                               debug=numba_debug)
     mfem_coeff2 = jitter2(mur)
     mfem_coeff3 = jitter2(sigma)
@@ -143,7 +149,18 @@ def build_coefficients(ind_vars, omega, B, dens_e, t_e, dens_i, masses, charges,
     coeff3 = NumbaCoefficient(mfem_coeff3)
     coeff4 = NumbaCoefficient(mfem_coeff4)
 
-    return coeff1, coeff2, coeff3, coeff4
+    dependency3 = (dens_e_coeff, t_e_coeff, dens_i_coeff)
+    dependency3 = [(x.mfem_numba_coeff if isinstance(x, NumbaCoefficient) else x)
+                   for x in dependency3]
+    jitter3 = mfem.jit.scalar(sdim=sdim, complex=False, params=params, debug=numba_debug,
+                              dependency=dependency3)
+    coeff5 = []
+    for idx in range(len(masses)):
+        params['iidx'] = idx
+        mfem_coeff5 = jitter3(nuei)
+        coeff5.append(NumbaCoefficient(mfem_coeff5))
+
+    return coeff1, coeff2, coeff3, coeff4, coeff5
 
 
 '''

@@ -27,6 +27,7 @@ def print_mat(mat, r, c):
 
 @njit(complex128[:](float64, float64, float64, float64[:]))
 def SPD_el(w, Bnorm, dens, nu_eis):
+
     mass_eff = (1 + sum(1j*nu_eis/w))*me
 
     wp2 = dens * q_base**2/(mass_eff*e0)
@@ -39,10 +40,10 @@ def SPD_el(w, Bnorm, dens, nu_eis):
     return array([Sterm, Pterm, Dterm])
 
 
-@njit(complex128[:](float64, float64, float64, float64, int64, float64[:]))
-def SPD_ion(w, Bnorm, dens, mass, charge, nu_eis):
+@njit(complex128[:](float64, float64, float64, float64, int64, float64))
+def SPD_ion(w, Bnorm, dens, mass, charge, nu_ei):
     qi = charge*q_base
-    mass_eff = (1 + sum(1j*nu_eis/w))*mass
+    mass_eff = (1 + 1j*nu_ei/w)*mass
     wp2 = dens * q_base**2/(mass_eff*e0)
     wc = qi * Bnorm/mass_eff
 
@@ -89,9 +90,9 @@ def epsilonr_pl_cold_std(w, B, denses, masses, charges, Te, ne):
         P += Pe
         D += De
 
-    for dens, mass, charge in zip(denses, masses, charges):
+    for dens, mass, charge, nu_ei in zip(denses, masses, charges, nu_eis):
         if dens > 0.:
-            Si, Pi, Di = SPD_ion(w, b_norm, dens, mass, charge, nu_eis)
+            Si, Pi, Di = SPD_ion(w, b_norm, dens, mass, charge, nu_ei)
             S += Si
             P += Pi
             D += Di
@@ -133,9 +134,9 @@ def epsilonr_pl_cold_g(w, B, denses, masses, charges, Te, ne, terms):
         M += M2
 
     kion = 1
-    for dens, mass, charge in zip(denses, masses, charges):
+    for dens, mass, charge, nu_ei in zip(denses, masses, charges, nu_eis):
         if dens > 0.:
-            S, P, D = SPD_ion(w, b_norm, dens, mass, charge, nu_eis)
+            S, P, D = SPD_ion(w, b_norm, dens, mass, charge, nu_ei)
             if terms[kion] == 0:
                 M2 = array([[S, -1j*D, 0j], [1j*D, S, 0j], [0., 0., P]])
             elif terms[kion] == 1:

@@ -122,15 +122,16 @@ class EM2D_ColdPlasma(EM2D_Domain, EM2D_Domain_helper):
         ind_vars = self.get_root_phys().ind_vars
 
         from petram.phys.common.rf_dispersion_coldplasma import build_coefficients
-        coeff1, coeff2, coeff3, coeff4 = build_coefficients(ind_vars, omega, B, dens_e, t_e,
+        coeff1, coeff2, coeff3, coeff4, coeff_nuei = build_coefficients(ind_vars, omega, B, dens_e, t_e,
                                                             dens_i, masses, charges,
                                                             self._global_ns, self._local_ns,
-                                                            terms=self.stix_terms)
-        return coeff1, coeff2, coeff3, coeff4, kz
+                                                            sdim=2, terms=self.stix_terms)
+
+        return coeff1, coeff2, coeff3, coeff4, coeff_nuei, kz
 
     def get_coeffs_2(self):
         # e, m, s
-        coeff1, coeff2, coeff3, coeff_stix, kz = self.jited_coeff
+        coeff1, coeff2, coeff3, coeff_stix, _coeff_nuei, kz = self.jited_coeff
         '''
         coeff4 = ComplexMatrixSum(
             coeff1, coeff3)      # -> coeff4 = coeff1 + coeff3
@@ -199,7 +200,7 @@ class EM2D_ColdPlasma(EM2D_Domain, EM2D_Domain_helper):
         from petram.helper.variables import (NativeCoefficientGenBase,
                                              NumbaCoefficientVariable)
 
-        coeff1, coeff2, coeff3, coeff_stix, kz = self.jited_coeff
+        coeff1, coeff2, coeff3, coeff_stix, coeff_nuei, kz = self.jited_coeff
 
         c1 = NumbaCoefficientVariable(coeff1, complex=True, shape=(3, 3))
         c2 = NumbaCoefficientVariable(coeff2, complex=True, shape=(3, 3))
@@ -211,6 +212,7 @@ class EM2D_ColdPlasma(EM2D_Domain, EM2D_Domain_helper):
         v["_m_"+ss] = c2
         v["_s_"+ss] = c3
         v["_spd_"+ss] = c4
+        v["_nuei_"+ss] = c5
 
         self.do_add_matrix_expr(v, suffix, ind_vars, 'epsilonr', ["_e_"+ss])
         self.do_add_matrix_expr(v, suffix, ind_vars, 'mur', ["_m_"+ss])
@@ -221,6 +223,12 @@ class EM2D_ColdPlasma(EM2D_Domain, EM2D_Domain_helper):
                                 "1j*_spd_"+ss+"[0,1]"])
         self.do_add_matrix_expr(v, suffix, ind_vars,
                                 'Pstix', ["_spd_"+ss+"[2,2]"])
+
+        for idx, coeff in enumerate(coeff_nuei):
+            c5 = NumbaCoefficientVariable(coeff)
+            v["_nuei"+str(idx+1)+"_"+ss] = c5
+            self.do_add_scalar_expr(v, suffix, ind_vars, 'nuei'+str(idx+1),
+                                    "_nuei"+str(idx+1)+"_"+ss)
 
         var = ['x', 'y', 'z']
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'epsilonr')
