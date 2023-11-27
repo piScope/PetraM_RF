@@ -248,7 +248,7 @@ class EM2D_Anisotropic(EM2D_Domain, EM2D_Domain_helper):
             self.add_integrator(engine, 'mur', mu[3],
                              mbf.AddDomainIntegrator, itg)
         '''
-    def add_domain_variables(self, v, n, suffix, ind_vars, solr, soli = None):
+    def add_domain_variables(self, v, n, suffix, ind_vars):
 
         from petram.helper.variables import add_expression, add_constant
         

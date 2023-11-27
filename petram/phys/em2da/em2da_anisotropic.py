@@ -378,7 +378,7 @@ class EM2Da_Anisotropic(EM2Da_Domain):
             self.add_integrator(engine, 'mur', imv_o_r_3,
                              mbf.AddDomainIntegrator, itg)
 
-    def add_domain_variables(self, v, n, suffix, ind_vars, solr, soli = None):
+    def add_domain_variables(self, v, n, suffix, ind_vars):
         from petram.helper.variables import add_expression, add_constant
 
         e, m, s, tmode = self.vt.make_value_or_expression(self)
