@@ -212,7 +212,6 @@ class EM2D_ColdPlasma(EM2D_Domain, EM2D_Domain_helper):
         v["_m_"+ss] = c2
         v["_s_"+ss] = c3
         v["_spd_"+ss] = c4
-        v["_nuei_"+ss] = c5
 
         self.do_add_matrix_expr(v, suffix, ind_vars, 'epsilonr', ["_e_"+ss])
         self.do_add_matrix_expr(v, suffix, ind_vars, 'mur', ["_m_"+ss])
