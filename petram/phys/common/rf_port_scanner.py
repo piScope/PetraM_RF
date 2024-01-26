@@ -22,7 +22,7 @@ class PortScanner(DefaultParametricScanner):
     ''' 
     Scanner for port BC amplitude
 
-    PortScan([1,2,3], amplitude=1, phase=0.0, phys='first', suffix="")
+    PortScan([1,2,3], amplitude=1, phase=0.0, phys='first')
     PortScan([1,2,3], amplitude=1, phase=0.0, phys='EM3D1')
     PortScan(amplitude=1, phase=0.0)  " scan all port of first phys em model"
 
@@ -34,7 +34,6 @@ class PortScanner(DefaultParametricScanner):
         self.amplitude = kwargs.pop("amplitude", 1)
         self.phase = kwargs.pop("phase", 0.0)
         self.phys_name = kwargs.pop("phys", 'first')
-        self.file_suffix = kwargs.pop("suffix", '')
 
         if len(args) == 0:
             self._names = None
@@ -159,6 +158,8 @@ class PortScanner(DefaultParametricScanner):
         for phys in self.target_phys:
             if phys.name() != self.phys_name:
                 continue
+
+            file_suffix = phys.dep_vars_suffix
             for obj in phys.walk():
                 if (isinstance(obj, EM3D_Port) or
                     isinstance(obj, EM2Da_Port) or
@@ -189,10 +190,15 @@ class PortScanner(DefaultParametricScanner):
         if len(smat) == 0:
             return
 
-        p = Probe("Smat"+self.file_suffix, xnames=["ports"])
+        p = Probe("Smat"+file_suffix, xnames=["ports"])
         for idx, item in zip(ports, smat):
             p.append_value(item, t=idx)
         p.write_file()
+
+        # store Smatrix to _variables
+        smat = np.vstack(smat)
+        from petram.helper.variables import Constant
+        engine.model._variables["Smat"+file_suffix] = Constant(smat)
 
 
 PortScan = PortScanner
