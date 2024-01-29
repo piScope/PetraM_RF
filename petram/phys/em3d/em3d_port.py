@@ -70,7 +70,6 @@ class EM3D_Port(EM3D_Bdry):
                                         inc_amp=inc_amp,
                                         inc_phase=inc_phase,
                                         port_idx=port_idx)
-        Phys.__init__(self)
 
     def extra_DoF_name(self):
         return self.get_root_phys().dep_vars[0] + "_port_" + str(self.port_idx)
