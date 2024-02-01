@@ -12,6 +12,7 @@ from petram.mfem_config import use_parallel
 '''
 
 import numpy as np
+from numpy import pi
 
 import petram.debug as debug
 dprint1, dprint2, dprint3 = debug.init_dprints('EM3D_PortLoad')
@@ -134,13 +135,13 @@ class EM3D_PortLoad(EM3D_Bdry):
             C_Et, C_jwHt = mm.get_coeff_cls()
             inc_amp, inc_phase, eps, mur = mm.vt.make_value_or_expression(mm)            
             lf1 = engine.new_lf(fes)
-            Ht1 = C_jwHt(3, 0.0, mm, real=True, eps=eps, mur=mur)
+            Ht1 = C_jwHt(3, pi, mm, real=True, eps=eps, mur=mur)
             Ht2 = mm.restrict_coeff(Ht1, engine, vec=True)
             intg = mfem.VectorFEBoundaryTangentLFIntegrator(Ht2)
             lf1.AddBoundaryIntegrator(intg)
             lf1.Assemble()
             lf1i = engine.new_lf(fes)
-            Ht3 = C_jwHt(3, 0.0, mm, real=False, eps=eps, mur=mur)
+            Ht3 = C_jwHt(3, pi, mm, real=False, eps=eps, mur=mur)
             Ht4 = self.restrict_coeff(Ht3, engine, vec=True)
             intg = mfem.VectorFEBoundaryTangentLFIntegrator(Ht4)
             lf1i.AddBoundaryIntegrator(intg)
@@ -197,7 +198,7 @@ class EM3D_PortLoad(EM3D_Bdry):
         c1[0, idx] = -1
         if len(np.atleast_1d(Smat))==1:
             Smat = np.eye(len(names2))*Smat
-        c2 = Smat[:, idx]
+        c2 = np.atleast_2d(Smat[:, idx])
 
         from petram.helper.densemat2pymat import Densemat2PyMat
         ret1 = Densemat2PyMat(c1)
