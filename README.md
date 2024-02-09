@@ -17,7 +17,8 @@ This module provides various Frequency domain RF interface to Petra-M.
  *    EM3D_H           : Mangetic field boundary
  *    EM3D_SurfJ       : Surface current
  *    EM3D_Port        : TE, TEM, Coax port
- *    EM3D_PortArray   : Array of Ports 
+ *    EM3D_PortArray   : Array of Ports
+ *    EM3D_PortLoad    : Exteranl load, defined as Smat, to PortBC
  *    EM3D_E           : Electric field
  *    EM3D_Continuity  : Continuitiy
  *    EM3D_Impedance   : Impedance BC Continuitiy (Leontovich)
