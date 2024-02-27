@@ -79,6 +79,8 @@ class EM2D_ColdPlasma(EM2D_Domain, EM2D_Domain_helper):
 
     def config_terms(self, evt):
         from petram.phys.common.rf_stix_terms_panel import ask_rf_stix_terms
+
+        self.vt.preprocess_params(self)
         _B, _dens_e, _t_e, _dens_i, _masses, charges, _kz = self.vt.make_value_or_expression(
             self)
 
@@ -123,9 +125,9 @@ class EM2D_ColdPlasma(EM2D_Domain, EM2D_Domain_helper):
 
         from petram.phys.common.rf_dispersion_coldplasma import build_coefficients
         coeff1, coeff2, coeff3, coeff4, coeff_nuei = build_coefficients(ind_vars, omega, B, dens_e, t_e,
-                                                            dens_i, masses, charges,
-                                                            self._global_ns, self._local_ns,
-                                                            sdim=2, terms=self.stix_terms)
+                                                                        dens_i, masses, charges,
+                                                                        self._global_ns, self._local_ns,
+                                                                        sdim=2, terms=self.stix_terms)
 
         return coeff1, coeff2, coeff3, coeff4, coeff_nuei, kz
 

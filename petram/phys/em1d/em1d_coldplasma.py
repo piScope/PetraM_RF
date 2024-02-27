@@ -63,6 +63,8 @@ class EM1D_ColdPlasma(EM1D_Vac):
 
     def config_terms(self, evt):
         from petram.phys.common.rf_stix_terms_panel import ask_rf_stix_terms
+
+        self.vt.preprocess_params(self)
         _B, _dens_e, _t_e, _dens_i, _masses, charges, _ky, _kz = self.vt.make_value_or_expression(
             self)
 

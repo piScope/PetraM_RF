@@ -75,6 +75,11 @@ def value2panelvalue(num_ions, value):
         return [stix_options[0]]*(num_ions+1)
 
     panelvalue = [x.split(":")[-1].strip() for x in value.split(",")]
+
+    # check if current option is among supported options
+    for x in panelvalue:
+        if x not in stix_options:
+             return [stix_options[0]]*(num_ions+1)
     return panelvalue
 
 def panelvalue2value(panelvalue):

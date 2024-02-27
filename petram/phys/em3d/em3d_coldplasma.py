@@ -36,7 +36,7 @@ def domain_constraints():
 class EM3D_ColdPlasma(EM3D_Domain):
     allow_custom_intorder = True
     vt = Vtable(vtable_data)
-    #nlterms = ['epsilonr']
+    # nlterms = ['epsilonr']
 
     def get_possible_child(self):
         from .em3d_pml import EM3D_LinearPML
@@ -49,6 +49,8 @@ class EM3D_ColdPlasma(EM3D_Domain):
 
     def config_terms(self, evt):
         from petram.phys.common.rf_stix_terms_panel import ask_rf_stix_terms
+
+        self.vt.preprocess_params(self)
         _B, _dens_e, _t_e, _dens_i, _masses, charges = self.vt.make_value_or_expression(
             self)
 
@@ -95,9 +97,9 @@ class EM3D_ColdPlasma(EM3D_Domain):
 
         from petram.phys.common.rf_dispersion_coldplasma import build_coefficients
         coeff1, coeff2, coeff3, coeff4, coeff5 = build_coefficients(ind_vars, omega, B, dens_e, t_e,
-                                                            dens_i, masses, charges,
-                                                            self._global_ns, self._local_ns,
-                                                            sdim=3, terms=self.stix_terms)
+                                                                    dens_i, masses, charges,
+                                                                    self._global_ns, self._local_ns,
+                                                                    sdim=3, terms=self.stix_terms)
 
         return coeff1, coeff2, coeff3, coeff4, coeff5
 
@@ -158,7 +160,7 @@ class EM3D_ColdPlasma(EM3D_Domain):
                                 a.AddDomainIntegrator,
                                 mfem.CurlCurlIntegrator,
                                 ir=cc_ir)
-            #coeff2 = self.restrict_coeff(coeff2, engine)
+            # coeff2 = self.restrict_coeff(coeff2, engine)
             # a.AddDomainIntegrator(mfem.CurlCurlIntegrator(coeff2))
         else:
             dprint1("No contrinbution from curlcurl")
