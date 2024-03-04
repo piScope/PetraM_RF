@@ -38,7 +38,9 @@ from petram.phys.coefficient import VCoeff
 
 def JextCoeff(exprs, ind_vars, l, g, omega):
     fac  = 1j * omega
+    print("!!!!", exprs)
     coeff = VCoeff(3, exprs, ind_vars, l, g, return_complex=True, scale=fac)
+    print("!!!!",coeff)
     return coeff
 
 

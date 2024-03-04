@@ -144,7 +144,7 @@ class EM3D_Anisotropic(EM3D_Domain):
                             mfem.VectorFEMassIntegrator,
                             ir=ms_ir)        
         
-    def add_domain_variables(self, v, n, suffix, ind_vars, solr, soli = None):
+    def add_domain_variables(self, v, n, suffix, ind_vars):
         from petram.helper.variables import add_expression, add_constant
         from petram.helper.variables import NativeCoefficientGenBase
         
