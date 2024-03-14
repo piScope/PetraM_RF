@@ -163,49 +163,99 @@ def build_coefficients(ind_vars, omega, B, dens_e, t_e, dens_i, masses, charges,
     return coeff1, coeff2, coeff3, coeff4, coeff5
 
 
-'''
-(reference original)
-def epsilonr_pl_warm(x, y, z):
-    return epsilonr_pl_f(x, y, z, temp0=50)
+def build_variables(solvar, ss, ind_vars, omega, B, dens_e, t_e, dens_i, masses, charges, g_ns, l_ns,
+                    sdim=3, terms=default_stix_option):
 
-def epsilonr_pl_cold(x, y, z):
-    return epsilonr_pl_f(x, y, z, temp0=15)
-def SPD(x, y, z, Bnorm, ne, ni, nim, Te, Ti, Tim):
-   vTe  = sqrt(2*Te/me)
-   vTi  = sqrt(2*Ti/mi)
-   vTim = sqrt(2*Tim/mim)
-   LAMBDA = 1+12*pi*(e0*Te)**(3./2)/(q**3 * sqrt(ne))
+    from petram.phys.common.rf_dispersion_coldplasma_numba import (epsilonr_pl_cold_std,
+                                                                   epsilonr_pl_cold_g,
+                                                                   epsilonr_pl_cold,
+                                                                   epsilonr_pl_cold_generic,
+                                                                   f_collisions)
 
-   nu_ei = (qi**2 * qe**2 * ni *
-           log(LAMBDA)/(4 * pi*e0**2*me**2)/vTe**3)
-   nu_eim = (qim**2 * qe**2 * nim *
-           log(LAMBDA)/(4 * pi*e0**2*me**2)/vTe**3)
+    Da = 1.66053906660e-27      # atomic mass unit (u or Dalton) (kg)
 
-   #effective electrons mass (to account for collisions)
-   me_eff  = (1+1j*nu_ei/w + 1j*nu_eim/w )*me
-   mi_eff  = (1+1j*nu_ei/w + 1j*nu_eim/w )*mi
-   mim_eff = (1+1j*nu_ei/w + 1j*nu_eim/w )*mim
-   # when suppressing collisions entirely.
-   #me_eff  = me
-   #mi_eff  = mi
-   #mim_eff = mim
+    masses = np.array(masses, dtype=np.float64) * Da
+    charges = np.array(charges, dtype=np.int32)
 
-   wpe2  = ne * q**2/(me_eff*e0)
-   wpi2  = ni * q**2/(mi_eff*e0)
-   wpim2 = nim * q**2/(mim_eff*e0)
+    num_ions = len(masses)
+    l = l_ns
+    g = g_ns
 
-   wce  =  qe * Bnorm/me_eff
-   wci  =  qi * Bnorm/mi_eff
-   wcim =  qim * Bnorm/mim_eff
+    def func(x, dens_smooth=None):
+        return dens_smooth
 
-   P =(1 - wpe2/w**2
-            - wpi2/w**2
-            - wpim2/w**2)
-   #print("wpe2, wpi2, wpim2", wpe2, wpi2, wpim2)
-   S = (1-wpe2/(w**2-wce**2)-wpi2/(w**2-wci**2)-
-           wpim2/(w**2-wcim**2))
-   D = (wce*wpe2/(w*(w**2-wce**2)) + wci*wpi2/(w*(w**2-wci**2)) +
-           wcim*wpim2/(w*(w**2-wcim**2)))
+    from petram.helper.variables import (variable,
+                                         Constant,
+                                         ExpressionVariable,
+                                         NumbaCoefficientVariable,
+                                         PyFunctionVariable)
+    d1 = variable.jit.float(dependency=("dens_smooth",))(func)
 
-   return S, P, D
-'''
+    def make_variable(x):
+        print(type(x))
+        if isinstance(x, str):
+            d1 = ExpressionVariable(x, ind_vars)
+        else:
+            d1 = Constant(x)
+        return d1
+
+    B_var = make_variable(B)
+    te_var = make_variable(t_e)
+    dense_var = make_variable(dens_e)
+    densi_var = make_variable(dens_i)
+
+    params = {'omega': omega, 'masses': masses, 'charges': charges, }
+    if terms == default_stix_option:
+        def epsilonr(*_ptx, B=None, dens_e=None, t_e=None, dens_i=None):
+            out = -epsilon0 * omega * omega*epsilonr_pl_cold(
+                omega, B, dens_i, masses, charges, t_e, dens_e)
+            return out
+
+        def sdp(*_ptx, B=None, dens_e=None, t_e=None, dens_i=None):
+            out = epsilonr_pl_cold_std(
+                omega, B, dens_i, masses, charges, t_e, dens_e)
+            return out
+
+    else:
+        sterms = value2int(len(charges), terms)
+        sterms = np.array(terms, dtype=np.int32)
+        params["sterms"] = sterms
+
+        def epsilonr(*_ptx, B=None, dens_e=None, t_e=None, dens_i=None):
+            out = -epsilon0 * omega * omega*epsilonr_pl_cold_generic(
+                omega, B, dens_i, masses, charges, t_e, dens_e, sterms)
+            return out
+
+        def sdp(*_ptx, B=None, dens_e=None, t_e=None, dens_i=None):
+            out = epsilonr_pl_cold_g(
+                omega, B, dens_i, masses, charges, t_e, dens_e, sterms)
+            return out
+
+    def mur(*_ptx):
+        return mu0*np.eye(3, dtype=np.complex128)
+
+    def sigma(*_ptx):
+        return - 1j*omega * np.zeros((3, 3), dtype=np.complex128)
+
+    def nuei(*_ptx, dens_e=dens_e, t_e=t_e, dens_i=dens_i):
+        nuei = f_collisions(dens_i, charges, t_e, dens_e)
+        return nuei
+
+    solvar["B_"+ss] = B_var
+    solvar["ne_"+ss] = dense_var
+    solvar["te_"+ss] = te_var
+    solvar["ni_"+ss] = densi_var
+    dependency = ("B_"+ss, "ne_"+ss, "te_"+ss, "ni_"+ss)
+
+    var1 = variable.array(complex=True, shape=(3, 3),
+                          dependency=dependency, params=params)(epsilonr)
+    var2 = variable.array(complex=True, shape=(3, 3),
+                          dependency=dependency, params=params)(mur)
+    var3 = variable.array(complex=True, shape=(3, 3),
+                          dependency=dependency, params=params)(sigma)
+    var4 = variable.array(complex=True, shape=(3, 3),
+                          dependency=dependency, params=params)(sdp)
+    var5 = variable.array(complex=True, shape=(len(masses),),
+                          dependency=dependency, params=params)(nuei)
+
+    return var1, var2, var3, var4, var5

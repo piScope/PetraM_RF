@@ -111,9 +111,9 @@ class EM1D_ColdPlasma(EM1D_Vac):
         from petram.phys.common.rf_dispersion_coldplasma import build_coefficients
 
         coeff1, coeff2, coeff3, coeff4, coeff_nuei = build_coefficients(ind_vars, omega, B, dens_e, t_e,
-                                                            dens_i, masses, charges,
-                                                            self._global_ns, self._local_ns,
-                                                            sdim=1, terms=self.stix_terms)
+                                                                        dens_i, masses, charges,
+                                                                        self._global_ns, self._local_ns,
+                                                                        sdim=1, terms=self.stix_terms)
         return coeff1, coeff2, coeff3, coeff4, coeff_nuei,  ky, kz
 
     def add_bf_contribution(self, engine, a, real=True, kfes=0):
@@ -216,39 +216,10 @@ class EM1D_ColdPlasma(EM1D_Vac):
         if len(self._sel_index) == 0:
             return
 
-        coeff1, coeff2, coeff3, coeff4, coeff_nuei, ky, kz = self.jited_coeff
-
-        c1 = NumbaCoefficientVariable(coeff1, complex=True, shape=(3, 3))
-        c2 = NumbaCoefficientVariable(coeff2, complex=True, shape=(3, 3))
-        c3 = NumbaCoefficientVariable(coeff3, complex=True, shape=(3, 3))
-        c4 = NumbaCoefficientVariable(coeff4, complex=True, shape=(3, 3))
-
-        ss = str(abs(hash(self.fullname())))
-        v["_e_"+ss] = c1
-        v["_m_"+ss] = c2
-        v["_s_"+ss] = c3
-        v["_spd_"+ss] = c4
-
-        self.do_add_matrix_expr(v, suffix, ind_vars, 'epsilonr', ["_e_"+ss])
-        self.do_add_matrix_expr(v, suffix, ind_vars, 'mur', ["_m_"+ss])
-        self.do_add_matrix_expr(v, suffix, ind_vars, 'sigma', ["_s_"+ss])
-        self.do_add_matrix_expr(v, suffix, ind_vars,
-                                'Sstix', ["_spd_"+ss+"[0,0]"])
-        self.do_add_matrix_expr(v, suffix, ind_vars, 'Dstix', [
-                                "1j*_spd_"+ss+"[0,1]"])
-        self.do_add_matrix_expr(v, suffix, ind_vars,
-                                'Pstix', ["_spd_"+ss+"[2,2]"])
-
-        for idx, coeff in enumerate(coeff_nuei):
-            c5 = NumbaCoefficientVariable(coeff)
-            v["_nuei"+str(idx+1)+"_"+ss] = c5
-            self.do_add_scalar_expr(v, suffix, ind_vars, 'nuei'+str(idx+1),
-                                    "_nuei"+str(idx+1)+"_"+ss)
-
-        var = ['x', 'y', 'z']
-        self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'epsilonr')
-        self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'mur')
-        self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'sigma')
+        freq, omega = self.get_root_phys().get_freq_omega()
+        B, dens_e, t_e, dens_i, masses, charges, ky, kz = self.vt.make_value_or_expression(
+            self)
+        ind_vars = self.get_root_phys().ind_vars
 
         add_constant(v, 'ky', suffix, np.float64(kz),
                      domains=self._sel_index,
@@ -256,3 +227,36 @@ class EM1D_ColdPlasma(EM1D_Vac):
         add_constant(v, 'kz', suffix, np.float64(kz),
                      domains=self._sel_index,
                      gdomain=self._global_ns)
+
+        from petram.phys.common.rf_dispersion_coldplasma import build_variables
+
+        ss = self.parent.parent.name()+'_'+self.name()  # phys module name + name
+        var1, var2, var3, var4, var5 = build_variables(v, ss, ind_vars,
+                                                       omega, B, dens_e, t_e,
+                                                       dens_i, masses, charges,
+                                                       self._global_ns, self._local_ns,
+                                                       sdim=1, terms=self.stix_terms)
+
+        v["_e_"+ss] = var1
+        v["_m_"+ss] = var2
+        v["_s_"+ss] = var3
+        v["_spd_"+ss] = var4
+        v["_nuei_"+ss] = var5
+
+        self.do_add_matrix_expr(v, suffix, ind_vars, 'epsilonr', ["_e_"+ss])
+        self.do_add_matrix_expr(v, suffix, ind_vars, 'mur', ["_m_"+ss])
+        self.do_add_matrix_expr(v, suffix, ind_vars, 'sigma', ["_s_"+ss])
+        self.do_add_matrix_expr(v, suffix, ind_vars, 'nuei', ["_nuei_"+ss])
+        self.do_add_matrix_expr(v, suffix, ind_vars,
+                                'Sstix', ["_spd_"+ss+"[0,0]"])
+        self.do_add_matrix_expr(v, suffix, ind_vars, 'Dstix', [
+                                "1j*_spd_"+ss+"[0,1]"])
+        self.do_add_matrix_expr(v, suffix, ind_vars,
+                                'Pstix', ["_spd_"+ss+"[2,2]"])
+
+        var = ['x', 'y', 'z']
+        self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'epsilonr')
+        self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'mur')
+        self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'sigma')
+
+        return
