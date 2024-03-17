@@ -202,7 +202,7 @@ class EM3D_LinearPML(EM3D_PML):
         v2v = ec['vert2vert']
 
         idx = int(self.ref_point)
-        self.ref_point_coord = base_mesh.GetVertexArray(v2v[idx])
+        self.ref_point_coord = base_mesh.GetVertexArray(v2v[idx]).copy()
 
         dprint1("PML reference point:", self.ref_point_coord)
 
