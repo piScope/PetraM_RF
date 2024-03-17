@@ -233,8 +233,8 @@ class EM2D(PhysModule):
     def get_possible_domain(self):
         if EM2D._possible_constraints is None:
             self._set_possible_constraints('em2d')
-            
-        doms = super(EM2D, self).get_possible_domain()        
+
+        doms = super(EM2D, self).get_possible_domain()
         return EM2D._possible_constraints['domain'] + doms
     
     def get_possible_edge(self):
@@ -243,8 +243,8 @@ class EM2D(PhysModule):
     def get_possible_pair(self):
         if EM2D._possible_constraints is None:
             self._set_possible_constraints('em2d')
-            
-        pairs = super(EM2D, self).get_possible_pair()        
+
+        pairs = super(EM2D, self).get_possible_pair()
         return EM2D._possible_constraints['pair'] + pairs
 
     def get_possible_point(self):

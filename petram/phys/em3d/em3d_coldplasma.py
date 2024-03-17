@@ -1,6 +1,10 @@
 '''
    cold plasma.
 '''
+from petram.phys.common.rf_dispersion_coldplasma import (stix_options,
+                                                         default_stix_option,
+                                                         vtable_data)
+
 import numpy as np
 
 from petram.mfem_config import use_parallel, get_numba_debug
@@ -24,56 +28,6 @@ else:
     import mfem.ser as mfem
     myid = 0
 
-data = (('B', VtableElement('bext', type='array',
-                            guilabel='magnetic field',
-                            default="=[0,0,0]",
-                            tip="external magnetic field")),
-        ('dens_e', VtableElement('dens_e', type='float',
-                                 guilabel='electron density(m-3)',
-                                 default="1e19",
-                                 tip="electron density")),
-        ('temperature', VtableElement('temperature', type='float',
-                                      guilabel='electron temp.(eV)',
-                                      default="10.",
-                                      tip="electron temperature used for collisions")),
-        ('dens_i', VtableElement('dens_i', type='array',
-                                 guilabel='ion densities(m-3)',
-                                 default="0.9e19, 0.1e19",
-                                 tip="ion densities")),
-        ('mass', VtableElement('mass', type='array',
-                               guilabel='ion masses(/Da)',
-                               default="2, 1",
-                               no_func=True,
-                               tip="mass. normalized by atomic mass unit")),
-        ('charge_q', VtableElement('charge_q', type='array',
-                                   guilabel='ion charges(/q)',
-                                   default="1, 1",
-                                   no_func=True,
-                                   tip="ion charges normalized by q(=1.60217662e-19 [C])")),)
-
-'''
-def Epsilon_Coeff(ind_vars, l, g, omega):
-    # - omega^2 * epsilon0 * epsilonr
-    exprs = [(1+0j), 0j, 0j, 0j, (1+0j), 0j, 0j, 0j, (1+0j)]
-    fac = -epsilon0 * omega * omega
-    coeff = MCoeff(3, exprs, ind_vars, l, g, return_complex=True, scale=fac)
-    return coeff
-
-
-def Sigma_Coeff(ind_vars, l, g, omega):
-    exprs = [0j, 0j, 0j, 0j, 0j, 0j, 0j, 0j, 0j]
-    fac = - 1j * omega
-    coeff = MCoeff(3, exprs, ind_vars, l, g, return_complex=True, scale=fac)
-    return coeff
-
-
-def Mu_Coeff(ind_vars, l, g, omega):
-    exprs = [(1+0j), 0j, 0j, 0j, (1+0j), 0j, 0j, 0j, (1+0j)]
-    fac = mu0
-    coeff = MCoeff(3, exprs, ind_vars, l, g, return_complex=True, scale=fac)
-    return coeff
-'''
-
 
 def domain_constraints():
     return [EM3D_ColdPlasma]
@@ -81,18 +35,51 @@ def domain_constraints():
 
 class EM3D_ColdPlasma(EM3D_Domain):
     allow_custom_intorder = True
-    vt = Vtable(data)
-    #nlterms = ['epsilonr']
+    vt = Vtable(vtable_data)
+    # nlterms = ['epsilonr']
 
     def get_possible_child(self):
         from .em3d_pml import EM3D_LinearPML
         return [EM3D_LinearPML]
 
-    def has_bf_contribution(self, kfes):
-        if kfes == 0:
-            return True
-        else:
-            return False
+    def attribute_set(self, v):
+        super(EM3D_ColdPlasma, self).attribute_set(v)
+        v["stix_terms"] = default_stix_option
+        return v
+
+    def config_terms(self, evt):
+        from petram.phys.common.rf_stix_terms_panel import ask_rf_stix_terms
+
+        self.vt.preprocess_params(self)
+        _B, _dens_e, _t_e, _dens_i, _masses, charges = self.vt.make_value_or_expression(
+            self)
+
+        num_ions = len(charges)
+        win = evt.GetEventObject()
+        value = ask_rf_stix_terms(win, num_ions, self.stix_terms)
+        self.stix_terms = value
+
+    def stix_terms_txt(self):
+        return self.stix_terms
+
+    def panel1_param(self):
+        panels = super(EM3D_ColdPlasma, self).panel1_param()
+        panels.extend([["Stix terms", "", 2, None],
+                       [None, None, 341, {"label": "Customize terms",
+                                          "func": "config_terms",
+                                          "sendevent": True,
+                                          "noexpand": True}], ])
+
+        return panels
+
+    def get_panel1_value(self):
+        values = super(EM3D_ColdPlasma, self).get_panel1_value()
+        values.extend([self.stix_terms_txt(), self])
+        return values
+
+    def import_panel1_value(self, v):
+        check = super(EM3D_ColdPlasma, self).import_panel1_value(v[:-2])
+        return check
 
     @property
     def jited_coeff(self):
@@ -109,10 +96,18 @@ class EM3D_ColdPlasma(EM3D_Domain):
         ind_vars = self.get_root_phys().ind_vars
 
         from petram.phys.common.rf_dispersion_coldplasma import build_coefficients
-        coeff1, coeff2, coeff3, coeff4 = build_coefficients(ind_vars, omega, B, dens_e, t_e,
-                                                            dens_i, masses, charges,
-                                                            self._global_ns, self._local_ns,)
-        return coeff1, coeff2, coeff3, coeff4
+        coeff1, coeff2, coeff3, coeff4, coeff5 = build_coefficients(ind_vars, omega, B, dens_e, t_e,
+                                                                    dens_i, masses, charges,
+                                                                    self._global_ns, self._local_ns,
+                                                                    sdim=3, terms=self.stix_terms)
+
+        return coeff1, coeff2, coeff3, coeff4, coeff5
+
+    def has_bf_contribution(self, kfes):
+        if kfes == 0:
+            return True
+        else:
+            return False
 
     def add_bf_contribution(self, engine, a, real=True, kfes=0):
         if kfes != 0:
@@ -122,7 +117,7 @@ class EM3D_ColdPlasma(EM3D_Domain):
         else:
             dprint1("Add BF contribution(imag)" + str(self._sel_index))
 
-        coeff1, coeff2, coeff3, coeff4 = self.jited_coeff
+        coeff1, coeff2, coeff3, coeff4, _coeff_nuei = self.jited_coeff
         self.set_integrator_realimag_mode(real)
 
         if self.has_pml():
@@ -165,7 +160,7 @@ class EM3D_ColdPlasma(EM3D_Domain):
                                 a.AddDomainIntegrator,
                                 mfem.CurlCurlIntegrator,
                                 ir=cc_ir)
-            #coeff2 = self.restrict_coeff(coeff2, engine)
+            # coeff2 = self.restrict_coeff(coeff2, engine)
             # a.AddDomainIntegrator(mfem.CurlCurlIntegrator(coeff2))
         else:
             dprint1("No contrinbution from curlcurl")
@@ -175,30 +170,36 @@ class EM3D_ColdPlasma(EM3D_Domain):
                             mfem.VectorFEMassIntegrator,
                             ir=ms_ir)
 
-    def add_domain_variables(self, v, n, suffix, ind_vars, solr, soli=None):
+    def add_domain_variables(self, v, n, suffix, ind_vars):
         from petram.helper.variables import add_expression, add_constant
-        from petram.helper.variables import (NativeCoefficientGenBase,
-                                             NumbaCoefficientVariable)
 
         if len(self._sel_index) == 0:
             return
 
-        coeff1, coeff2, coeff3, coeff4 = self.jited_coeff
+        freq, omega = self.get_root_phys().get_freq_omega()
+        B, dens_e, t_e, dens_i, masses, charges = self.vt.make_value_or_expression(
+            self)
+        ind_vars = self.get_root_phys().ind_vars
 
-        c1 = NumbaCoefficientVariable(coeff1, complex=True, shape=(3, 3))
-        c2 = NumbaCoefficientVariable(coeff2, complex=True, shape=(3, 3))
-        c3 = NumbaCoefficientVariable(coeff3, complex=True, shape=(3, 3))
-        c4 = NumbaCoefficientVariable(coeff4, complex=True, shape=(3, 3))
+        from petram.phys.common.rf_dispersion_coldplasma import build_variables
 
-        ss = str(abs(hash(self.fullname())))
-        v["_e_"+ss] = c1
-        v["_m_"+ss] = c2
-        v["_s_"+ss] = c3
-        v["_spd_"+ss] = c4
+        ss = self.parent.parent.name()+'_'+self.name()  # phys module name + name
+        var1, var2, var3, var4, var5 = build_variables(v, ss, ind_vars,
+                                                       omega, B, dens_e, t_e,
+                                                       dens_i, masses, charges,
+                                                       self._global_ns, self._local_ns,
+                                                       sdim=1, terms=self.stix_terms)
+
+        v["_e_"+ss] = var1
+        v["_m_"+ss] = var2
+        v["_s_"+ss] = var3
+        v["_spd_"+ss] = var4
+        v["_nuei_"+ss] = var5
 
         self.do_add_matrix_expr(v, suffix, ind_vars, 'epsilonr', ["_e_"+ss])
         self.do_add_matrix_expr(v, suffix, ind_vars, 'mur', ["_m_"+ss])
         self.do_add_matrix_expr(v, suffix, ind_vars, 'sigma', ["_s_"+ss])
+        self.do_add_matrix_expr(v, suffix, ind_vars, 'nuei', ["_nuei_"+ss])
         self.do_add_matrix_expr(v, suffix, ind_vars,
                                 'Sstix', ["_spd_"+ss+"[0,0]"])
         self.do_add_matrix_expr(v, suffix, ind_vars, 'Dstix', [
@@ -211,17 +212,5 @@ class EM3D_ColdPlasma(EM3D_Domain):
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'mur')
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'sigma')
 
-        '''
-        e, m, s = self.vt.make_value_or_expression(self)
-        m = [(1+0j), 0j, 0j, 0j, (1+0j), 0j, 0j, 0j, (1+0j)]
-        s = [0j, 0j, 0j, 0j, 0j, 0j, 0j, 0j, 0j]
+        return
 
-        self.do_add_matrix_expr(v, suffix, ind_vars, 'epsilonr', e)
-        self.do_add_matrix_expr(v, suffix, ind_vars, 'mur', m)
-        self.do_add_matrix_expr(v, suffix, ind_vars, 'sigma', s)
-
-        var = ['x', 'y', 'z']
-        self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'epsilonr')
-        self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'mur')
-        self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'sigma')
-        '''

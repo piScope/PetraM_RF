@@ -34,20 +34,17 @@ data = (('epsilonr', VtableElement('epsilonr', type='complex',
                                 default=0.0,
                                 tip="contuctivity")),)
 
-
 def Epsilon_Coeff(exprs, ind_vars, l, g, omega):
     # - omega^2 * epsilon0 * epsilonr
     fac = -epsilon0 * omega * omega
     coeff = SCoeff(exprs, ind_vars, l, g, return_complex=True, scale=fac)
     return coeff
 
-
 def Sigma_Coeff(exprs, ind_vars, l, g, omega):
     # v = - 1j * self.omega * v
     fac = - 1j * omega
     coeff = SCoeff(exprs, ind_vars, l, g, return_complex=True, scale=fac)
     return coeff
-
 
 def Mu_Coeff(exprs, ind_vars, l, g, omega):
     # v = mu * v
@@ -118,7 +115,7 @@ class EM3D_Vac(EM3D_Domain):
                             a.AddDomainIntegrator,
                             mfem.VectorFEMassIntegrator)
 
-    def add_domain_variables(self, v, n, suffix, ind_vars, solr, soli=None):
+    def add_domain_variables(self, v, n, suffix, ind_vars):
         from petram.helper.variables import add_expression, add_constant
         from petram.helper.variables import NativeCoefficientGenBase
 

@@ -1,6 +1,9 @@
 '''
    cold plasma.
 '''
+from petram.phys.common.rf_dispersion_coldplasma import (stix_options,
+                                                         default_stix_option,
+                                                         vtable_data)
 import numpy as np
 
 from petram.mfem_config import use_parallel, get_numba_debug
@@ -24,42 +27,18 @@ else:
     import mfem.ser as mfem
     myid = 0
 
-data = (('B', VtableElement('bext', type='array',
-                            guilabel='magnetic field',
-                            default="=[0,0,0]",
-                            tip="external magnetic field")),
-        ('dens_e', VtableElement('dens_e', type='float',
-                                 guilabel='electron density(m-3)',
-                                 default="1e19",
-                                 tip="electron density")),
-        ('temperature', VtableElement('temperature', type='float',
-                                      guilabel='electron temp.(eV)',
-                                      default="10.",
-                                      tip="electron temperature used for collisions")),
-        ('dens_i', VtableElement('dens_i', type='array',
-                                 guilabel='ion densities(m-3)',
-                                 default="0.9e19, 0.1e19",
-                                 tip="ion densities")),
-        ('mass', VtableElement('mass', type='array',
-                               guilabel='ion masses(/Da)',
-                               default="2, 1",
-                               no_func=True,
-                               tip="mass. normalized by atomic mass unit")),
-        ('charge_q', VtableElement('charge_q', type='array',
-                                   guilabel='ion charges(/q)',
-                                   default="1, 1",
-                                   no_func=True,
-                                   tip="ion charges normalized by q(=1.60217662e-19 [C])")),
-        ('ky', VtableElement('ky', type='float',
-                             guilabel='ky',
-                             default=0.,
-                             no_func=True,
-                             tip="wave number in the y direction")),
-        ('kz', VtableElement('kz', type='float',
-                             guilabel='kz',
-                             default=0.0,
-                             no_func=True,
-                             tip="wave number in the z direction")),)
+
+vtable_data.extend(
+    [('ky', VtableElement('ky', type='float',
+                          guilabel='ky',
+                          default=0.,
+                          no_func=True,
+                          tip="wave number in the y direction")),
+     ('kz', VtableElement('kz', type='float',
+                          guilabel='kz',
+                          default=0.0,
+                          no_func=True,
+                          tip="wave number in the z direction"))])
 
 
 def domain_constraints():
@@ -68,7 +47,7 @@ def domain_constraints():
 
 class EM1D_ColdPlasma(EM1D_Vac):
     allow_custom_intorder = False
-    vt = Vtable(data)
+    vt = Vtable(vtable_data)
 
     def __init__(self, **kargs):
         super(EM1D_ColdPlasma, self).__init__(**kargs)
@@ -76,6 +55,45 @@ class EM1D_ColdPlasma(EM1D_Vac):
 
     def get_possible_child(self):
         return []
+
+    def attribute_set(self, v):
+        EM1D_Vac.attribute_set(self, v)
+        v["stix_terms"] = default_stix_option
+        return v
+
+    def config_terms(self, evt):
+        from petram.phys.common.rf_stix_terms_panel import ask_rf_stix_terms
+
+        self.vt.preprocess_params(self)
+        _B, _dens_e, _t_e, _dens_i, _masses, charges, _ky, _kz = self.vt.make_value_or_expression(
+            self)
+
+        num_ions = len(charges)
+        win = evt.GetEventObject()
+        value = ask_rf_stix_terms(win, num_ions, self.stix_terms)
+        self.stix_terms = value
+
+    def stix_terms_txt(self):
+        return self.stix_terms
+
+    def panel1_param(self):
+        panels = super(EM1D_ColdPlasma, self).panel1_param()
+        panels.extend([["Stix terms", "", 2, None],
+                       [None, None, 341, {"label": "Customize terms",
+                                          "func": "config_terms",
+                                          "sendevent": True,
+                                          "noexpand": True}], ])
+
+        return panels
+
+    def get_panel1_value(self):
+        values = super(EM1D_ColdPlasma, self).get_panel1_value()
+        values.extend([self.stix_terms_txt(), self])
+        return values
+
+    def import_panel1_value(self, v):
+        check = super(EM1D_ColdPlasma, self).import_panel1_value(v[:-2])
+        return check
 
     @property
     def jited_coeff(self):
@@ -91,10 +109,12 @@ class EM1D_ColdPlasma(EM1D_Vac):
         ind_vars = self.get_root_phys().ind_vars
 
         from petram.phys.common.rf_dispersion_coldplasma import build_coefficients
-        coeff1, coeff2, coeff3, coeff4 = build_coefficients(ind_vars, omega, B, dens_e, t_e,
-                                                            dens_i, masses, charges,
-                                                            self._global_ns, self._local_ns,)
-        return coeff1, coeff2, coeff3, coeff4, ky, kz
+
+        coeff1, coeff2, coeff3, coeff4, coeff_nuei = build_coefficients(ind_vars, omega, B, dens_e, t_e,
+                                                                        dens_i, masses, charges,
+                                                                        self._global_ns, self._local_ns,
+                                                                        sdim=1, terms=self.stix_terms)
+        return coeff1, coeff2, coeff3, coeff4, coeff_nuei,  ky, kz
 
     def add_bf_contribution(self, engine, a, real=True, kfes=0):
         if real:
@@ -102,7 +122,7 @@ class EM1D_ColdPlasma(EM1D_Vac):
         else:
             dprint1("Add BF contribution(imag)" + str(self._sel_index))
 
-        coeff1, coeff2, coeff3, coeff4, ky, kz = self.jited_coeff
+        coeff1, coeff2, coeff3, coeff4, _coeff_nuei,  ky, kz = self.jited_coeff
         self.set_integrator_realimag_mode(real)
 
         # if self.has_pml():
@@ -150,7 +170,7 @@ class EM1D_ColdPlasma(EM1D_Vac):
             dprint1("Add mixed contribution(imag)" + "(" + str(r) + "," + str(c) + ')'
                     + str(self._sel_index))
 
-        coeff1, coeff2, coeff3, coeff4, ky, kz = self.jited_coeff
+        coeff1, coeff2, coeff3, coeff4, _coeff_nuei, ky, kz = self.jited_coeff
         self.set_integrator_realimag_mode(real)
 
         # super(EM1D_ColdPlasma, self).add_mix_contribution(engine, mbf, r, c, is_trans,
@@ -188,30 +208,43 @@ class EM1D_ColdPlasma(EM1D_Vac):
         self.add_integrator(engine, 'mur', imu,
                             mbf.AddDomainIntegrator, itg)
 
-    def add_domain_variables(self, v, n, suffix, ind_vars, solr, soli=None):
+    def add_domain_variables(self, v, n, suffix, ind_vars):
         from petram.helper.variables import add_expression, add_constant
-        from petram.helper.variables import (NativeCoefficientGenBase,
-                                             NumbaCoefficientVariable)
 
         if len(self._sel_index) == 0:
             return
 
-        coeff1, coeff2, coeff3, coeff4, ky, kz = self.jited_coeff
+        freq, omega = self.get_root_phys().get_freq_omega()
+        B, dens_e, t_e, dens_i, masses, charges, ky, kz = self.vt.make_value_or_expression(
+            self)
+        ind_vars = self.get_root_phys().ind_vars
 
-        c1 = NumbaCoefficientVariable(coeff1, complex=True, shape=(3, 3))
-        c2 = NumbaCoefficientVariable(coeff2, complex=True, shape=(3, 3))
-        c3 = NumbaCoefficientVariable(coeff3, complex=True, shape=(3, 3))
-        c4 = NumbaCoefficientVariable(coeff4, complex=True, shape=(3, 3))
+        add_constant(v, 'ky', suffix, np.float64(kz),
+                     domains=self._sel_index,
+                     gdomain=self._global_ns)
+        add_constant(v, 'kz', suffix, np.float64(kz),
+                     domains=self._sel_index,
+                     gdomain=self._global_ns)
 
-        ss = str(abs(hash(self.fullname())))
-        v["_e_"+ss] = c1
-        v["_m_"+ss] = c2
-        v["_s_"+ss] = c3
-        v["_spd_"+ss] = c4
+        from petram.phys.common.rf_dispersion_coldplasma import build_variables
+
+        ss = self.parent.parent.name()+'_'+self.name()  # phys module name + name
+        var1, var2, var3, var4, var5 = build_variables(v, ss, ind_vars,
+                                                       omega, B, dens_e, t_e,
+                                                       dens_i, masses, charges,
+                                                       self._global_ns, self._local_ns,
+                                                       sdim=1, terms=self.stix_terms)
+
+        v["_e_"+ss] = var1
+        v["_m_"+ss] = var2
+        v["_s_"+ss] = var3
+        v["_spd_"+ss] = var4
+        v["_nuei_"+ss] = var5
 
         self.do_add_matrix_expr(v, suffix, ind_vars, 'epsilonr', ["_e_"+ss])
         self.do_add_matrix_expr(v, suffix, ind_vars, 'mur', ["_m_"+ss])
         self.do_add_matrix_expr(v, suffix, ind_vars, 'sigma', ["_s_"+ss])
+        self.do_add_matrix_expr(v, suffix, ind_vars, 'nuei', ["_nuei_"+ss])
         self.do_add_matrix_expr(v, suffix, ind_vars,
                                 'Sstix', ["_spd_"+ss+"[0,0]"])
         self.do_add_matrix_expr(v, suffix, ind_vars, 'Dstix', [
@@ -223,11 +256,5 @@ class EM1D_ColdPlasma(EM1D_Vac):
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'epsilonr')
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'mur')
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'sigma')
-        
-        add_constant(v, 'ky', suffix, np.float64(kz),
-                     domains = self._sel_index,
-                     gdomain = self._global_ns)
-        add_constant(v, 'kz', suffix, np.float64(kz),
-                     domains = self._sel_index,
-                     gdomain = self._global_ns)
-        
+
+        return

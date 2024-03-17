@@ -247,7 +247,7 @@ class EM2D_Vac(EM2D_Domain, EM2D_Domain_helper):
                                 mbf.AddDomainIntegrator, itg)
         '''
 
-    def add_domain_variables(self, v, n, suffix, ind_vars, solr, soli=None):
+    def add_domain_variables(self, v, n, suffix, ind_vars):
         from petram.helper.variables import add_expression, add_constant
         e, m, s, kz = self.vt.make_value_or_expression(self)
 
