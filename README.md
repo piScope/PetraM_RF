@@ -9,6 +9,7 @@ This module provides various Frequency domain RF interface to Petra-M.
  *    EM3D_ExtJ        : external current
  *    EM3D_Div         : div J = 0 constraints (add Lagrange multiplier)
  *    EM3D_PML         : PML cartesian streaching
+ *    EM3D_ColdPlasma  : Cold magnetised plasma
  
   Boundary:
  *    EM3D_PEC         : Perfect electric conductor
@@ -16,10 +17,11 @@ This module provides various Frequency domain RF interface to Petra-M.
  *    EM3D_H           : Mangetic field boundary
  *    EM3D_SurfJ       : Surface current
  *    EM3D_Port        : TE, TEM, Coax port
- *    EM3D_PortArray   : Array of Ports 
+ *    EM3D_PortArray   : Array of Ports
+ *    EM3D_PortLoad    : Exteranl load, defined as Smat, to PortBC
  *    EM3D_E           : Electric field
  *    EM3D_Continuity  : Continuitiy
- *    EM3D_Impedance   : Impedance BC Continuitiy (Leontovich) 
+ *    EM3D_Impedance   : Impedance BC Continuitiy (Leontovich)
 
   Pair:
  *    EM3D_Floquet     : Periodic boundary condition
@@ -46,6 +48,7 @@ This module provides various Frequency domain RF interface to Petra-M.
  *    EM2D_Vac         : scalar dielectric
  *    EM2D_ExtJ        : external current
  *    EM2D_PML         : PML cartesian streaching
+ *    EM2D_ColdPlasma  : Cold magnetised plasma
 
   Boundary:
  *    EM2D_PEC         : Perfect electric conductor
@@ -65,6 +68,7 @@ This module provides various Frequency domain RF interface to Petra-M.
  *    EM1D_Anisotropic : tensor dielectric
  *    EM1D_Vac         : scalar dielectric
  *    EM1D_ExtJ        : external current
+ *    EM1D_ColdPlasma  : Cold magnetised plasma
  
   Boundary:
  *    EM1D_PEC         : Perfect electric conductor

@@ -185,7 +185,7 @@ class EM2Da(PhysModule):
     def panel1_param(self):
         panels = super(EM2Da, self).panel1_param()
         panels.extend([self.make_param_panel('freq',  self.freq_txt),
-                ["indpendent vars.", self.ind_vars, 0, {}],
+                ["independent vars.", self.ind_vars, 0, {}],
                 ["dep. vars. suffix", self.dep_vars_suffix, 0, {}],
                 ["dep. vars.", ','.join(self.dep_vars), 2, {}],
                 ["derived vars.", ','.join(EM2Da.der_vars_base), 2, {}],
@@ -222,40 +222,29 @@ class EM2Da(PhysModule):
         from .em2da_const import mu0, epsilon0
         self._global_ns['mu0'] = mu0
         self._global_ns['epsilon0'] = epsilon0
-            
-    def get_possible_bdry(self):
-        from .em2da_pec       import EM2Da_PEC
-        from .em2da_pmc       import EM2Da_PMC
-        #from em2da_h       import EM2Da_H
-        from .em2da_surfj      import EM2Da_SurfJ
-        from .em2da_port      import EM2Da_Port
-        from .em2da_e         import EM2Da_E
-        from .em2da_cont      import EM2Da_Continuity
-
-        bdrs = super(EM2Da, self).get_possible_bdry()
         
-        return [EM2Da_PEC,
-                EM2Da_Port,
-                EM2Da_E,
-                EM2Da_SurfJ,
-                EM2Da_PMC,
-                EM2Da_Continuity] + bdrs
-    
     def get_possible_domain(self):
-        from .em2da_anisotropic import EM2Da_Anisotropic
-        from .em2da_vac       import EM2Da_Vac
-        from .em2da_extj       import EM2Da_ExtJ
-
-        doms = super(EM2Da, self).get_possible_domain()
+        if EM2Da._possible_constraints is None:
+            self._set_possible_constraints('em2da')
+            
+        doms = super(EM2Da, self).get_possible_domain()        
+        return EM2Da._possible_constraints['domain'] + doms
         
-        return [EM2Da_Vac, EM2Da_Anisotropic, EM2Da_ExtJ] + doms
+    def get_possible_bdry(self):
+        if EM2Da._possible_constraints is None:
+            self._set_possible_constraints('em2da')
+        bdrs = super(EM2Da, self).get_possible_bdry()
+        return EM2Da._possible_constraints['bdry'] + bdrs
 
     def get_possible_edge(self):
         return []                
 
     def get_possible_pair(self):
-        from .em2da_floquet     import EM2Da_Floquet
-        return [EM2Da_Floquet]
+        if EM2Da._possible_constraints is None:
+            self._set_possible_constraints('em2da')
+            
+        pairs = super(EM2Da, self).get_possible_pair()        
+        return EM2Da._possible_constraints['pair'] + pairs
 
     def get_possible_point(self):
         return []
@@ -292,8 +281,8 @@ class EM2Da(PhysModule):
         from petram.helper.variables import TestVariable
         #v['debug_test'] =  TestVariable()
         freq, omega = self.get_freq_omega()
-        add_constant(v, 'omega', suffix, np.float(omega),)
-        add_constant(v, 'freq', suffix, np.float(freq),)
+        add_constant(v, 'omega', suffix, np.float64(omega),)
+        add_constant(v, 'freq', suffix, np.float64(freq),)
         add_constant(v, 'mu0', '', self._global_ns['mu0'])
         add_constant(v, 'e0', '', self._global_ns['e0'])
         

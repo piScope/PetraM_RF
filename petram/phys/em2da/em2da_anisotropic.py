@@ -34,7 +34,7 @@ data =  (('epsilonr', VtableElement('epsilonr', type='complex',
                                      suffix =[('r', 'phi', 'z'), ('r', 'phi', 'z')],
                                      default = np.zeros((3, 3)),
                                      tip = "contuctivity" )),
-         ('t_mode', VtableElement('t_mode', type='int',
+         ('t_mode', VtableElement('t_mode', type='float',
                                      guilabel = 'm',
                                      default = 0.0, 
                                      tip = "mode number" )),)
@@ -225,6 +225,9 @@ class InvMu_m2_o_r(PhysCoefficient):
        v = 1/mu0/v/x[0]*self.tmode*self.tmode
        if self.real:  return v.real
        else: return v.imag
+
+def domain_constraints():
+   return [EM2Da_Anisotropic]
        
 class EM2Da_Anisotropic(EM2Da_Domain):
     vt  = Vtable(data)
@@ -375,7 +378,7 @@ class EM2Da_Anisotropic(EM2Da_Domain):
             self.add_integrator(engine, 'mur', imv_o_r_3,
                              mbf.AddDomainIntegrator, itg)
 
-    def add_domain_variables(self, v, n, suffix, ind_vars, solr, soli = None):
+    def add_domain_variables(self, v, n, suffix, ind_vars):
         from petram.helper.variables import add_expression, add_constant
 
         e, m, s, tmode = self.vt.make_value_or_expression(self)
@@ -389,7 +392,7 @@ class EM2Da_Anisotropic(EM2Da_Domain):
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'mur')
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'sigma')
 
-        add_constant(v, 'm_mode', suffix, np.float(tmode), 
+        add_constant(v, 'm_mode', suffix, np.float64(tmode), 
                      domains = self._sel_index,
                      gdomain = self._global_ns)
 

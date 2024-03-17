@@ -186,7 +186,7 @@ class EM2D(PhysModule):
     def panel1_param(self):
         panels = super(EM2D, self).panel1_param()
         panels.extend([self.make_param_panel('freq',  self.freq_txt),
-                ["indpendent vars.", self.ind_vars, 0, {}],
+                ["independent vars.", self.ind_vars, 0, {}],
                 ["dep. vars. suffix", self.dep_vars_suffix, 0, {}],
                 ["dep. vars.", ','.join(self.dep_vars), 2, {}],
                 ["derived vars.", ','.join(EM2D.der_vars_base), 2, {}],
@@ -223,42 +223,29 @@ class EM2D(PhysModule):
         from petram.phys.phys_const import mu0, epsilon0, q0        
         self._global_ns['mu0'] = mu0
         self._global_ns['epsilon0'] = epsilon0
-            
+
     def get_possible_bdry(self):
-        from petram.phys.em2d.em2d_pec       import EM2D_PEC
-        from petram.phys.em2d.em2d_pmc       import EM2D_PMC
-        from petram.phys.em2d.em2d_z         import EM2D_Impedance
-        from petram.phys.em2d.em2d_h         import EM2D_H
-        #from em2d_surfj      import EM2D_SurfJ
-        #from .em2d_port      import EM2D_Port
-        from petram.phys.em2d.em2d_e         import EM2D_E
-        from petram.phys.em2d.em2d_cont      import EM2D_Continuity
-        
+        if EM2D._possible_constraints is None:
+            self._set_possible_constraints('em2d')
         bdrs = super(EM2D, self).get_possible_bdry()
-        
-        return [EM2D_PEC,
-                #EM2D_Port,
-                EM2D_E,                                
-                EM2D_PMC,
-                EM2D_H,
-                EM2D_Impedance,
-                EM2D_Continuity] + bdrs
-    
+        return EM2D._possible_constraints['bdry'] + bdrs
+
     def get_possible_domain(self):
-        from .em2d_anisotropic  import EM2D_Anisotropic
-        from .em2d_vac          import EM2D_Vac
-        from .em2d_extj         import EM2D_ExtJ
+        if EM2D._possible_constraints is None:
+            self._set_possible_constraints('em2d')
 
         doms = super(EM2D, self).get_possible_domain()
-        
-        return [EM2D_Vac, EM2D_Anisotropic, EM2D_ExtJ] + doms
-
+        return EM2D._possible_constraints['domain'] + doms
+    
     def get_possible_edge(self):
         return []                
 
     def get_possible_pair(self):
-        from .em2d_floquet     import EM2D_Floquet
-        return [EM2D_Floquet]
+        if EM2D._possible_constraints is None:
+            self._set_possible_constraints('em2d')
+
+        pairs = super(EM2D, self).get_possible_pair()
+        return EM2D._possible_constraints['pair'] + pairs
 
     def get_possible_point(self):
         return []
@@ -294,8 +281,8 @@ class EM2D(PhysModule):
         suffix = self.dep_vars_suffix
 
         freq, omega = self.get_freq_omega()
-        add_constant(v, 'omega', suffix, np.float(omega),)
-        add_constant(v, 'freq', suffix, np.float(freq),)
+        add_constant(v, 'omega', suffix, np.float64(omega),)
+        add_constant(v, 'freq', suffix, np.float64(freq),)
         add_constant(v, 'mu0', '', self._global_ns['mu0'])
         add_constant(v, 'e0', '', self._global_ns['e0'])
         
@@ -321,7 +308,7 @@ class EM2D(PhysModule):
                       ['Ex', 'Ey', 'Ez'])
 
         addc_expression(v, 'B', suffix, ind_vars,
-                                 '-1j/omega*(-1j*kz*Ez + gradEy)',
+                                 '-1j/omega*(-1j*kz*Ey + gradEy)',
                                  ['m_mode', 'E', 'omega'], 0)
         addc_expression(v, 'B', suffix, ind_vars,
                                  '-1j/omega*(1j*kz*Ex - gradEx)',

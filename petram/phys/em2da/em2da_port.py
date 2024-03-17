@@ -204,6 +204,8 @@ class H_Ephi_rz(mfem.VectorPyCoefficient):
 class H_Ephi_phi(mfem.PyCoefficient):
     pass
 
+def bdry_constraints():
+   return [EM2Da_Port]
 
 class EM2Da_Port(EM2Da_Bdry):
     extra_diagnostic_print = True
@@ -227,6 +229,7 @@ class EM2Da_Port(EM2Da_Bdry):
         v['mur'] = 1.0
         v['sel_readonly'] = False
         v['sel_index'] = []
+        v['isTimeDependent_RHS'] = True
         self.vt.attribute_set(v)
         return v
 
@@ -247,6 +250,30 @@ class EM2Da_Port(EM2Da_Bdry):
         self.mode = v[1]
         self.mn = [int(x) for x in v[2].split(',')]
         self.vt.import_panel_value(self, v[3:])
+
+    def panel4_param(self):
+        ll = super(EM2Da_Port, self).panel4_param()
+        ll.append(['Varying (in time/for loop) RHS', False, 3, {"text": ""}])
+        return ll
+
+    def panel4_tip(self):
+        return None
+
+    def import_panel4_value(self, value):
+        super(EM2Da_Port, self).import_panel4_value(value[:-1])
+        self.isTimeDependent_RHS = value[-1]
+
+    def get_panel4_value(self):
+        value = super(EM2Da_Port, self).get_panel4_value()
+        value.append(self.isTimeDependent_RHS)
+        return value
+
+    def verify_setting(self):
+        if self.isTimeDependent_RHS:
+            flag = True
+        else:
+            flag = False
+        return flag, 'Varying RHS is not set', 'This potntially causes an error with PortScan. Set it Time/NL Dep. panel '
 
     def update_param(self):
         self.update_inc_amp_phase()

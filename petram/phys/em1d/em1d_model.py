@@ -154,11 +154,18 @@ class EM1D(PhysModule):
         ND
         RT
         '''
-        values = ['L2', 'H1', 'H1']
+        if self.use_h1_x:
+            values = ['H1', 'H1', 'H1']
+        else:
+            values = ['L2', 'H1', 'H1']
         return values[idx]
 
     def get_fec(self):
         v = self.dep_vars
+        if self.use_h1_x:
+            return [(v[0], 'H1_FECollection'),
+                    (v[1], 'H1_FECollection'),
+                    (v[2], 'H1_FECollection'), ]
         return [(v[0], 'L2_FECollection'),
                 (v[1], 'H1_FECollection'),
                 (v[2], 'H1_FECollection'), ]
@@ -166,6 +173,8 @@ class EM1D(PhysModule):
     def fes_order(self, idx):
         self.vt_order.preprocess_params(self)        
         if idx == 0:
+            if self.use_h1_x:
+                return self.order
             return self.order -1
         else:
             return self.order            
@@ -184,16 +193,18 @@ class EM1D(PhysModule):
         v["ndim"] = 1
         v["ind_vars"] = 'x'
         v["dep_vars_suffix"] = ''
+        v["use_h1_x"] = False
         return v
 
     def panel1_param(self):
         panels = super(EM1D, self).panel1_param()
         panels.extend([self.make_param_panel('freq',  self.freq_txt),
-                       ["indpendent vars.", self.ind_vars, 0, {}],
+                       ["independent vars.", self.ind_vars, 0, {}],
                        ["dep. vars. suffix", self.dep_vars_suffix, 0, {}],
                        ["dep. vars.", ','.join(self.dep_vars), 2, {}],
                        ["derived vars.", ','.join(self.der_vars), 2, {}],
-                       ["predefined ns vars.", txt_predefined, 2, {}]])
+                       ["predefined ns vars.", txt_predefined, 2, {}],
+                       ["use H1 for Ex", self.use_h1_x, 3, {"text":' '}],])
         return panels
 
     def get_panel1_value(self):
@@ -201,7 +212,7 @@ class EM1D(PhysModule):
         names2 = ','.join([x for x in self.der_vars])
         val = super(EM1D, self).get_panel1_value()
         val.extend([self.freq_txt, self.ind_vars, self.dep_vars_suffix,
-                    names, names2, txt_predefined])
+                    names, names2, txt_predefined, self.use_h1_x])
         return val
 
     def attribute_expr(self):
@@ -219,41 +230,33 @@ class EM1D(PhysModule):
 
     def import_panel1_value(self, v):
         v = super(EM1D, self).import_panel1_value(v)
+
         self.freq_txt = str(v[0])
         self.ind_vars = str(v[1])
         self.dep_vars_suffix = str(v[2])
+        self.use_h1_x = v[-1]
 
+        if self.use_h1_x:
+            self.element = 'H1_FECollection, H1_FECollection, H1_FECollection'
+        else:
+            self.element = 'L2_FECollection, H1_FECollection, H1_FECollection'
         from petram.phys.em1d.em1d_const import mu0, epsilon0
 
         self._global_ns['mu0'] = mu0
         self._global_ns['epsilon0'] = epsilon0
 
-    def get_possible_bdry(self):
-        from .em1d_pec import EM1D_PEC
-        from .em1d_pmc import EM1D_PMC
-        #from em1d_h       import EM1D_H
-        #from em1d_surfj       import EM1D_SurfJ
-        from .em1d_port import EM1D_Port
-        from .em1d_e import EM1D_E
-        from .em1d_cont import EM1D_Continuity
-
-        bdrs = super(EM1D, self).get_possible_bdry()
-
-        return [EM1D_PEC,
-                EM1D_Port,
-                EM1D_E,
-                EM1D_PMC,
-                EM1D_Continuity] + bdrs
-
     def get_possible_domain(self):
-        from .em1d_anisotropic import EM1D_Anisotropic
-        from .em1d_vac import EM1D_Vac
-        from .em1d_extj import EM1D_ExtJ
-
-        doms = super(EM1D, self).get_possible_domain()
-        #from em3d_div       import EM3D_Div
-
-        return [EM1D_Vac, EM1D_Anisotropic, EM1D_ExtJ] + doms
+        if EM1D._possible_constraints is None:
+            self._set_possible_constraints('em1d')
+            
+        doms = super(EM1D, self).get_possible_domain()        
+        return EM1D._possible_constraints['domain'] + doms
+        
+    def get_possible_bdry(self):
+        if EM1D._possible_constraints is None:
+            self._set_possible_constraints('em1d')
+        bdrs = super(EM1D, self).get_possible_bdry()
+        return EM1D._possible_constraints['bdry'] + bdrs
 
     def get_possible_edge(self):
         return []
@@ -288,8 +291,8 @@ class EM1D(PhysModule):
         from petram.helper.variables import TestVariable
 
         freq, omega = self.get_freq_omega()
-        add_constant(v, 'omega', suffix, np.float(omega),)
-        add_constant(v, 'freq', suffix, np.float(freq),)
+        add_constant(v, 'omega', suffix, np.float64(omega),)
+        add_constant(v, 'freq', suffix, np.float64(freq),)
         add_constant(v, 'mu0', '', self._global_ns['mu0'])
         add_constant(v, 'e0', '', self._global_ns['e0'])
 

@@ -197,7 +197,7 @@ class EM3D(PhysModule):
         panels = super(EM3D, self).panel1_param()
         a, b = self.get_var_suffix_var_name_panel()        
         panels.extend([self.make_param_panel('freq',  self.freq_txt),
-                ["indpendent vars.", self.ind_vars, 0, {}],
+                ["independent vars.", self.ind_vars, 0, {}],
                 a,
                 ["dep. vars.", ','.join(self.dep_vars), 2, {}],
                 ["derived vars.", ','.join(EM3D.der_var_base), 2, {}],
@@ -217,7 +217,7 @@ class EM3D(PhysModule):
         return ["freq"], [float]
     
     def get_default_ns(self):
-        from petram.phys.em3d.em3d_const import mu0, epsilon0, q0
+        from petram.phys.phys_const import mu0, epsilon0, q0
         ns =  {'mu0': mu0,
                'e0': epsilon0,
                'q0': q0}
@@ -234,7 +234,21 @@ class EM3D(PhysModule):
         from petram.phys.em3d.em3d_const import mu0, epsilon0
         self._global_ns['mu0'] = mu0
         self._global_ns['epsilon0'] = epsilon0
+
+    def get_possible_bdry(self):
+        if EM3D._possible_constraints is None:
+            self._set_possible_constraints('em3d')       
+        bdrs = super(EM3D, self).get_possible_bdry()
+        return EM3D._possible_constraints['bdry'] + bdrs
+
+    def get_possible_domain(self):
+        if EM3D._possible_constraints is None:
+            self._set_possible_constraints('em3d')
             
+        doms = super(EM3D, self).get_possible_domain()        
+        return EM3D._possible_constraints['domain'] + doms
+
+    '''
     def get_possible_bdry(self):
         from .em3d_pec         import EM3D_PEC
         from .em3d_pmc         import EM3D_PMC
@@ -258,15 +272,23 @@ class EM3D(PhysModule):
         doms = super(EM3D, self).get_possible_domain()
         
         return [EM3D_Vac, EM3D_Anisotropic, EM3D_ExtJ, EM3D_Div] + doms
-
+    '''
+    
     def get_possible_edge(self):
         return []                
 
+    '''
     def get_possible_pair(self):
 
         from .em3d_floquet     import EM3D_Floquet
 
         return [EM3D_Floquet]
+    '''
+    def get_possible_pair(self):
+        if EM3D._possible_constraints is None:
+            self._set_possible_constraints()
+        return EM3D._possible_constraints['pair']
+    
     '''
     def get_possible_point(self):
         return []
@@ -363,6 +385,17 @@ class EM3D(PhysModule):
             addc_expression(v, 'Jp', suffix, ind_vars,
                            '(-1j*(dot(epsilonr, E) - E)*freq*2*pi*e0)[2]',
                             ['epsilonr', 'E', 'freq'], 2)
+
+            # Js : surface current (n x B / mu)
+            addc_expression(v, 'Js', suffix, ind_vars,
+                            '(cross([nx, ny, nz], inv(mur).dot(B))/mu0)[0]',
+                            ['nx', 'ny', 'nz', 'B', 'mur', 'mu0'], 0)
+            addc_expression(v, 'Js', suffix, ind_vars,
+                            '(cross([nx, ny, nz], inv(mur).dot(B))/mu0)[1]',
+                            ['nx', 'ny', 'nz','B', 'mur', 'mu0'], 1)
+            addc_expression(v, 'Js', suffix, ind_vars,
+                            '(cross([nx, ny, nz], inv(mur).dot(B))/mu0)[2]',
+                            ['nx', 'ny', 'nz', 'B', 'mur', 'mu0'], 2)
             
             
         elif name.startswith('psi'):

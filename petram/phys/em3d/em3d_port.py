@@ -56,6 +56,8 @@ data = (('inc_amp', VtableElement('inc_amp', type='complex',
                               default=1.0,
                               tip="relative permeability")),)
 
+def bdry_constraints():
+   return [EM3D_Port]
 
 class EM3D_Port(EM3D_Bdry):
     extra_diagnostic_print = True
@@ -68,7 +70,6 @@ class EM3D_Port(EM3D_Bdry):
                                         inc_amp=inc_amp,
                                         inc_phase=inc_phase,
                                         port_idx=port_idx)
-        Phys.__init__(self)
 
     def extra_DoF_name(self):
         return self.get_root_phys().dep_vars[0] + "_port_" + str(self.port_idx)
@@ -89,6 +90,7 @@ class EM3D_Port(EM3D_Bdry):
         v['mur'] = 1.0
         v['sel_readonly'] = False
         v['sel_index'] = []
+        v['isTimeDependent_RHS'] = True
         return v
 
     def panel1_param(self):
@@ -108,6 +110,30 @@ class EM3D_Port(EM3D_Bdry):
         self.mode = v[1]
         self.mn = [int(x) for x in v[2].split(',')]
         self.vt.import_panel_value(self, v[3:])
+
+    def panel4_param(self):
+        ll = super(EM3D_Port, self).panel4_param()
+        ll.append(['Varying (in time/for loop) RHS', False, 3, {"text": ""}])
+        return ll
+
+    def panel4_tip(self):
+        return None
+
+    def import_panel4_value(self, value):
+        super(EM3D_Port, self).import_panel4_value(value[:-1])
+        self.isTimeDependent_RHS = value[-1]
+
+    def get_panel4_value(self):
+        value = super(EM3D_Port, self).get_panel4_value()
+        value.append(self.isTimeDependent_RHS)
+        return value
+
+    def verify_setting(self):
+        if self.isTimeDependent_RHS:
+            flag = True
+        else:
+            flag = False
+        return flag, 'Varying RHS is not set', 'This potntially causes an error with PortScan. Set it Time/NL Dep. panel '
 
     def update_param(self):
         self.vt.preprocess_params(self)
@@ -334,6 +360,19 @@ class EM3D_Port(EM3D_Bdry):
     def postprocess_extra(self, sol, flag, sol_extra):
         name = self.name() + '_' + str(self.port_idx)
         sol_extra[name] = sol.toarray()
+
+    def check_extra_update(self, mode):
+        '''
+        mode = 'B' or 'M'
+        'M' return True, if M needs to be updated
+        'B' return True, if B needs to be updated
+        '''
+        if self._update_flag:
+            if mode == 'B':
+                return self.isTimeDependent_RHS
+            if mode == 'M':
+                return self.isTimeDependent
+        return False
 
     def add_extra_contribution(self, engine, **kwargs):
         dprint1("Add Extra contribution" + str(self._sel_index))
