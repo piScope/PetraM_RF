@@ -192,9 +192,9 @@ def build_variables(solvar, ss, ind_vars, omega, B, dens_e, t_e, dens_i, masses,
     d1 = variable.jit.float(dependency=("dens_smooth",))(func)
 
     def make_variable(x):
-        print(type(x))
         if isinstance(x, str):
-            d1 = ExpressionVariable(x, ind_vars)
+            ind_vars_split = [x.strip() for x in ind_vars.split(',')]
+            d1 = ExpressionVariable(x, ind_vars_split)
         else:
             d1 = Constant(x)
         return d1
@@ -250,9 +250,9 @@ def build_variables(solvar, ss, ind_vars, omega, B, dens_e, t_e, dens_i, masses,
     var1 = variable.array(complex=True, shape=(3, 3),
                           dependency=dependency, params=params)(epsilonr)
     var2 = variable.array(complex=True, shape=(3, 3),
-                          dependency=dependency, params=params)(mur)
+                          params=params)(mur)
     var3 = variable.array(complex=True, shape=(3, 3),
-                          dependency=dependency, params=params)(sigma)
+                          params=params)(sigma)
     var4 = variable.array(complex=True, shape=(3, 3),
                           dependency=dependency, params=params)(sdp)
     var5 = variable.array(complex=True, shape=(len(masses),),

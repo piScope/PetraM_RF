@@ -199,25 +199,38 @@ class EM2D_ColdPlasma(EM2D_Domain, EM2D_Domain_helper):
 
     def add_domain_variables(self, v, n, suffix, ind_vars):
         from petram.helper.variables import add_expression, add_constant
-        from petram.helper.variables import (NativeCoefficientGenBase,
-                                             NumbaCoefficientVariable)
 
-        coeff1, coeff2, coeff3, coeff_stix, coeff_nuei, kz = self.jited_coeff
+        if len(self._sel_index) == 0:
+            return
 
-        c1 = NumbaCoefficientVariable(coeff1, complex=True, shape=(3, 3))
-        c2 = NumbaCoefficientVariable(coeff2, complex=True, shape=(3, 3))
-        c3 = NumbaCoefficientVariable(coeff3, complex=True, shape=(3, 3))
-        c4 = NumbaCoefficientVariable(coeff_stix, complex=True, shape=(3, 3))
+        freq, omega = self.get_root_phys().get_freq_omega()
+        B, dens_e, t_e, dens_i, masses, charges, kz = self.vt.make_value_or_expression(
+            self)
+        ind_vars = self.get_root_phys().ind_vars
 
-        ss = str(abs(hash(self.fullname())))
-        v["_e_"+ss] = c1
-        v["_m_"+ss] = c2
-        v["_s_"+ss] = c3
-        v["_spd_"+ss] = c4
+        add_constant(v, 'kz', suffix, np.float64(kz),
+                     domains=self._sel_index,
+                     gdomain=self._global_ns)
+
+        from petram.phys.common.rf_dispersion_coldplasma import build_variables
+
+        ss = self.parent.parent.name()+'_'+self.name()  # phys module name + name
+        var1, var2, var3, var4, var5 = build_variables(v, ss, ind_vars,
+                                                       omega, B, dens_e, t_e,
+                                                       dens_i, masses, charges,
+                                                       self._global_ns, self._local_ns,
+                                                       sdim=1, terms=self.stix_terms)
+
+        v["_e_"+ss] = var1
+        v["_m_"+ss] = var2
+        v["_s_"+ss] = var3
+        v["_spd_"+ss] = var4
+        v["_nuei_"+ss] = var5
 
         self.do_add_matrix_expr(v, suffix, ind_vars, 'epsilonr', ["_e_"+ss])
         self.do_add_matrix_expr(v, suffix, ind_vars, 'mur', ["_m_"+ss])
         self.do_add_matrix_expr(v, suffix, ind_vars, 'sigma', ["_s_"+ss])
+        self.do_add_matrix_expr(v, suffix, ind_vars, 'nuei', ["_nuei_"+ss])
         self.do_add_matrix_expr(v, suffix, ind_vars,
                                 'Sstix', ["_spd_"+ss+"[0,0]"])
         self.do_add_matrix_expr(v, suffix, ind_vars, 'Dstix', [
@@ -225,35 +238,10 @@ class EM2D_ColdPlasma(EM2D_Domain, EM2D_Domain_helper):
         self.do_add_matrix_expr(v, suffix, ind_vars,
                                 'Pstix', ["_spd_"+ss+"[2,2]"])
 
-        for idx, coeff in enumerate(coeff_nuei):
-            c5 = NumbaCoefficientVariable(coeff)
-            v["_nuei"+str(idx+1)+"_"+ss] = c5
-            self.do_add_scalar_expr(v, suffix, ind_vars, 'nuei'+str(idx+1),
-                                    "_nuei"+str(idx+1)+"_"+ss)
-
         var = ['x', 'y', 'z']
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'epsilonr')
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'mur')
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'sigma')
 
-        add_constant(v, 'kz', suffix, np.float64(kz),
-                     domains=self._sel_index,
-                     gdomain=self._global_ns)
+        return
 
-        '''
-        e, m, s, kz = self.vt.make_value_or_expression(self)
-
-        self.do_add_matrix_expr(v, suffix, ind_vars, 'epsilonr', e)
-        self.do_add_matrix_expr(v, suffix, ind_vars, 'mur', m)
-        self.do_add_matrix_expr(v, suffix, ind_vars, 'sigma', s)
-
-        var = ['x', 'y', 'z']
-        self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'epsilonr')
-        self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'mur')
-        self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'sigma')
-
-        add_constant(v, 'kz', suffix, np.float64(kz),
-                     domains = self._sel_index,
-                     gdomain = self._global_ns)
-
-        '''

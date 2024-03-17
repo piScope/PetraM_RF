@@ -139,7 +139,8 @@ def Sigma_Coeff(exprs, ind_vars, l, g, omega):
 def Mu_Coeff(exprs, ind_vars, l, g, omega):
     # v = mu * v
     fac = mu0
-    return MCoeff(3, exprs, ind_vars, l, g, return_complex=True, scale=fac)
+    #return MCoeff(3, exprs, ind_vars, l, g, return_complex=True, scale=fac)
+    return SCoeff([exprs], ind_vars, l, g, return_complex=True, scale=fac)
      
 def domain_constraints():
    return [EM1D_Anisotropic]
