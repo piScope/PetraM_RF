@@ -217,9 +217,9 @@ def build_variables(solvar, ss, ind_vars, omega, B, dens_e, t_e, dens_i, masses,
             return out
 
     else:
-        sterms = value2int(len(charges), terms)
-        sterms = np.array(terms, dtype=np.int32)
-        params["sterms"] = sterms
+        terms = value2int(len(charges), terms)
+        terms = np.array(terms, dtype=np.int32)
+        params["sterms"] = terms
 
         def epsilonr(*_ptx, B=None, dens_e=None, t_e=None, dens_i=None):
             out = -epsilon0 * omega * omega*epsilonr_pl_cold_generic(
