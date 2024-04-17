@@ -50,7 +50,7 @@ Expansion of matrix is as follows
 
 
   Erz = Er e_r + Ez e_z
-  Ephx = - rho Ephi
+  Ephx = rho Ephi
 '''
 
 from .em2da_const import mu0, epsilon0
