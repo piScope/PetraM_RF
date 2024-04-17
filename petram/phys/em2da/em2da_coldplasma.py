@@ -228,7 +228,7 @@ class EM2Da_ColdPlasma(EM2Da_Domain):
         eps21 = coeff4[1, [0, 2]]
 
         def iinvmu_o_r_t(ptx, invmu):
-            return -1j*invmu[0, 0]/ptx[0]*tmode
+            return 1j*invmu[0, 0]/ptx[0]*tmode
         imv_o_r_3 = func_to_numba_coeff_scalar(iinvmu_o_r_t,
                                                complex=True,
                                                dependency=(invmu,))

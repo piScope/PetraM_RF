@@ -198,7 +198,7 @@ class InvMu_o_r(PhysCoefficient):
        
 class iInvMu_m_o_r(PhysCoefficient):
    '''
-      -1j/mu0/mur/r
+      1j/mu0/mur/r
    '''
    def __init__(self, *args, **kwargs):
        self.tmode = kwargs.pop('tmode', 1.0)      
@@ -335,7 +335,7 @@ class EM2Da_Anisotropic(EM2Da_Domain):
         
         imv_o_r_3 = iInvMu_m_o_r(m,  self.get_root_phys().ind_vars,
                               self._local_ns, self._global_ns,
-                              real = real, tmode = -tmode)
+                              real = real, tmode = tmode)
         if r == 1 and c == 0:        
             e = Epsilon_21(2, e, self.get_root_phys().ind_vars,
                                 self._local_ns, self._global_ns,
