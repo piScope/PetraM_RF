@@ -341,7 +341,7 @@ class EM2Da_Anisotropic(EM2Da_Domain):
             itg =  mfem.MixedVectorWeakDivergenceIntegrator
             self.add_integrator(engine, 'mur', imv_o_r_3,
                                 mbf.AddDomainIntegrator, itg)
-            #print r, c, mbf
+
         else:
             e = Epsilon_12(2, e, self.get_root_phys().ind_vars,
                              self._local_ns, self._global_ns,
