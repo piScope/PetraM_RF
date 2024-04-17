@@ -107,11 +107,6 @@ class eps(object):
         v = - v * epsilon0 * self.omega * self.omega
         if self.real:  return v.real
         else: return v.imag
-class neg_eps(object):
-    def apply_factor(self, x, v):
-        v = v * epsilon0 * self.omega * self.omega
-        if self.real:  return v.real
-        else: return v.imag
 
 class sigma_o_r(object):
     def apply_factor(self, x, v):
@@ -126,11 +121,6 @@ class sigma_x_r(object):
 class sigma(object):
     def apply_factor(self, x, v):
         v = - 1j * self.omega * v
-        if self.real:  return v.real
-        else: return v.imag
-class neg_sigma(object):
-    def apply_factor(self, x, v):
-        v = 1j * self.omega * v
         if self.real:  return v.real
         else: return v.imag
         
@@ -152,7 +142,8 @@ class Sigma_x_r_rz(M_RZ, sigma_x_r):
 class Sigma_x_r_phi(M_PHI, sigma_x_r):
     pass
  
-class Epsilon_21(M_21, neg_eps):
+
+class Epsilon_21(M_21, eps):
     pass
     '''
     def EvalValue(self, x):
@@ -160,11 +151,14 @@ class Epsilon_21(M_21, neg_eps):
         print val
         return val
     '''
-class Epsilon_12(M_12, neg_eps):
+
+class Epsilon_12(M_12, eps):
     pass   
-class Sigma_12(M_12, neg_sigma):
+
+class Sigma_12(M_12, sigma):
     pass
-class Sigma_21(M_21, neg_sigma):
+
+class Sigma_21(M_21, sigma):
     pass
 
 class InvMu_x_r(PhysCoefficient):
@@ -198,7 +192,7 @@ class InvMu_o_r(PhysCoefficient):
        
 class iInvMu_m_o_r(PhysCoefficient):
    '''
-      -1j/mu0/mur/r
+      1j/mu0/mur/r
    '''
    def __init__(self, *args, **kwargs):
        self.tmode = kwargs.pop('tmode', 1.0)      
@@ -335,7 +329,7 @@ class EM2Da_Anisotropic(EM2Da_Domain):
         
         imv_o_r_3 = iInvMu_m_o_r(m,  self.get_root_phys().ind_vars,
                               self._local_ns, self._global_ns,
-                              real = real, tmode = -tmode)
+                              real = real, tmode = tmode)
         if r == 1 and c == 0:        
             e = Epsilon_21(2, e, self.get_root_phys().ind_vars,
                                 self._local_ns, self._global_ns,
