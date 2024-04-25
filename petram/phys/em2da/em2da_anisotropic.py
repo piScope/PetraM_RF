@@ -50,7 +50,7 @@ Expansion of matrix is as follows
 
 
   Erz = Er e_r + Ez e_z
-  Ephx = - rho Ephi
+  Ephx = rho Ephi
 '''
 
 from .em2da_const import mu0, epsilon0
@@ -107,11 +107,6 @@ class eps(object):
         v = - v * epsilon0 * self.omega * self.omega
         if self.real:  return v.real
         else: return v.imag
-class neg_eps(object):
-    def apply_factor(self, x, v):
-        v = v * epsilon0 * self.omega * self.omega
-        if self.real:  return v.real
-        else: return v.imag
 
 class sigma_o_r(object):
     def apply_factor(self, x, v):
@@ -126,11 +121,6 @@ class sigma_x_r(object):
 class sigma(object):
     def apply_factor(self, x, v):
         v = - 1j * self.omega * v
-        if self.real:  return v.real
-        else: return v.imag
-class neg_sigma(object):
-    def apply_factor(self, x, v):
-        v = 1j * self.omega * v
         if self.real:  return v.real
         else: return v.imag
         
@@ -152,19 +142,17 @@ class Sigma_x_r_rz(M_RZ, sigma_x_r):
 class Sigma_x_r_phi(M_PHI, sigma_x_r):
     pass
  
-class Epsilon_21(M_21, neg_eps):
+
+class Epsilon_21(M_21, eps):
     pass
-    '''
-    def EvalValue(self, x):
-        val = super(Epsilon_21, self).EvalValue(x)
-        print val
-        return val
-    '''
-class Epsilon_12(M_12, neg_eps):
+
+class Epsilon_12(M_12, eps):
     pass   
-class Sigma_12(M_12, neg_sigma):
+
+class Sigma_12(M_12, sigma):
     pass
-class Sigma_21(M_21, neg_sigma):
+
+class Sigma_21(M_21, sigma):
     pass
 
 class InvMu_x_r(PhysCoefficient):
@@ -198,7 +186,7 @@ class InvMu_o_r(PhysCoefficient):
        
 class iInvMu_m_o_r(PhysCoefficient):
    '''
-      -1j/mu0/mur/r
+      1j/mu0/mur/r
    '''
    def __init__(self, *args, **kwargs):
        self.tmode = kwargs.pop('tmode', 1.0)      
@@ -328,14 +316,14 @@ class EM2Da_Anisotropic(EM2Da_Domain):
         from .em2da_const import mu0, epsilon0
         freq, omega = self.get_root_phys().get_freq_omega()
         e, m, s, tmode = self.vt.make_value_or_expression(self)
-        #if tmode == 0: return
+
         if not isinstance(e, str): e = str(e)
         if not isinstance(m, str): m = str(m)
         if not isinstance(s, str): s = str(s)
         
         imv_o_r_3 = iInvMu_m_o_r(m,  self.get_root_phys().ind_vars,
                               self._local_ns, self._global_ns,
-                              real = real, tmode = -tmode)
+                              real = real, tmode = tmode)
         if r == 1 and c == 0:        
             e = Epsilon_21(2, e, self.get_root_phys().ind_vars,
                                 self._local_ns, self._global_ns,
@@ -343,7 +331,6 @@ class EM2Da_Anisotropic(EM2Da_Domain):
             s = Sigma_21(2, s,  self.get_root_phys().ind_vars,
                               self._local_ns, self._global_ns,
                               real = real, omega = omega)
-            #if  is_trans:
             # (a_vec dot u_vec, v_scalar)                        
             itg = mfem.MixedDotProductIntegrator
             self.add_integrator(engine, 'epsilon', e,
@@ -354,11 +341,8 @@ class EM2Da_Anisotropic(EM2Da_Domain):
             itg =  mfem.MixedVectorWeakDivergenceIntegrator
             self.add_integrator(engine, 'mur', imv_o_r_3,
                                 mbf.AddDomainIntegrator, itg)
-            #print r, c, mbf
+
         else:
-            #if is_trans:
-            #    pass
-            #else:               
             e = Epsilon_12(2, e, self.get_root_phys().ind_vars,
                              self._local_ns, self._global_ns,
                              real = real, omega = omega)

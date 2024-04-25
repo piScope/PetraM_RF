@@ -44,7 +44,7 @@ Expansion of matrix is as follows
 
 
   Erz = Er e_r + Ez e_z
-  Ephx = - rho Ephi
+  Ephx = rho Ephi
 '''
 
 
@@ -228,13 +228,13 @@ class EM2Da_ColdPlasma(EM2Da_Domain):
         eps21 = coeff4[1, [0, 2]]
 
         def iinvmu_o_r_t(ptx, invmu):
-            return -1j*invmu[0, 0]/ptx[0]*tmode
+            return 1j*invmu[0, 0]/ptx[0]*tmode
         imv_o_r_3 = func_to_numba_coeff_scalar(iinvmu_o_r_t,
                                                complex=True,
                                                dependency=(invmu,))
 
-        se_21 = - eps21
-        se_12 = - eps12
+        se_21 = eps21
+        se_12 = eps12
 
         if r == 1 and c == 0:
 

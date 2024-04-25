@@ -32,7 +32,8 @@ This module provides various Frequency domain RF interface to Petra-M.
  *    EM2Da_Vac         : scalar dielectric
  *    EM2Da_ExtJ        : external current
  *    EM2Da_Div         : div J = 0 constraints (add Lagrange multiplier)
-
+ *    EM2Da_ColdPlasma  : Cold magnetised plasma
+ 
   Boundary:
  *    EM2Da_PEC         : Perfect electric conductor
  *    EM2Da_PMC         : Perfect magnetic conductor
@@ -54,8 +55,8 @@ This module provides various Frequency domain RF interface to Petra-M.
  *    EM2D_PEC         : Perfect electric conductor
  *    EM2D_PMC         : Perfect magnetic conductor
  *    EM2D_H           : Mangetic field boundary 
- *    EM2D_SurfJ       : Surface current         (N.I)
- *    EM2D_Port        : TE, TEM, Coax port      (N.I)
+ *    EM2D_SurfJ       : Surface current         (To be implemented)
+ *    EM2D_Port        : TE, TEM, Coax port      (To be implemented)
  *    EM2D_E           : Electric field
  *    EM2D_Continuity  : Continuitiy
  *    EM2D_Impedance   : Impedance BC Continuitiy (Leontovich)
