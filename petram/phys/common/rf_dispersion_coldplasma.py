@@ -20,7 +20,7 @@ else:
     import mfem.ser as mfem
     myid = 0
 
-vtable_data = [('B', VtableElement('bext', type='array',
+vtable_data0= [('B', VtableElement('bext', type='array',
                                    guilabel='magnetic field',
                                    default="=[0,0,0]",
                                    tip="external magnetic field")),

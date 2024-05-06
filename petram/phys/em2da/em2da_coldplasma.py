@@ -3,7 +3,7 @@
 '''
 from petram.phys.common.rf_dispersion_coldplasma import (stix_options,
                                                          default_stix_option,
-                                                         vtable_data)
+                                                         vtable_data0)
 
 from petram.phys.phys_const import mu0, epsilon0
 from petram.phys.numba_coefficient import (func_to_numba_coeff_scalar,
@@ -25,7 +25,7 @@ if use_parallel:
 else:
     import mfem.ser as mfem
 
-
+vtable_data = vtable_data0.copy()
 vtable_data.extend([
     ('t_mode', VtableElement('t_mode', type="float",
                              guilabel='m',

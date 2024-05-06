@@ -3,7 +3,7 @@
 '''
 from petram.phys.common.rf_dispersion_coldplasma import (stix_options,
                                                          default_stix_option,
-                                                         vtable_data)
+                                                         vtable_data0)
 import numpy as np
 
 from petram.mfem_config import use_parallel, get_numba_debug
@@ -27,7 +27,7 @@ else:
     import mfem.ser as mfem
     myid = 0
 
-
+vtable_data = vtable_data0.copy()
 vtable_data.extend(
     [('ky', VtableElement('ky', type='float',
                           guilabel='ky',

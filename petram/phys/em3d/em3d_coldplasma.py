@@ -3,7 +3,7 @@
 '''
 from petram.phys.common.rf_dispersion_coldplasma import (stix_options,
                                                          default_stix_option,
-                                                         vtable_data)
+                                                         vtable_data0)
 
 import numpy as np
 
@@ -28,6 +28,7 @@ else:
     import mfem.ser as mfem
     myid = 0
 
+vtable_data = vtable_data0.copy()
 
 def domain_constraints():
     return [EM3D_ColdPlasma]

@@ -17,7 +17,7 @@
 '''
 from petram.phys.common.rf_dispersion_coldplasma import (stix_options,
                                                          default_stix_option,
-                                                         vtable_data,)
+                                                         vtable_data0,)
 
 from petram.phys.em2d.em2d_base import EM2D_Bdry, EM2D_Domain, EM2D_Domain_helper
 from petram.phys.phys_const import mu0, epsilon0
@@ -33,7 +33,7 @@ if use_parallel:
 else:
     import mfem.ser as mfem
 
-
+vtable_data = vtable_data0.copy()
 vtable_data.extend([('kz', VtableElement('kz', type='float',
                                          guilabel='kz',
                                          default=0.0,
