@@ -156,13 +156,44 @@ def epsilonr_pl_cold_g(w, B, denses, masses, charges, Te, ne, terms):
     return M
 
 
+@njit(complex128[:, :](float64[:], complex128[:,:]))
+def rotate_dielectric(B, M):
+    def R1(ph):
+        return array([[cos(ph), 0.,  sin(ph)],
+                      [0,       1.,   0],
+                      [-sin(ph), 0,  cos(ph)]], dtype=complex128)
+
+    def R2(th):
+        return array([[cos(th), -sin(th), 0],
+                      [sin(th), cos(th), 0],
+                      [0, 0,  1.]], dtype=complex128)
+
+    #  B=(0,0,1) -> phi = 0,  th =0
+    #  B=(1,0,0) -> phi = 90, th =0
+    #  B=(0,1,0) -> phi = 90, th =90
+
+    #  Bx = sin(phi) cos(th)
+    #  By = sin(phi) sin(th)
+    #  Bz = cos(phi)
+
+    # B = [Bx, By, Bz]
+    th = arctan2(B[1], B[0])
+    ph = arctan2(B[0]*cos(th)+B[1]*sin(th), B[2])
+    A = dot(R1(ph), dot(M, R1(-ph)))
+
+    return A
+      
 @njit(complex128[:, :](float64, float64[:], float64[:], darray_ro, iarray_ro, float64, float64))
 def epsilonr_pl_cold(w, B, denses, masses, charges, Te, ne):
     '''
     standard SPD stix
     '''
     M = epsilonr_pl_cold_std(w, B, denses, masses, charges, Te, ne)
+    return rotate_dielectric(B, M)
 
+
+
+    '''
     def R1(ph):
         return array([[cos(ph), 0.,  sin(ph)],
                       [0,       1.,   0],
@@ -189,7 +220,7 @@ def epsilonr_pl_cold(w, B, denses, masses, charges, Te, ne):
     ans = dot(R2(th), dot(A, R2(-th)))
     # print_mat(ans, 3, 3)
     return ans
-
+    '''
 
 @njit(complex128[:, :](float64, float64[:], float64[:], darray_ro, iarray_ro, float64, float64, iarray_ro))
 def epsilonr_pl_cold_generic(w, B, denses, masses, charges, Te, ne, terms):
@@ -198,7 +229,8 @@ def epsilonr_pl_cold_generic(w, B, denses, masses, charges, Te, ne, terms):
     '''
     M = epsilonr_pl_cold_g(w, B, denses, masses,
                            charges, Te, ne, terms)
-
+    return rotate_dielectric(B, M)
+    '''
     def R1(ph):
         return array([[cos(ph), 0.,  sin(ph)],
                       [0,       1.,   0],
@@ -216,3 +248,4 @@ def epsilonr_pl_cold_generic(w, B, denses, masses, charges, Te, ne, terms):
     ans = dot(R2(th), dot(A, R2(-th)))
 
     return ans
+    '''
