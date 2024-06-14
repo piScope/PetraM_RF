@@ -107,7 +107,7 @@ def epsilonr_pl_cold_g(w, B, denses, masses, charges, Te, ne, terms):
     '''
     generalized Stix tensor
     terms defined in rf_dispersion_coldplasma
-       stix_options = ("SDP", "SD", "DP", "P", "w/o xx", "None")
+       stix_options = ("SDP", "SD", "SP", "DP", "P", "w/o xx", "None")
     '''
 
     b_norm = sqrt(B[0]**2+B[1]**2+B[2]**2)
@@ -121,14 +121,22 @@ def epsilonr_pl_cold_g(w, B, denses, masses, charges, Te, ne, terms):
         S, P, D = SPD_el(w, b_norm, ne, nu_eis)
         if terms[0] == 0:
             M2 = array([[S, -1j*D, 0j], [1j*D, S, 0j], [0., 0., P]])
+
         elif terms[0] == 1:
             M2 = array([[S, -1j*D, 0j], [1j*D, S, 0j], [0., 0., 0j]])
+
         elif terms[0] == 2:
-            M2 = array([[0j, -1j*D, 0j], [1j*D, 0j, 0j], [0., 0., P]])
+            M2 = array([[S, 0j, 0j], [0j, S, 0j], [0., 0., P]])
+
         elif terms[0] == 3:
-            M2 = array([[0j, 0j, 0j], [0j, 0j, 0j], [0j, 0., P]])
+            M2 = array([[0j, -1j*D, 0j], [1j*D, 0j, 0j], [0., 0., P]])
+
         elif terms[0] == 4:
+            M2 = array([[0j, 0j, 0j], [0j, 0j, 0j], [0j, 0., P]])
+
+        elif terms[0] == 5:
             M2 = array([[0j, -1j*D, 0j], [1j*D, S, 0j], [0j, 0., P]])
+
         else:
             M2 = array([[0j, 0j, 0j], [0j, 0j, 0j], [0., 0., 0j]])
         M += M2
@@ -139,14 +147,22 @@ def epsilonr_pl_cold_g(w, B, denses, masses, charges, Te, ne, terms):
             S, P, D = SPD_ion(w, b_norm, dens, mass, charge, nu_ei)
             if terms[kion] == 0:
                 M2 = array([[S, -1j*D, 0j], [1j*D, S, 0j], [0., 0., P]])
+
             elif terms[kion] == 1:
                 M2 = array([[S, -1j*D, 0j], [1j*D, S, 0j], [0., 0., 0j]])
+
             elif terms[kion] == 2:
-                M2 = array([[0j, -1j*D, 0j], [1j*D, 0j, 0j], [0., 0., P]])
+                M2 = array([[S, 0j, 0j], [0j, S, 0j], [0., 0., P]])
+
             elif terms[kion] == 3:
-                M2 = array([[0j, 0j, 0j], [0j, 0j, 0j], [0j, 0., P]])
+                M2 = array([[0j, -1j*D, 0j], [1j*D, 0j, 0j], [0., 0., P]])
+
             elif terms[kion] == 4:
+                M2 = array([[0j, 0j, 0j], [0j, 0j, 0j], [0j, 0., P]])
+
+            elif terms[kion] == 5:
                 M2 = array([[0j, -1j*D, 0j], [1j*D, S, 0j], [0j, 0., P]])
+
             else:
                 M2 = array([[0j, 0j, 0j], [0j, 0j, 0j], [0., 0., 0j]])
             M += M2

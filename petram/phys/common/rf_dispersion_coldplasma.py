@@ -47,7 +47,7 @@ vtable_data0= [('B', VtableElement('bext', type='array',
                                           no_func=True,
                                           tip="ion charges normalized by q(=1.60217662e-19 [C])")), ]
 
-stix_options = ("SDP", "SD", "DP", "P", "w/o xx", "None")
+stix_options = ("SDP", "SD", "SP", "DP", "P", "w/o xx", "None")
 default_stix_option = "(default) include all"
 
 
