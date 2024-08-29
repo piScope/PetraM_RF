@@ -73,7 +73,7 @@ class EM1D_ColdPlasma(EM1D_Vac):
         value = ask_rf_stix_terms(win, num_ions, self.stix_terms)
         self.stix_terms = value
 
-    def stix_terms_txt(self):
+    def stix_terms_str(self):
         return self.stix_terms
 
     def panel1_param(self):
@@ -88,7 +88,7 @@ class EM1D_ColdPlasma(EM1D_Vac):
 
     def get_panel1_value(self):
         values = super(EM1D_ColdPlasma, self).get_panel1_value()
-        values.extend([self.stix_terms_txt(), self])
+        values.extend([self.stix_terms_str(), self])
         return values
 
     def import_panel1_value(self, v):
