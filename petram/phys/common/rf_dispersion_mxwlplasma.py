@@ -56,28 +56,13 @@ vtable_data0= [('B', VtableElement('bext', type='array',
                                           tip="ion charges normalized by q(=1.60217662e-19 [C])")),
                ('kpa_kpe', VtableElement('kpa_kpe', type='array',
                                           guilabel='k',
-                                          default="1, 1",
+                                          default="1, (0, 0, 1)",
                                           no_func=True,
-                                          tip="k_parallel and k_perp for dielectric")),
+                                          tip="k_parallel and k_perp for computing dielectric. kperp direction is adjusted to be normal to the magnetic field  ")),
                ]
 
-stix_options = ("SDP", "SD", "SP", "DP", "P", "w/o xx", "None")
-default_stix_option = "(default) include all"
-
-
-def value2int(num_ions, value):
-    '''
-    GUI value to interger
-    '''
-    if value == default_stix_option:
-        return [0]*(num_ions+1)
-
-    panelvalue = [x.split(":")[-1].strip() for x in value.split(",")]
-    return [stix_options.index(x) for x in panelvalue]
-
-
 def build_coefficients(ind_vars, omega, B, dens_e, t_e, dens_i, masses, charges, g_ns, l_ns,
-                       sdim=3, terms=default_stix_option):
+                       sdim=3)
 
     from petram.phys.common.rf_dispersion_coldplasma_numba import (epsilonr_pl_cold_std,
                                                                    epsilonr_pl_cold_g,
