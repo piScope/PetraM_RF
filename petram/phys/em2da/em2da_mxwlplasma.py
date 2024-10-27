@@ -74,23 +74,7 @@ class EM2Da_MxwlPlasma(EM2Da_Domain):
 
     def attribute_set(self, v):
         EM2Da_Domain.attribute_set(self, v)
-        v["stix_terms"] = default_stix_option
         return v
-
-    def config_terms(self, evt):
-        from petram.phys.common.rf_stix_terms_panel import ask_rf_stix_terms
-
-        self.vt.preprocess_params(self)
-        _B, _dens_e, _t_e, _dens_i, _masses, charges, _tmode = self.vt.make_value_or_expression(
-            self)
-
-        num_ions = len(charges)
-        win = evt.GetEventObject()
-        value = ask_rf_stix_terms(win, num_ions, self.stix_terms)
-        self.stix_terms = value
-
-    def stix_terms_str(self):
-        return self.stix_terms
 
     def panel1_param(self):
         panels = super(EM2Da_MxwlPlasma, self).panel1_param()
@@ -109,7 +93,7 @@ class EM2Da_MxwlPlasma(EM2Da_Domain):
 
     def get_coeffs(self):
         freq, omega = self.get_root_phys().get_freq_omega()
-        B, dens_e, t_e, dens_i, masses, charges, tmode = self.vt.make_value_or_expression(
+        B, dens_e, t_e, dens_i, t_i, masses, charges, kpakpe, kped, tmode = self.vt.make_value_or_expression(
             self)
         ind_vars = self.get_root_phys().ind_vars
 
@@ -117,7 +101,7 @@ class EM2Da_MxwlPlasma(EM2Da_Domain):
         coeff1, coeff2, coeff3, coeff4, coeff_nuei = build_coefficients(ind_vars, omega, B, dens_e, t_e,
                                                                         dens_i, masses, charges,
                                                                         self._global_ns, self._local_ns,
-                                                                        sdim=2, terms=self.stix_terms)
+                                                                        sdim=2)
 
         return coeff1, coeff2, coeff3, coeff4, coeff_nuei, tmode
 
@@ -253,8 +237,9 @@ class EM2Da_MxwlPlasma(EM2Da_Domain):
             return
 
         freq, omega = self.get_root_phys().get_freq_omega()
-        B, dens_e, t_e, dens_i, masses, charges, tmode = self.vt.make_value_or_expression(
+        B, dens_e, t_e, dens_i, t_i, masses, charges, kpakpe, kped, tmode = self.vt.make_value_or_expression(
             self)
+        
         ind_vars = self.get_root_phys().ind_vars
 
         add_constant(v, 'm_mode', suffix, np.float64(tmode),

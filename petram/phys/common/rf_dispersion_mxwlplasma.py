@@ -28,11 +28,7 @@ vtable_data0= [('B', VtableElement('bext', type='array',
                                         guilabel='electron density(m-3)',
                                         default="1e19",
                                         tip="electron density")),
-               ('temperature', VtableElement('temperature', type='float',
-                                             guilabel='electron temp.(eV)',
-                                             default="10.",
-                                             tip="electron temperature")),
-               ('temperature_pa', VtableElement('temperature_pa', type='float',
+               ('temperature_e', VtableElement('temperature_e', type='float',
                                              guilabel='electron temp.(eV)',
                                              default="10.",
                                              tip="electron temperature")),
@@ -40,7 +36,7 @@ vtable_data0= [('B', VtableElement('bext', type='array',
                                         guilabel='ion densities(m-3)',
                                         default="0.9e19, 0.1e19",
                                         tip="ion densities")),
-               ('temperatures', VtableElement('temperatures', type='float',
+               ('temperatures_i', VtableElement('temperatures_i', type='array',
                                              guilabel='ion temps.(eV)',
                                              default="100., 100",
                                              tip="ion temperatures")),
@@ -55,20 +51,22 @@ vtable_data0= [('B', VtableElement('bext', type='array',
                                           no_func=True,
                                           tip="ion charges normalized by q(=1.60217662e-19 [C])")),
                ('kpa_kpe', VtableElement('kpa_kpe', type='array',
-                                          guilabel='k',
-                                          default="1, (0, 0, 1)",
+                                          guilabel='kpa, kpe',
+                                          default="1, 1.",
                                           no_func=True,
-                                          tip="k_parallel and k_perp for computing dielectric. kperp direction is adjusted to be normal to the magnetic field  ")),
-               ]
+                                          tip="k_parallel and k_perp for computing dielectric. ")),
+               ('kpe_vec', VtableElement('kpe_vec', type='array',
+                                          guilabel='kpe dir.',
+                                          default="0, 0, 1",
+                                          no_func=True,
+                                          tip="k_perp direction. Adjusted to be normal to the magnetic field.")),]
 
-def build_coefficients(ind_vars, omega, B, dens_e, t_e, dens_i, masses, charges, g_ns, l_ns,
-                       sdim=3)
+def build_coefficients(ind_vars, omega, B, dens_e, t_e, dens_i, t_i,
+                       masses, charges, kpakpe, kped, g_ns, l_ns,
+                       sdim=3):
 
-    from petram.phys.common.rf_dispersion_coldplasma_numba import (epsilonr_pl_cold_std,
-                                                                   epsilonr_pl_cold_g,
-                                                                   epsilonr_pl_cold,
-                                                                   epsilonr_pl_cold_generic,
-                                                                   f_collisions)
+    from petram.phys.common.rf_dispersion_coldplasma_numba import epsilonr_pl_cold_std
+
 
     Da = 1.66053906660e-27      # atomic mass unit (u or Dalton) (kg)
 
@@ -89,31 +87,15 @@ def build_coefficients(ind_vars, omega, B, dens_e, t_e, dens_i, masses, charges,
                           return_complex=False, return_mfem_constant=True)
 
     params = {'omega': omega, 'masses': masses, 'charges': charges, }
-    if terms == default_stix_option:
 
-        def epsilonr(ptx, B, dens_e, t_e, dens_i):
+    def epsilonr(ptx, B, dens_e, t_e, dens_i):
             out = -epsilon0 * omega * omega*epsilonr_pl_cold(
                 omega, B, dens_i, masses, charges, t_e, dens_e)
             return out
 
-        def sdp(ptx, B, dens_e, t_e, dens_i):
+    def sdp(ptx, B, dens_e, t_e, dens_i):
             out = epsilonr_pl_cold_std(
                 omega, B, dens_i, masses, charges, t_e, dens_e)
-            return out
-
-    else:
-        terms = value2int(len(charges), terms)
-        terms = np.array(terms, dtype=np.int32)
-        params["sterms"] = terms
-
-        def epsilonr(ptx, B, dens_e, t_e, dens_i):
-            out = -epsilon0 * omega * omega*epsilonr_pl_cold_generic(
-                omega, B, dens_i, masses, charges, t_e, dens_e, sterms)
-            return out
-
-        def sdp(ptx, B, dens_e, t_e, dens_i):
-            out = epsilonr_pl_cold_g(
-                omega, B, dens_i, masses, charges, t_e, dens_e, sterms)
             return out
 
     def mur(ptx):
@@ -162,14 +144,10 @@ def build_coefficients(ind_vars, omega, B, dens_e, t_e, dens_i, masses, charges,
     return coeff1, coeff2, coeff3, coeff4, coeff5
 
 
-def build_variables(solvar, ss, ind_vars, omega, B, dens_e, t_e, dens_i, masses, charges, g_ns, l_ns,
-                    sdim=3, terms=default_stix_option):
+def build_variables(solvar, ss, ind_vars, omega, B, dens_e, t_e, dens_i, t_i,
+                    masses, charges, kpakpe, kped, g_ns, l_ns, sdim=3):
 
-    from petram.phys.common.rf_dispersion_coldplasma_numba import (epsilonr_pl_cold_std,
-                                                                   epsilonr_pl_cold_g,
-                                                                   epsilonr_pl_cold,
-                                                                   epsilonr_pl_cold_generic,
-                                                                   f_collisions)
+    from petram.phys.common.rf_dispersion_coldplasma_numba import epsilonr_pl_cold_std
 
     Da = 1.66053906660e-27      # atomic mass unit (u or Dalton) (kg)
 
@@ -204,30 +182,15 @@ def build_variables(solvar, ss, ind_vars, omega, B, dens_e, t_e, dens_i, masses,
     densi_var = make_variable(dens_i)
 
     params = {'omega': omega, 'masses': masses, 'charges': charges, }
-    if terms == default_stix_option:
-        def epsilonr(*_ptx, B=None, dens_e=None, t_e=None, dens_i=None):
+
+    def epsilonr(*_ptx, B=None, dens_e=None, t_e=None, dens_i=None):
             out = -epsilon0 * omega * omega*epsilonr_pl_cold(
                 omega, B, dens_i, masses, charges, t_e, dens_e)
             return out
 
-        def sdp(*_ptx, B=None, dens_e=None, t_e=None, dens_i=None):
+    def sdp(*_ptx, B=None, dens_e=None, t_e=None, dens_i=None):
             out = epsilonr_pl_cold_std(
                 omega, B, dens_i, masses, charges, t_e, dens_e)
-            return out
-
-    else:
-        terms = value2int(len(charges), terms)
-        terms = np.array(terms, dtype=np.int32)
-        params["sterms"] = terms
-
-        def epsilonr(*_ptx, B=None, dens_e=None, t_e=None, dens_i=None):
-            out = -epsilon0 * omega * omega*epsilonr_pl_cold_generic(
-                omega, B, dens_i, masses, charges, t_e, dens_e, sterms)
-            return out
-
-        def sdp(*_ptx, B=None, dens_e=None, t_e=None, dens_i=None):
-            out = epsilonr_pl_cold_g(
-                omega, B, dens_i, masses, charges, t_e, dens_e, sterms)
             return out
 
     def mur(*_ptx):
