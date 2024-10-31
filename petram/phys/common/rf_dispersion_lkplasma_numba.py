@@ -318,12 +318,3 @@ def rotate_dielectric(B, K, M):
     return ans
 
 
-@njit(complex128[:, :](float64, float64[:], float64[:], float64[:], float64[:], float64[:],
-                       float64, float64, float64, float64, int32))
-def epsilonr_pl_hot(w, B, temps, denses, masses, charges, Te, ne, npara, nperp, nhrms):
-    '''
-    hot maxwellian
-    '''
-    M = epsilonr_pl_hot_std(w, B, temps, denses, masses,
-                            charges, Te, ne, npara, nperp, nhrms)
-    return rotate_dielectric(B, M)

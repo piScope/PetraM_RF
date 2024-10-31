@@ -68,11 +68,10 @@ vtable_data0= [('B', VtableElement('bext', type='array',
 def make_functions():
     from petram.phys.common.rf_dispersion_coldplasma_numba import (epsilonr_pl_cold_std,
                                                                    f_collisions)
-    from petram.phys.common.rf_dispersion_mxwlplasma_numba import (epsilonr_pl_hot_std,
+    from petram.phys.common.rf_dispersion_lkplasma_numba import (epsilonr_pl_hot_std,
                                                                    rottate_dielectric)
     
-    def epsilonr(ptx, B, t_c, dens_e, t_e, dens_i, t_i, kpakpe, kpevec ):
-        
+    def epsilonr(ptx, B, t_c, dens_e, t_e, dens_i, t_i, kpakpe, kpevec ):        
         e_cold = epsilonr_pl_cold_std(omega, B, dens_i, masses, charges, t_e, dens_e)
 
         e_hot =  epsilonr_pl_hot_std(omega, B, t_i, dens_i,  masses, charges,
@@ -82,12 +81,12 @@ def make_functions():
         e_colda = (e_cold - e_cold.transpose().conj())/2.0 # anti_hermitian (collisional abs.)
 
 
-        out = -epsilon0 * omega * omega * (e_cold + e_hota)
+        out = -epsilon0 * omega * omega * (e_colda + e_hot)
         out = rotate_dielectric(B, kpevec, out)
         
         return out
 
-    def sdp(ptx, B, dens_e, t_e, dens_i):
+    def sdp(ptx, B, dens_e, t_e, dens_i):        
             out = epsilonr_pl_cold_std(
                 omega, B, dens_i, masses, charges, t_e, dens_e)
             return out
@@ -98,15 +97,93 @@ def make_functions():
     def sigma(ptx):
         return - 1j*omega * np.zeros((3, 3), dtype=np.complex128)
 
-    def nuei(ptx, dens_e, t_e, dens_i):
+    return epsilonr, sdp, mur, sigma
+
+
+def make_afunction_variable():
+    from petram.phys.common.rf_dispersion_coldplasma_numba import (epsilonr_pl_cold_std,
+                                                                   f_collisions)
+    from petram.phys.common.rf_dispersion_lkplasma_numba import (epsilonr_pl_hot_std,
+                                                                   rottate_dielectric)
+
+
+    def epsilonr(*_ptx, B=None, t_c=None, dens_e=None, t_e=None, dens_i=None, t_i=None, kpakpe=None, kpevec=None):        
+        e_cold = epsilonr_pl_cold_std(omega, B, dens_i, masses, charges, t_e, dens_e)
+
+        e_hot =  epsilonr_pl_hot_std(omega, B, t_i, dens_i,  masses, charges,
+                                     t_e, dens_e,
+                                     c*kpakpe[0]/omega, c*kpakpe[1]/omega, nhrms)
+
+        e_colda = (e_cold - e_cold.transpose().conj())/2.0 # anti_hermitian (collisional abs.)
+
+
+        out = -epsilon0 * omega * omega * (e_colda + e_hot)
+        out = rotate_dielectric(B, kpevec, out)
+        
+        return out
+
+    def sdp(*_ptx, B=None, dens_e=None, t_e=None, dens_i=None):
+            out = epsilonr_pl_cold_std(
+                omega, B, dens_i, masses, charges, t_e, dens_e)
+            return out
+
+    def mur(*_ptx):
+        return mu0*np.eye(3, dtype=np.complex128)
+
+    def sigma(*_ptx):
+        return - 1j*omega * np.zeros((3, 3), dtype=np.complex128)
+
+    def nuei(*_ptx, dens_e=None, t_e=None, dens_i=None):
         # iidx : index of ions
         nuei = f_collisions(dens_i, charges, t_e, dens_e)
         return nuei[iidx]
 
-    return epsilonr, sdp, mur, sigma, nuei
+    def epsilonrac(*_ptx, B=None, t_c=None, dens_e=None, t_e=None, dens_i=None, t_i=None, kpakpe=None, kpevec=None):
+        
+        e_cold = epsilonr_pl_cold_std(omega, B, dens_i, masses, charges, t_e, dens_e)
+        e_colda = (e_cold - e_cold.transpose().conj())/2.0 # anti_hermitian (collisional abs.)
+        out = -epsilon0 * omega * omega * e_colda
+        out = rotate_dielectric(B, kpevec, out)
+        
+        return out
+
+    def epsilonrae(*_ptx, B=None, t_c=None, dens_e=None, t_e=None, dens_i=None, t_i=None, kpakpe=None, kpevec=None):
+        
+        dens_i = np.array([0]*len(dens_i))
+
+        e_hot =  epsilonr_pl_hot_std(omega, B, t_i, dens_i,  masses, charges,
+                                     t_e, dens_e,
+                                     c*kpakpe[0]/omega, c*kpakpe[1]/omega, nhrms)
+
+        e_hota = (e_hot - e_hot.transpose().conj())/2.0 
+        out = -epsilon0 * omega * omega * e_hota
+        out = rotate_dielectric(B, kpevec, out)
+        
+        return out
+
+    def epsilonrai(*_ptx, B=None, t_c=None, dens_e=None, t_e=None, dens_i=None, t_i=None, kpakpe=None, kpevec=None):
+                          
+        dens_e = 0.0
+
+        ret = np.zeros((len(masses), 3, 3), dtype=np.complex128)
+        for i in range(masses):
+            dens_i2 = np.zeros(len(masses))
+            dens_i2[i] = dens_i[i]              
+            e_hot =  epsilonr_pl_hot_std(omega, B, t_i, dens_i2,  masses, charges,
+                                     t_e, dens_e,
+                                     c*kpakpe[0]/omega, c*kpakpe[1]/omega, nhrms)
+
+            e_hota = (e_hot - e_hot.transpose().conj())/2.0 # anti_hermitian (collisional abs.)
+            out = -epsilon0 * omega * omega * e_hota
+            out = rotate_dielectric(B, kpevec, out)
+                          
+            ret[i, :, :] = out
+        return ret
+
+    return epsilonr, sdp, mur, sigma, nuei, epsilonrac, epsilonrae, epsilonrai
 
 
-def build_coefficients(ind_vars, omega, B, dens_e, t_e, dens_i, t_i,
+def build_coefficients(ind_vars, omega, B, t_c, dens_e, t_e, dens_i, t_i,
                        masses, charges, kpakpe, kpevec, g_ns, l_ns,
                        sdim=3):
 
@@ -142,7 +219,7 @@ def build_coefficients(ind_vars, omega, B, dens_e, t_e, dens_i, t_i,
     params = {'omega': omega, 'masses': masses, 'charges': charges, 'nhrms': 20,
               'c':speed_of_light}
 
-    epsilonr, sdp, mur, sigma, nuei = make_functions()
+    epsilonr, sdp, mur, sigma = make_functions()
     
     numba_debug = False if myid != 0 else get_numba_debug()
 
@@ -166,27 +243,16 @@ def build_coefficients(ind_vars, omega, B, dens_e, t_e, dens_i, t_i,
     coeff3 = NumbaCoefficient(mfem_coeff3)
     coeff4 = NumbaCoefficient(mfem_coeff4)
 
-    dependency3 = (dens_e_coeff, t_e_coeff, dens_i_coeff)
-    dependency3 = [(x.mfem_numba_coeff if isinstance(x, NumbaCoefficient) else x)
-                   for x in dependency3]
-    jitter3 = mfem.jit.scalar(sdim=sdim, complex=False, params=params, debug=numba_debug,
-                              dependency=dependency3)
-    coeff5 = []
-    for idx in range(len(masses)):
-        params['iidx'] = idx
-        mfem_coeff5 = jitter3(nuei)
-        coeff5.append(NumbaCoefficient(mfem_coeff5))
-
-    return coeff1, coeff2, coeff3, coeff4, coeff5
+    return coeff1, coeff2, coeff3, coeff4
 
 
-def build_variables(solvar, ss, ind_vars, omega, B, dens_e, t_e, dens_i, t_i,
-                    masses, charges, kpakpe, kped, g_ns, l_ns, sdim=3):
+def build_variables(solvar, ss, ind_vars, omega, B, t_c, dens_e, t_e, dens_i, t_i,
+                    masses, charges, kpakpe, kpevec, g_ns, l_ns, sdim=3):
 
     from petram.phys.common.rf_dispersion_coldplasma_numba import (epsilonr_pl_cold_std,
                                                                    epsilonr_pl_cold,
                                                                    f_collisions)
-    from petram.phys.common.rf_dispersion_mxwlplasma_numba import (epsilonr_pl_hot_std,
+    from petram.phys.common.rf_dispersion_lkplasma_numba import (epsilonr_pl_hot_std,
                                                                    epsilonr_pl_hot)
 
 
@@ -219,20 +285,29 @@ def build_variables(solvar, ss, ind_vars, omega, B, dens_e, t_e, dens_i, t_i,
 
     B_var = make_variable(B)
     te_var = make_variable(t_e)
+    ti_var = make_variable(t_i)
+    tc_var = make_variable(t_c)                          
     dense_var = make_variable(dens_e)
     densi_var = make_variable(dens_i)
+
+    kpakpe_var = make_variable(kpakpe)
+    kpevec_var = make_variable(kpevec)
 
     params = {'omega': omega, 'masses': masses, 'charges': charges, 'nhrms': 20,
               'c':speed_of_light}
 
-    epsilonr, sdp, mur, sigma, nuei = make_functions()    
+    epsilonr, sdp, mur, sigma, nuei, epsilonrac, epsilonrae, epsilonrai = make_functions_variable()    
 
 
     solvar["B_"+ss] = B_var
+    solvar["tc_"+ss] = tc_var                                                    
     solvar["ne_"+ss] = dense_var
     solvar["te_"+ss] = te_var
     solvar["ni_"+ss] = densi_var
-    dependency = ("B_"+ss, "ne_"+ss, "te_"+ss, "ni_"+ss)
+    solvar["ti_"+ss] = te_var
+                          
+    dependency = ("B_"+ss, "tc_"+ss, "ne_"+ss, "te_"+ss, "ni_"+ss,  "ti_"+ss,
+                  "kpakpe_"+ss, "kpevec_"+ss)
 
     var1 = variable.array(complex=True, shape=(3, 3),
                           dependency=dependency, params=params)(epsilonr)
@@ -245,4 +320,13 @@ def build_variables(solvar, ss, ind_vars, omega, B, dens_e, t_e, dens_i, t_i,
     var5 = variable.array(complex=True, shape=(len(masses),),
                           dependency=dependency, params=params)(nuei)
 
-    return var1, var2, var3, var4, var5
+    var6 = variable.array(complex=True, shape=(3, 3),
+                          dependency=dependency, params=params)(epsilonrac)
+    var7 = variable.array(complex=True, shape=(3, 3),
+                          dependency=dependency, params=params)(epsilonrae)
+
+    var8 = variable.array(complex=True, shape=(len(masses), 3, 3),
+                          dependency=dependency, params=params)(epsilonrai)
+
+
+    return var1, var2, var3, var4, var5, var6, var7, var8
