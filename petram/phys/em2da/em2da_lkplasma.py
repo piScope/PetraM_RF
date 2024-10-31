@@ -53,6 +53,10 @@ def domain_constraints():
 class EM2Da_MxwlPlasma(EM2Da_Domain):
     vt = Vtable(vtable_data)
 
+    @classmethod
+    def fancy_menu_name(cls):
+        return "LocalKPlasma"
+
     def has_bf_contribution(self, kfes):
         if kfes == 0:
             return True

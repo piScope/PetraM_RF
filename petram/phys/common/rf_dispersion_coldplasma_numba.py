@@ -1,6 +1,6 @@
 from numba import njit, void, int32, int64, float64, complex128, types
-from numpy import (pi, sin, cos, exp, sqrt, log, arctan2,
-                   max, array, linspace, conj, transpose,
+from numpy import (pi, sin, cos, exp, sqrt, log, arctan2, cross,
+                   max, array, linspace, conj, transpose, arccos,
                    sum, zeros, dot, array, ascontiguousarray)
 import numpy as np
 
@@ -171,7 +171,6 @@ def epsilonr_pl_cold_g(w, B, denses, masses, charges, Te, ne, terms):
 
     return M
 
-
 @njit(complex128[:, :](float64[:], complex128[:, :]))
 def rotate_dielectric(B, M):
     #
@@ -204,6 +203,32 @@ def rotate_dielectric(B, M):
     ph = arctan2(B[0]*cos(th)+B[1]*sin(th), B[2])
     A = dot(R1(ph), dot(M, R1(-ph)))
     ans = dot(R2(th), dot(A, R2(-th)))
+
+    #
+    # alternative: rotate ez to match with B
+    #  ans2 below agrees with ans
+    #
+    # def rot_mat(ax, th):
+    #    mat = array([[ax[0]**2*(1-cos(th))+cos(th),  ax[0]*ax[1]*(1-cos(th))-ax[2]*sin(th), ax[0]*ax[2]*(1-cos(th))+ax[1]*sin(th)],
+    #                 [ax[0]*ax[1]*(1-cos(th))+ax[2]*sin(th), ax[1]**2*(1-cos(th))+cos(th),  ax[1]*ax[2]*(1-cos(th))-ax[0]*sin(th)],
+    #                 [ax[0]*ax[2]*(1-cos(th))-ax[1]*sin(th), ax[1]*ax[2]*(1-cos(th))+ax[0]*sin(th), ax[2]**2*(1-cos(th))+cos(th)]], 
+    #             dtype=complex128)
+    #    return mat
+    #
+    # ez = array([0, 0, 1.0])
+    # bn = B/sqrt(B[0]**2 + B[1]**2 + B[2]**2)
+    # ax = cross(bn, ez)
+    # # if bn // ez don't do anything
+    # if sqrt(sum(ax**2)) < 1e-7: 
+    #     ans2 = M
+    # else:
+    #     ax = ax/sqrt(sum(ax**2))
+    #     ay = cross(ax, bn)
+    #     th = arctan2(sum(ez*ay), sum(ez*bn))
+    #     mata = rot_mat(ax, -th)
+    #     matb = rot_mat(ax, th)
+    #
+    #     ans2 = dot(matb, dot(M, mata))
 
     return ans
 

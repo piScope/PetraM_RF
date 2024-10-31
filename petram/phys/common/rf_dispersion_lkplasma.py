@@ -12,6 +12,8 @@ from petram.phys.numba_coefficient import NumbaCoefficient
 from petram.phys.coefficient import SCoeff, VCoeff, MCoeff
 from petram.phys.vtable import VtableElement, Vtable
 
+from petram.phys.phys_const import c as speed_of_light
+
 if use_parallel:
     import mfem.par as mfem
     from mpi4py import MPI
@@ -40,6 +42,10 @@ vtable_data0= [('B', VtableElement('bext', type='array',
                                              guilabel='ion temps.(eV)',
                                              default="100., 100",
                                              tip="ion temperatures")),
+               ('temperatures_c', VtableElement('temperatures_c', type='float',
+                                             guilabel='Tcol(eV)',
+                                             default="100.",
+                                             tip="temperature used for collision")),
                ('mass', VtableElement('mass', type='array',
                                       guilabel='ion masses(/Da)',
                                       default="2, 1",
@@ -53,45 +59,33 @@ vtable_data0= [('B', VtableElement('bext', type='array',
                ('kpa_kpe', VtableElement('kpa_kpe', type='array',
                                           guilabel='kpa, kpe',
                                           default="1, 1.",
-                                          no_func=True,
                                           tip="k_parallel and k_perp for computing dielectric. ")),
                ('kpe_vec', VtableElement('kpe_vec', type='array',
                                           guilabel='kpe dir.',
                                           default="0, 0, 1",
-                                          no_func=True,
                                           tip="k_perp direction. Adjusted to be normal to the magnetic field.")),]
 
-def build_coefficients(ind_vars, omega, B, dens_e, t_e, dens_i, t_i,
-                       masses, charges, kpakpe, kped, g_ns, l_ns,
-                       sdim=3):
+def make_functions():
+    from petram.phys.common.rf_dispersion_coldplasma_numba import (epsilonr_pl_cold_std,
+                                                                   f_collisions)
+    from petram.phys.common.rf_dispersion_mxwlplasma_numba import (epsilonr_pl_hot_std,
+                                                                   rottate_dielectric)
+    
+    def epsilonr(ptx, B, t_c, dens_e, t_e, dens_i, t_i, kpakpe, kpevec ):
+        
+        e_cold = epsilonr_pl_cold_std(omega, B, dens_i, masses, charges, t_e, dens_e)
 
-    from petram.phys.common.rf_dispersion_coldplasma_numba import epsilonr_pl_cold_std
+        e_hot =  epsilonr_pl_hot_std(omega, B, t_i, dens_i,  masses, charges,
+                                     t_e, dens_e,
+                                     c*kpakpe[0]/omega, c*kpakpe[1]/omega, nhrms)
+
+        e_colda = (e_cold - e_cold.transpose().conj())/2.0 # anti_hermitian (collisional abs.)
 
 
-    Da = 1.66053906660e-27      # atomic mass unit (u or Dalton) (kg)
-
-    masses = np.array(masses, dtype=np.float64) * Da
-    charges = np.array(charges, dtype=np.int32)
-
-    num_ions = len(masses)
-    l = l_ns
-    g = g_ns
-
-    B_coeff = VCoeff(3, [B], ind_vars, l, g,
-                     return_complex=False, return_mfem_constant=True)
-    dens_e_coeff = SCoeff([dens_e, ], ind_vars, l, g,
-                          return_complex=False, return_mfem_constant=True)
-    t_e_coeff = SCoeff([t_e, ], ind_vars, l, g,
-                       return_complex=False, return_mfem_constant=True)
-    dens_i_coeff = VCoeff(num_ions, [dens_i, ], ind_vars, l, g,
-                          return_complex=False, return_mfem_constant=True)
-
-    params = {'omega': omega, 'masses': masses, 'charges': charges, }
-
-    def epsilonr(ptx, B, dens_e, t_e, dens_i):
-            out = -epsilon0 * omega * omega*epsilonr_pl_cold(
-                omega, B, dens_i, masses, charges, t_e, dens_e)
-            return out
+        out = -epsilon0 * omega * omega * (e_cold + e_hota)
+        out = rotate_dielectric(B, kpevec, out)
+        
+        return out
 
     def sdp(ptx, B, dens_e, t_e, dens_i):
             out = epsilonr_pl_cold_std(
@@ -109,9 +103,51 @@ def build_coefficients(ind_vars, omega, B, dens_e, t_e, dens_i, t_i,
         nuei = f_collisions(dens_i, charges, t_e, dens_e)
         return nuei[iidx]
 
+    return epsilonr, sdp, mur, sigma, nuei
+
+
+def build_coefficients(ind_vars, omega, B, dens_e, t_e, dens_i, t_i,
+                       masses, charges, kpakpe, kpevec, g_ns, l_ns,
+                       sdim=3):
+
+
+
+    Da = 1.66053906660e-27      # atomic mass unit (u or Dalton) (kg)
+
+    masses = np.array(masses, dtype=np.float64) * Da
+    charges = np.array(charges, dtype=np.int32)
+
+    num_ions = len(masses)
+    l = l_ns
+    g = g_ns
+
+    B_coeff = VCoeff(3, [B], ind_vars, l, g,
+                     return_complex=False, return_mfem_constant=True)
+    dens_e_coeff = SCoeff([dens_e, ], ind_vars, l, g,
+                          return_complex=False, return_mfem_constant=True)
+    t_e_coeff = SCoeff([t_e, ], ind_vars, l, g,
+                       return_complex=False, return_mfem_constant=True)
+    t_c_coeff = SCoeff([t_c, ], ind_vars, l, g,
+                       return_complex=False, return_mfem_constant=True)
+    dens_i_coeff = VCoeff(num_ions, [dens_i, ], ind_vars, l, g,
+                          return_complex=False, return_mfem_constant=True)
+    t_i_coeff = VCoeff(num_ions, [t_i, ], ind_vars, l, g,
+                          return_complex=False, return_mfem_constant=True)
+    kpakpe_coeff = VCoeff(2, kpakpe, ind_vars, l, g,
+                       return_complex=False, return_mfem_constant=True)
+    kpevec_coeff = VCoeff(2, kpevec, ind_vars, l, g,
+                       return_complex=False, return_mfem_constant=True)
+
+
+    params = {'omega': omega, 'masses': masses, 'charges': charges, 'nhrms': 20,
+              'c':speed_of_light}
+
+    epsilonr, sdp, mur, sigma, nuei = make_functions()
+    
     numba_debug = False if myid != 0 else get_numba_debug()
 
-    dependency = (B_coeff, dens_e_coeff, t_e_coeff, dens_i_coeff)
+    dependency = (B_coeff, t_c_coeff, dens_e_coeff, t_e_coeff,
+                  dens_i_coeff, t_i_coeff, kpakpe_coeff, kpevec_coeff)
     dependency = [(x.mfem_numba_coeff if isinstance(x, NumbaCoefficient) else x)
                   for x in dependency]
 
@@ -147,7 +183,12 @@ def build_coefficients(ind_vars, omega, B, dens_e, t_e, dens_i, t_i,
 def build_variables(solvar, ss, ind_vars, omega, B, dens_e, t_e, dens_i, t_i,
                     masses, charges, kpakpe, kped, g_ns, l_ns, sdim=3):
 
-    from petram.phys.common.rf_dispersion_coldplasma_numba import epsilonr_pl_cold_std
+    from petram.phys.common.rf_dispersion_coldplasma_numba import (epsilonr_pl_cold_std,
+                                                                   epsilonr_pl_cold,
+                                                                   f_collisions)
+    from petram.phys.common.rf_dispersion_mxwlplasma_numba import (epsilonr_pl_hot_std,
+                                                                   epsilonr_pl_hot)
+
 
     Da = 1.66053906660e-27      # atomic mass unit (u or Dalton) (kg)
 
@@ -181,27 +222,11 @@ def build_variables(solvar, ss, ind_vars, omega, B, dens_e, t_e, dens_i, t_i,
     dense_var = make_variable(dens_e)
     densi_var = make_variable(dens_i)
 
-    params = {'omega': omega, 'masses': masses, 'charges': charges, }
+    params = {'omega': omega, 'masses': masses, 'charges': charges, 'nhrms': 20,
+              'c':speed_of_light}
 
-    def epsilonr(*_ptx, B=None, dens_e=None, t_e=None, dens_i=None):
-            out = -epsilon0 * omega * omega*epsilonr_pl_cold(
-                omega, B, dens_i, masses, charges, t_e, dens_e)
-            return out
+    epsilonr, sdp, mur, sigma, nuei = make_functions()    
 
-    def sdp(*_ptx, B=None, dens_e=None, t_e=None, dens_i=None):
-            out = epsilonr_pl_cold_std(
-                omega, B, dens_i, masses, charges, t_e, dens_e)
-            return out
-
-    def mur(*_ptx):
-        return mu0*np.eye(3, dtype=np.complex128)
-
-    def sigma(*_ptx):
-        return - 1j*omega * np.zeros((3, 3), dtype=np.complex128)
-
-    def nuei(*_ptx, dens_e=dens_e, t_e=t_e, dens_i=dens_i):
-        nuei = f_collisions(dens_i, charges, t_e, dens_e)
-        return nuei
 
     solvar["B_"+ss] = B_var
     solvar["ne_"+ss] = dense_var

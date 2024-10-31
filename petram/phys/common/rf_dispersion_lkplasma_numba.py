@@ -281,10 +281,11 @@ def epsilonr_pl_hot_std(w, B, temps, denses, masses, charges, Te, ne, npara, npe
     return M
 
 
-@njit(complex128[:, :](float64[:], complex128[:, :]))
-def rotate_dielectric(B, M):
+@njit(complex128[:, :](float64[:], float64[:], complex128[:, :]))
+def rotate_dielectric(B, K, M):
     #
     #  B : magnetic field.
+    #  Kp : kperp 
     #  M : dielectric matrix.
     #
     B = ascontiguousarray(B)
