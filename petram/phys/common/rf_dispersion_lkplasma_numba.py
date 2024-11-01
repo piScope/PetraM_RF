@@ -246,7 +246,7 @@ def chi_el(nperp, npar, ne, te_kev, Bmagn, freq, nharm):
     return np.array([XX, XY, YY, XZ, YZ, ZZ])
 
 
-@njit(complex128[:, ::1](float64, float64[:], float64[:], float64[:], float64[:], float64[:],
+@njit(complex128[:, ::1](float64, float64[:], float64[:], float64[:], darray_ro, iarray_ro,
                          float64, float64, float64, float64, int32))
 def epsilonr_pl_hot_std(w, B, temps, denses, masses, charges, Te, ne, npara, nperp, nhrms):
 
