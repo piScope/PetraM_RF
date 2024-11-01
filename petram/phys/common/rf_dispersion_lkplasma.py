@@ -65,6 +65,9 @@ vtable_data0 = [('B', VtableElement('bext', type='array',
                                           default="0, 0, 1",
                                           tip="k_perp direction. Adjusted to be normal to the magnetic field.")), ]
 
+kpe_options = ["explicit", "fast wave"]
+default_stix_option = "explicit"
+
 
 def make_functions():
     from petram.phys.common.rf_dispersion_coldplasma_numba import (epsilonr_pl_cold_std,
