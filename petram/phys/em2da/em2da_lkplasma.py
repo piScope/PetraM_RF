@@ -1,5 +1,5 @@
 '''
-   Cold plasma:
+   local-K plasma:
 '''
 from petram.phys.common.rf_dispersion_lkplasma import (vtable_data0,
                                                        default_kpe_option,
@@ -120,13 +120,13 @@ class EM2Da_LocalKPlasma(EM2Da_Domain):
             self)
         ind_vars = self.get_root_phys().ind_vars
         kpe_mode = self.kpe_mode
+        kpe_alg = self.kpe_alg
 
         from petram.phys.common.rf_dispersion_lkplasma import build_coefficients
         coeff1, coeff2, coeff3, coeff4 = build_coefficients(ind_vars, omega, B, t_c,  dens_e, t_e,
                                                             dens_i, t_i, masses, charges, kpakpe, kpevec,
                                                             kpe_mode, self._global_ns, self._local_ns,
-                                                            kpe_alg=self.kpe_alg,
-                                                            sdim=2, mmode=mmode)
+                                                            kpe_alg=kpe_alg, sdim=2, mmode=mmode)
 
         return coeff1, coeff2, coeff3, coeff4, mmode
 
@@ -301,6 +301,17 @@ class EM2Da_LocalKPlasma(EM2Da_Domain):
                                 "_eae_"+ss + "/(-omega*omega*e0)"])
         self.do_add_matrix_expr(v, suffix, ind_vars, 'epsilonrai', [
                                 "_eai_"+ss + "/(-omega*omega*e0)"])
+        
+        add_expression(v, 'Pcol', suffix, ind_vars,
+                       "w*conj(E).dot(epsilonrac.dot(E))/2j*e0", ['E', 'epsilonrac', 'w'])
+        add_expression(v, 'Pabse', suffix, ind_vars,
+                       "w*conj(E).dot(epsilonrae.dot(E))/2j*e0", ['E', 'epsilonrac', 'w'])
+        add_expression(v, 'Pabsi1', suffix, ind_vars,
+                       "w*conj(E).dot(epsilonrai[0].dot(E))/2j*e0", ['E', 'epsilonrac', 'w'])
+        add_expression(v, 'Pabsi2', suffix, ind_vars,
+                       "w*conj(E).dot(epsilonrai[1].dot(E))/2j*e0", ['E', 'epsilonrac', 'w'])
+        add_expression(v, 'Pabsi3', suffix, ind_vars,
+                       "w*conj(E).dot(epsilonrai[2].dot(E))/2j*e0", ['E', 'epsilonrac', 'w'])
 
         self.do_add_matrix_expr(v, suffix, ind_vars, 'Nrfr', ["_nref_"+ss])
 

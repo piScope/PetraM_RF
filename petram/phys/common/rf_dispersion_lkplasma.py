@@ -78,7 +78,7 @@ def make_functions():
 
     def epsilonr(_ptx, B, t_c, dens_e, t_e, dens_i, t_i, kpakpe, kpevec):
         e_cold = epsilonr_pl_cold_std(
-            omega, B, dens_i, masses, charges, t_e, dens_e)
+            omega, B, dens_i, masses, charges, t_e, dens_e, col_model)
 
         npape = eval_npara_nperp(_ptx, omega, kpakpe, kpe_mode, e_cold)
         npara = npape[0].real
@@ -99,7 +99,7 @@ def make_functions():
 
     def sdp(_ptx, B, dens_e, t_e, dens_i):
         out = epsilonr_pl_cold_std(
-            omega, B, dens_i, masses, charges, t_e, dens_e)
+            omega, B, dens_i, masses, charges, t_e, dens_e, col_model)
         return out
 
     def mur(_ptx):
@@ -120,7 +120,7 @@ def make_function_variable():
 
     def epsilonr(*ptx, B=None, t_c=None, dens_e=None, t_e=None, dens_i=None, t_i=None, kpakpe=None, kpevec=None):
         e_cold = epsilonr_pl_cold_std(
-            omega, B, dens_i, masses, charges, t_e, dens_e)
+            omega, B, dens_i, masses, charges, t_e, dens_e, col_model)
 
         npape = eval_npara_nperp(array(ptx), omega, kpakpe, kpe_mode, e_cold)
         npara = npape[0].real
@@ -142,7 +142,7 @@ def make_function_variable():
 
     def sdp(*_ptx,  B=None, t_c=None, dens_e=None, t_e=None, dens_i=None, t_i=None, kpakpe=None, kpevec=None):
         out = epsilonr_pl_cold_std(
-            omega, B, dens_i, masses, charges, t_e, dens_e)
+            omega, B, dens_i, masses, charges, t_e, dens_e, col_model)
         return out
 
     def mur(*_ptx):
@@ -159,7 +159,7 @@ def make_function_variable():
     def epsilonrac(*ptx, B=None, t_c=None, dens_e=None, t_e=None, dens_i=None, t_i=None, kpakpe=None, kpevec=None):
 
         e_cold = epsilonr_pl_cold_std(
-            omega, B, dens_i, masses, charges, t_e, dens_e)
+            omega, B, dens_i, masses, charges, t_e, dens_e, col_model)
 
         npape = eval_npara_nperp(array(ptx), omega, kpakpe, kpe_mode, e_cold)
         npara = npape[0].real
@@ -177,7 +177,7 @@ def make_function_variable():
     def epsilonrae(*ptx, B=None, t_c=None, dens_e=None, t_e=None, dens_i=None, t_i=None, kpakpe=None, kpevec=None):
 
         e_cold = epsilonr_pl_cold_std(
-            omega, B, dens_i, masses, charges, t_e, dens_e)
+            omega, B, dens_i, masses, charges, t_e, dens_e, col_model)
 
         npape = eval_npara_nperp(array(ptx), omega, kpakpe, kpe_mode, e_cold)
         npara = npape[0].real
@@ -200,7 +200,7 @@ def make_function_variable():
     def epsilonrai(*ptx, B=None, t_c=None, dens_e=None, t_e=None, dens_i=None, t_i=None, kpakpe=None, kpevec=None):
 
         e_cold = epsilonr_pl_cold_std(
-            omega, B, dens_i, masses, charges, t_e, dens_e)
+            omega, B, dens_i, masses, charges, t_e, dens_e, col_model)
 
         npape = eval_npara_nperp(array(ptx), omega, kpakpe, kpe_mode, e_cold)
         npara = npape[0].real
@@ -272,7 +272,8 @@ def build_coefficients(ind_vars, omega, B, t_c, dens_e, t_e, dens_i, t_i,
         petram.phys.common.rf_dispersion_lkplasma_numba, "eval_kpe_"+kpe_alg)
 
     params = {'omega': omega, 'masses': masses, 'charges': charges, 'nhrms': 20,
-              'c': speed_of_light, 'kpe_mode': kpe_options.index(kpe_mode), "kpe_alg": kpe_alg}
+              'c': speed_of_light, 'kpe_mode': kpe_options.index(kpe_mode), "kpe_alg": kpe_alg,
+              'col_model': 0}
 
     if tmode is not None:
         params["tmode"] = tmode
@@ -363,7 +364,7 @@ def build_variables(solvar, ss, ind_vars, omega, B, t_c, dens_e, t_e, dens_i, t_
         petram.phys.common.rf_dispersion_lkplasma_numba, "eval_kpe_"+kpe_alg)
     params = {'omega': omega, 'masses': masses, 'charges': charges, 'nhrms': 20,
               'c': speed_of_light, "kpe_mode": kpe_options.index(kpe_mode),
-              'kpe_alg': kpe_alg}
+              'kpe_alg': kpe_alg, 'col_model': 0}
 
     epsilonr, sdp, mur, sigma, nuei, epsilonrac, epsilonrae, epsilonrai, npape = make_function_variable()
 

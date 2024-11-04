@@ -395,6 +395,18 @@ def eval_kpe_std(ptx, kpara, kperp, k, b):
     # print(ret)
     return ret
 
+@njit(float64[:](float64[:], float64, float64, float64[:], float64[:]))
+def eval_kpe_em1da(ptx, kpara, kperp, k, b):
+    #
+    #   kvec specifies the direction of k on r-z plane
+    #
+    bn = b/sqrt(b[0]**2 + b[1]**2 + b[2]**2)
+
+    kz = -(k[0]*bn[0] + k[1]*bn[1])/bn[2]
+    kvec = array([k[0], k[1], kz])
+
+    #print('kvec', kvec)
+    return kvec
 
 @njit(float64[:](float64[:], float64, float64, float64[:], float64[:]))
 def eval_kpe_em2da(ptx, kpara, kperp, k, b):
@@ -405,6 +417,19 @@ def eval_kpe_em2da(ptx, kpara, kperp, k, b):
 
     ktor = -(k[0]*bn[0] + k[2]*bn[2])/bn[1]
     kvec = array([k[0], ktor, k[2]])
+
+    #print('kvec', kvec)
+    return kvec
+
+@njit(float64[:](float64[:], float64, float64, float64[:], float64[:]))
+def eval_kpe_em2d(ptx, kpara, kperp, k, b):
+    #
+    #   kvec specifies the direction of k on r-z plane
+    #
+    bn = b/sqrt(b[0]**2 + b[1]**2 + b[2]**2)
+
+    kz = -(k[0]*bn[0] + k[1]*bn[1])/bn[2]
+    kvec = array([k[0], k[1], kz])
 
     #print('kvec', kvec)
     return kvec

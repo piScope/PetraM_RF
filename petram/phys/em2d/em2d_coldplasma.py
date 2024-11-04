@@ -17,6 +17,8 @@
 '''
 from petram.phys.common.rf_dispersion_coldplasma import (stix_options,
                                                          default_stix_option,
+                                                         col_model_options,
+                                                         default_col_model,
                                                          vtable_data0,)
 
 from petram.phys.em2d.em2d_base import EM2D_Bdry, EM2D_Domain, EM2D_Domain_helper
@@ -75,6 +77,7 @@ class EM2D_ColdPlasma(EM2D_Domain, EM2D_Domain_helper):
     def attribute_set(self, v):
         EM2D_Domain.attribute_set(self, v)
         v["stix_terms"] = default_stix_option
+        v["col_model"] = default_col_model
         return v
 
     def config_terms(self, evt):
@@ -94,6 +97,7 @@ class EM2D_ColdPlasma(EM2D_Domain, EM2D_Domain_helper):
 
     def panel1_param(self):
         panels = super(EM2D_ColdPlasma, self).panel1_param()
+        panels.append(["col. model", None, 1, {"values": col_model_options}])
         panels.extend([["Stix terms", "", 2, None],
                        [None, None, 341, {"label": "Customize terms",
                                           "func": "config_terms",
@@ -103,11 +107,12 @@ class EM2D_ColdPlasma(EM2D_Domain, EM2D_Domain_helper):
 
     def get_panel1_value(self):
         values = super(EM2D_ColdPlasma, self).get_panel1_value()
-        values.extend([self.stix_terms_str(), self])
+        values.extend([self.col_model, self.stix_terms_str(), self])
         return values
 
     def import_panel1_value(self, v):
-        check = super(EM2D_ColdPlasma, self).import_panel1_value(v[:-2])
+        check = super(EM2D_ColdPlasma, self).import_panel1_value(v[:-3])
+        self.col_model = v[-3]
         return check
 
     @ property
@@ -122,10 +127,11 @@ class EM2D_ColdPlasma(EM2D_Domain, EM2D_Domain_helper):
         B, dens_e, t_e, dens_i, masses, charges, kz = self.vt.make_value_or_expression(
             self)
         ind_vars = self.get_root_phys().ind_vars
+        col_model = self.col_model
 
         from petram.phys.common.rf_dispersion_coldplasma import build_coefficients
         coeff1, coeff2, coeff3, coeff4, coeff_nuei = build_coefficients(ind_vars, omega, B, dens_e, t_e,
-                                                                        dens_i, masses, charges,
+                                                                        dens_i, masses, charges, col_model,
                                                                         self._global_ns, self._local_ns,
                                                                         sdim=2, terms=self.stix_terms)
 
@@ -207,6 +213,7 @@ class EM2D_ColdPlasma(EM2D_Domain, EM2D_Domain_helper):
         B, dens_e, t_e, dens_i, masses, charges, kz = self.vt.make_value_or_expression(
             self)
         ind_vars = self.get_root_phys().ind_vars
+        col_model = self.col_model
 
         add_constant(v, 'kz', suffix, np.float64(kz),
                      domains=self._sel_index,
@@ -215,21 +222,31 @@ class EM2D_ColdPlasma(EM2D_Domain, EM2D_Domain_helper):
         from petram.phys.common.rf_dispersion_coldplasma import build_variables
 
         ss = self.parent.parent.name()+'_'+self.name()  # phys module name + name
-        var1, var2, var3, var4, var5 = build_variables(v, ss, ind_vars,
-                                                       omega, B, dens_e, t_e,
-                                                       dens_i, masses, charges,
-                                                       self._global_ns, self._local_ns,
-                                                       sdim=1, terms=self.stix_terms)
+        var1, var2, var3, var4, var5, var6 = build_variables(v, ss, ind_vars,
+                                                             omega, B, dens_e, t_e,
+                                                             dens_i, masses, charges, col_model,
+                                                             self._global_ns, self._local_ns,
+                                                             sdim=1, terms=self.stix_terms)
 
         v["_e_"+ss] = var1
         v["_m_"+ss] = var2
         v["_s_"+ss] = var3
         v["_spd_"+ss] = var4
         v["_nuei_"+ss] = var5
+        v["_eac_"+ss] = var6
 
-        self.do_add_matrix_expr(v, suffix, ind_vars, 'epsilonr', ["_e_"+ss + "/(-omega*omega*e0)"])
-        self.do_add_matrix_expr(v, suffix, ind_vars, 'mur', ["_m_"+ss + "/mu0"])
-        self.do_add_matrix_expr(v, suffix, ind_vars, 'sigma', ["_s_"+ss + "/(-1j*omega)"])
+        self.do_add_matrix_expr(v, suffix, ind_vars, 'epsilonr', [
+                                "_e_"+ss + "/(-omega*omega*e0)"])
+        self.do_add_matrix_expr(v, suffix, ind_vars, 'epsilonrac', [
+                                "_eac_"+ss + "/(-omega*omega*e0)"])
+
+        add_expression(v, 'Pcol', suffix, ind_vars,
+                       "w*conj(E).dot(epsilonrac.dot(E))/2j*e0", ['E', 'epsilonrac', 'w'])
+
+        self.do_add_matrix_expr(v, suffix, ind_vars,
+                                'mur', ["_m_"+ss + "/mu0"])
+        self.do_add_matrix_expr(v, suffix, ind_vars, 'sigma', [
+                                "_s_"+ss + "/(-1j*omega)"])
         self.do_add_matrix_expr(v, suffix, ind_vars, 'nuei', ["_nuei_"+ss])
         self.do_add_matrix_expr(v, suffix, ind_vars,
                                 'Sstix', ["_spd_"+ss+"[0,0]"])
@@ -247,4 +264,3 @@ class EM2D_ColdPlasma(EM2D_Domain, EM2D_Domain_helper):
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'sigma')
 
         return
-

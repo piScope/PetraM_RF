@@ -20,35 +20,38 @@ else:
     import mfem.ser as mfem
     myid = 0
 
-vtable_data0= [('B', VtableElement('bext', type='array',
-                                   guilabel='magnetic field',
-                                   default="=[0,0,0]",
-                                   tip="external magnetic field")),
-               ('dens_e', VtableElement('dens_e', type='float',
-                                        guilabel='electron density(m-3)',
-                                        default="1e19",
-                                        tip="electron density")),
-               ('temperature', VtableElement('temperature', type='float',
-                                             guilabel='w_col(1/s) or Tc(eV)',
-                                             default="10.",
-                                             tip="angular collision freq. or effecitive temperature for collisions")),
-               ('dens_i', VtableElement('dens_i', type='array',
-                                        guilabel='ion densities(m-3)',
-                                        default="0.9e19, 0.1e19",
-                                        tip="ion densities")),
-               ('mass', VtableElement('mass', type='array',
-                                      guilabel='ion masses(/Da)',
-                                      default="2, 1",
-                                      no_func=True,
-                                      tip="mass. normalized by atomic mass unit")),
-               ('charge_q', VtableElement('charge_q', type='array',
-                                          guilabel='ion charges(/q)',
-                                          default="1, 1",
-                                          no_func=True,
-                                          tip="ion charges normalized by q(=1.60217662e-19 [C])")), ]
+vtable_data0 = [('B', VtableElement('bext', type='array',
+                                    guilabel='magnetic field',
+                                    default="=[0,0,0]",
+                                    tip="external magnetic field")),
+                ('dens_e', VtableElement('dens_e', type='float',
+                                         guilabel='electron density(m-3)',
+                                         default="1e19",
+                                         tip="electron density")),
+                ('temperature', VtableElement('temperature', type='float',
+                                              guilabel='w_col(1/s) or Tc(eV)',
+                                              default="10.",
+                                              tip="angular collision freq. or effecitive temperature for collisions")),
+                ('dens_i', VtableElement('dens_i', type='array',
+                                         guilabel='ion densities(m-3)',
+                                         default="0.9e19, 0.1e19",
+                                         tip="ion densities")),
+                ('mass', VtableElement('mass', type='array',
+                                       guilabel='ion masses(/Da)',
+                                       default="2, 1",
+                                       no_func=True,
+                                       tip="mass. normalized by atomic mass unit")),
+                ('charge_q', VtableElement('charge_q', type='array',
+                                           guilabel='ion charges(/q)',
+                                           default="1, 1",
+                                           no_func=True,
+                                           tip="ion charges normalized by q(=1.60217662e-19 [C])")), ]
 
 stix_options = ("SDP", "SD", "SP", "DP", "P", "w/o xx", "None")
 default_stix_option = "(default) include all"
+
+col_model_options = ["Tc", "wcol"]
+default_col_model = col_model_options[0]
 
 
 def value2int(num_ions, value):
@@ -62,8 +65,8 @@ def value2int(num_ions, value):
     return [stix_options.index(x) for x in panelvalue]
 
 
-def build_coefficients(ind_vars, omega, B, dens_e, t_e, dens_i, masses, charges, g_ns, l_ns,
-                       sdim=3, terms=default_stix_option):
+def build_coefficients(ind_vars, omega, B, dens_e, t_e, dens_i, masses, charges, col_mode,
+                       g_ns, l_ns, sdim=3, terms=default_stix_option):
 
     from petram.phys.common.rf_dispersion_coldplasma_numba import (epsilonr_pl_cold_std,
                                                                    epsilonr_pl_cold_g,
@@ -89,18 +92,19 @@ def build_coefficients(ind_vars, omega, B, dens_e, t_e, dens_i, masses, charges,
     dens_i_coeff = VCoeff(num_ions, [dens_i, ], ind_vars, l, g,
                           return_complex=False, return_mfem_constant=True)
 
-    params = {'omega': omega, 'masses': masses, 'charges': charges, }
+    params = {'omega': omega, 'masses': masses, 'charges': charges,
+              'col_model': col_model_options.index(col_mode)}
+
     if terms == default_stix_option:
 
         def epsilonr(ptx, B, dens_e, t_e, dens_i):
             out = -epsilon0 * omega * omega*epsilonr_pl_cold(
-                omega, B, dens_i, masses, charges, t_e, dens_e)
-            print("cold", out)
+                omega, B, dens_i, masses, charges, t_e, dens_e, col_model)
             return out
 
         def sdp(ptx, B, dens_e, t_e, dens_i):
             out = epsilonr_pl_cold_std(
-                omega, B, dens_i, masses, charges, t_e, dens_e)
+                omega, B, dens_i, masses, charges, t_e, dens_e, col_model)
             return out
 
     else:
@@ -110,12 +114,12 @@ def build_coefficients(ind_vars, omega, B, dens_e, t_e, dens_i, masses, charges,
 
         def epsilonr(ptx, B, dens_e, t_e, dens_i):
             out = -epsilon0 * omega * omega*epsilonr_pl_cold_generic(
-                omega, B, dens_i, masses, charges, t_e, dens_e, sterms)
+                omega, B, dens_i, masses, charges, t_e, dens_e, sterms, col_model)
             return out
 
         def sdp(ptx, B, dens_e, t_e, dens_i):
             out = epsilonr_pl_cold_g(
-                omega, B, dens_i, masses, charges, t_e, dens_e, sterms)
+                omega, B, dens_i, masses, charges, t_e, dens_e, sterms, col_model)
             return out
 
     def mur(ptx):
@@ -164,8 +168,8 @@ def build_coefficients(ind_vars, omega, B, dens_e, t_e, dens_i, masses, charges,
     return coeff1, coeff2, coeff3, coeff4, coeff5
 
 
-def build_variables(solvar, ss, ind_vars, omega, B, dens_e, t_e, dens_i, masses, charges, g_ns, l_ns,
-                    sdim=3, terms=default_stix_option):
+def build_variables(solvar, ss, ind_vars, omega, B, dens_e, t_e, dens_i, masses, charges,
+                    col_mode, g_ns, l_ns, sdim=3, terms=default_stix_option):
 
     from petram.phys.common.rf_dispersion_coldplasma_numba import (epsilonr_pl_cold_std,
                                                                    epsilonr_pl_cold_g,
@@ -205,17 +209,24 @@ def build_variables(solvar, ss, ind_vars, omega, B, dens_e, t_e, dens_i, masses,
     dense_var = make_variable(dens_e)
     densi_var = make_variable(dens_i)
 
-    params = {'omega': omega, 'masses': masses, 'charges': charges, }
+    params = {'omega': omega, 'masses': masses, 'charges': charges,
+              'col_model': col_model_options.index(col_mode)}
+
     if terms == default_stix_option:
         def epsilonr(*_ptx, B=None, dens_e=None, t_e=None, dens_i=None):
             out = -epsilon0 * omega * omega*epsilonr_pl_cold(
-                omega, B, dens_i, masses, charges, t_e, dens_e)
+                omega, B, dens_i, masses, charges, t_e, dens_e, col_model)
             return out
 
         def sdp(*_ptx, B=None, dens_e=None, t_e=None, dens_i=None):
             out = epsilonr_pl_cold_std(
-                omega, B, dens_i, masses, charges, t_e, dens_e)
+                omega, B, dens_i, masses, charges, t_e, dens_e, col_model)
             return out
+
+        def epsilonrac(*_ptx, B=None, dens_e=None, t_e=None, dens_i=None):
+            out = -epsilon0 * omega * omega*epsilonr_pl_cold(
+                omega, B, dens_i, masses, charges, t_e, dens_e, col_model)
+            return (out - out.transpose().conj())/2.0
 
     else:
         terms = value2int(len(charges), terms)
@@ -224,13 +235,18 @@ def build_variables(solvar, ss, ind_vars, omega, B, dens_e, t_e, dens_i, masses,
 
         def epsilonr(*_ptx, B=None, dens_e=None, t_e=None, dens_i=None):
             out = -epsilon0 * omega * omega*epsilonr_pl_cold_generic(
-                omega, B, dens_i, masses, charges, t_e, dens_e, sterms)
+                omega, B, dens_i, masses, charges, t_e, dens_e, sterms, col_model)
             return out
 
         def sdp(*_ptx, B=None, dens_e=None, t_e=None, dens_i=None):
             out = epsilonr_pl_cold_g(
-                omega, B, dens_i, masses, charges, t_e, dens_e, sterms)
+                omega, B, dens_i, masses, charges, t_e, dens_e, sterms, col_model)
             return out
+
+        def epsilonrac(*_ptx, B=None, dens_e=None, t_e=None, dens_i=None):
+            out = -epsilon0 * omega * omega*epsilonr_pl_cold_generic(
+                omega, B, dens_i, masses, charges, t_e, dens_e, sterms, col_model)
+            return (out - out.transpose().conj())/2.0
 
     def mur(*_ptx):
         return mu0*np.eye(3, dtype=np.complex128)
@@ -258,5 +274,7 @@ def build_variables(solvar, ss, ind_vars, omega, B, dens_e, t_e, dens_i, masses,
                           dependency=dependency, params=params)(sdp)
     var5 = variable.array(complex=True, shape=(len(masses),),
                           dependency=dependency, params=params)(nuei)
+    var6 = variable.array(complex=True, shape=(3, 3),
+                          dependency=dependency, params=params)(epsilonrac)
 
-    return var1, var2, var3, var4, var5
+    return var1, var2, var3, var4, var5, var6
