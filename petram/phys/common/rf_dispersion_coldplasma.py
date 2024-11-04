@@ -95,6 +95,7 @@ def build_coefficients(ind_vars, omega, B, dens_e, t_e, dens_i, masses, charges,
         def epsilonr(ptx, B, dens_e, t_e, dens_i):
             out = -epsilon0 * omega * omega*epsilonr_pl_cold(
                 omega, B, dens_i, masses, charges, t_e, dens_e)
+            print("cold", out)
             return out
 
         def sdp(ptx, B, dens_e, t_e, dens_i):

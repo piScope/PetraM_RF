@@ -8,11 +8,11 @@
 
       temps : ion temperature (eV)
       masses : ion masses (kg)
-      charges : ion charges (C)
+      charges : ion charges (C/1.6e-19)
 
- (sample run) 
-    >>> nperp,npara,denses,masses,charges,temps,ne,Te,Bmang,w,nhrms=(40.,10.,[5.e19,5.e18],[2*Da,Da],[q_base,q_base],[15e3,15e3],5.e19,10e3,0.5,3e7*2*3.1415926,20)
-    >>> from petram.phys.common.rf_dispersion_mxwlplasma_numba import epsilonr_pl_hot_std
+ (sample run)
+    >>> nperp,npara,denses,masses,charges,temps,ne,Te,Bmang,w,nhrms=(40.,10.,[5.e19,5.e18],[2*Da,Da],[1, 1],[15e3,15e3],5.e19,10e3,0.5,3e7*2*3.1415926,20)
+    >>> from petram.phys.common.rf_dispersion_lkplasma_numba import epsilonr_pl_hot_std
     >>> epsilonr_pl_hot_std(w,np.array(B),np.array(temps),np.array(denses),np.array(masses),np.array(charges),Te,ne,npara,nperp,nhrms)
 
 
@@ -24,6 +24,7 @@ array([[-1.56316016e+03+1.23807373e+01j, -1.12033076e+01-9.84907588e+03j,
          1.29769916e+06+1.58788920e+06j]])
 
 '''
+from petram.phys.phys_const import c as speed_of_light
 from petram.helper.numba_ive import ive
 from petram.phys.common.numba_zfunc import zfunc
 from numpy import pi, sqrt
@@ -34,7 +35,7 @@ from petram.phys.phys_const import epsilon0 as e0
 from petram.phys.phys_const import q0 as q_base
 from petram.phys.phys_const import Da
 from numba import njit, void, int32, int64, float64, complex128, types
-from numpy import (pi, sin, cos, exp, sqrt, log, arctan2,
+from numpy import (pi, sin, cos, exp, sqrt, log, arctan2, cross,
                    max, array, linspace, conj, transpose,
                    sum, zeros, dot, array, ascontiguousarray)
 import numpy as np
@@ -263,7 +264,7 @@ def epsilonr_pl_hot_std(w, B, temps, denses, masses, charges, Te, ne, npara, npe
     for Ti, dens, mass, charge in zip(temps, denses, masses, charges):
         ti_kev = Ti/1000.
         A = mass/Da
-        Z = charge/q_base
+        Z = charge
         if dens <= 0.:
             continue
         for nh in range(-nhrms, nhrms+1):
@@ -285,36 +286,125 @@ def epsilonr_pl_hot_std(w, B, temps, denses, masses, charges, Te, ne, npara, npe
 def rotate_dielectric(B, K, M):
     #
     #  B : magnetic field.
-    #  Kp : kperp 
+    #  Kp : kperp
     #  M : dielectric matrix.
     #
+    #
+
     B = ascontiguousarray(B)
     M = ascontiguousarray(M)
+    K = ascontiguousarray(K)
 
-    def R1(ph):
-        return array([[cos(ph), 0.,  sin(ph)],
-                      [0,       1.,   0],
-                      [-sin(ph), 0,  cos(ph)]], dtype=complex128)
+    def rot_mat(ax, th):
+        mat = array([[ax[0]**2*(1-cos(th))+cos(th),  ax[0]*ax[1]*(1-cos(th))-ax[2]*sin(th), ax[0]*ax[2]*(1-cos(th))+ax[1]*sin(th)],
+                     [ax[0]*ax[1]*(1-cos(th))+ax[2]*sin(th), ax[1]**2*(1-cos(th)) +
+                      cos(th),  ax[1]*ax[2]*(1-cos(th))-ax[0]*sin(th)],
+                     [ax[0]*ax[2]*(1-cos(th))-ax[1]*sin(th), ax[1]*ax[2]*(1-cos(th))+ax[0]*sin(th), ax[2]**2*(1-cos(th))+cos(th)]],
+                    dtype=complex128)
+        return mat
 
-    def R2(th):
-        return array([[cos(th), -sin(th), 0],
-                      [sin(th), cos(th), 0],
-                      [0, 0,  1.]], dtype=complex128)
+    #  Step 1:
+    #    algin ez to bn
+    #    compute where ex goes after this step
+    ez = array([0, 0, 1.0])
+    ex = array([1.0, 0, 0.0], dtype=np.complex128)
+    bn = B/sqrt(B[0]**2 + B[1]**2 + B[2]**2)
+    ax = cross(bn, ez)
+    # if bn // ez don't do anything
+    if sqrt(sum(ax**2)) < 1e-16 and np.sum(bn*ez) > 0:
+        ans2 = M
+    else:
+        if sqrt(sum(ax**2)) < 1e-16:
+            ax = array([1.0, 0, 0.0])
+            ay = array([0.0, 1.0, 0.0])
+        else:
+            ax = ax/sqrt(sum(ax**2))
+            ay = cross(ax, bn)
+        th = arctan2(sum(ez*ay), sum(ez*bn))
+        mata = rot_mat(ax, th)
+        matb = rot_mat(ax, -th)
 
-    #  B=(0,0,1) -> phi = 0,  th =0
-    #  B=(1,0,0) -> phi = 90, th =0
-    #  B=(0,1,0) -> phi = 90, th =90
+        ans2 = dot(matb, dot(M, mata))
+        ex = dot(matb, ex)
 
-    #  Bx = sin(phi) cos(th)
-    #  By = sin(phi) sin(th)
-    #  Bz = cos(phi)
+    # this is ex oriantation
+    ex = ex.real
+    ex = ex/sqrt(ex[0]**2 + ex[1]**2 + ex[2]**2)
 
-    # B = [Bx, By, Bz]
-    th = arctan2(B[1], B[0])
-    ph = arctan2(B[0]*cos(th)+B[1]*sin(th), B[2])
-    A = dot(R1(ph), dot(M, R1(-ph)))
-    ans = dot(R2(th), dot(A, R2(-th)))
+    #  Step 2:
+    #    Kperp is project of K on the plane perpendicular to bn
+    K = K - K*bn
 
-    return ans
+    #  Step 3
+    #    algin ex to K
+
+    ka = K/sqrt(K[0]**2 + K[1]**2 + K[2]**2)
+    kb = cross(bn, ka)
+    th = arctan2(sum(ex*kb), sum(ex*ka))
+
+    mata = rot_mat(bn, th)
+    matb = rot_mat(bn, -th)
+
+    ans2 = dot(matb, dot(ans2, mata))
+    #ex = dot(matb, ex)
+
+    return ans2
 
 
+@njit(complex128[:](float64[:], float64, float64[:], int64, complex128[:, :]))
+def eval_npara_nperp(ptx, omega, kpakpe, kpe_mode, e_cold):
+
+    if kpe_mode == 1:  # fast wave
+        npara = speed_of_light*kpakpe[0]/omega
+        S = e_cold[0, 0]
+        D = e_cold[0, 1]*1j
+        P = e_cold[2, 2]
+
+        nperpsq = (D**2 - (npara**2 - S)**2)/(npara**2 - S)
+        nperp = sqrt(nperpsq)
+        #nperp = nperp.real
+    elif kpe_mode == 2:  # slow wave
+        npara = speed_of_light*kpakpe[0]/omega
+        S = e_cold[0, 0]
+        D = e_cold[0, 1]*1j
+        P = e_cold[2, 2]
+        nperpsq = -(npara**2 - S)*P/S
+        nperp = sqrt(nperpsq)
+        #nperp = nperp.real
+    else:
+        npara = speed_of_light*kpakpe[0]/omega
+        nperp = speed_of_light*kpakpe[1]/omega
+
+    return array([npara, nperp])
+
+#
+# routines to define kpe as vector
+#
+
+
+@njit(float64[:](float64[:], float64, float64, float64[:], float64[:]))
+def eval_kpe_std(ptx, kpara, kperp, k, b):
+    #
+    #   kpe vector is given by k. it just project kpevec to a plane normal to
+    #   b
+    #
+    bn = b/sqrt(b[0]**2 + b[1]**2 + b[2]**2)
+    kn = k/sqrt(k[0]**2 + k[1]**2 + k[2]**2)
+    tmp = cross(bn, kn)
+    ret = cross(bn, tmp)
+    # print(ret)
+    return ret
+
+
+@njit(float64[:](float64[:], float64, float64, float64[:], float64[:]))
+def eval_kpe_em2da(ptx, kpara, kperp, k, b):
+    #
+    #   kvec specifies the direction of k on r-z plane
+    #
+    bn = b/sqrt(b[0]**2 + b[1]**2 + b[2]**2)
+
+    ktor = -(k[0]*bn[0] + k[2]*bn[2])/bn[1]
+    kvec = array([k[0], ktor, k[2]])
+
+    #print('kvec', kvec)
+    return kvec

@@ -30,6 +30,7 @@ else:
 
 vtable_data = vtable_data0.copy()
 
+
 def domain_constraints():
     return [EM3D_ColdPlasma]
 
@@ -197,9 +198,12 @@ class EM3D_ColdPlasma(EM3D_Domain):
         v["_spd_"+ss] = var4
         v["_nuei_"+ss] = var5
 
-        self.do_add_matrix_expr(v, suffix, ind_vars, 'epsilonr', ["_e_"+ss + "/(-omega*omega*e0)"])
-        self.do_add_matrix_expr(v, suffix, ind_vars, 'mur', ["_m_"+ss + "/mu0"])
-        self.do_add_matrix_expr(v, suffix, ind_vars, 'sigma', ["_s_"+ss + "/(-1j*omega)"])
+        self.do_add_matrix_expr(v, suffix, ind_vars, 'epsilonr', [
+                                "_e_"+ss + "/(-omega*omega*e0)"])
+        self.do_add_matrix_expr(v, suffix, ind_vars,
+                                'mur', ["_m_"+ss + "/mu0"])
+        self.do_add_matrix_expr(v, suffix, ind_vars, 'sigma', [
+                                "_s_"+ss + "/(-1j*omega)"])
         self.do_add_matrix_expr(v, suffix, ind_vars, 'nuei', ["_nuei_"+ss])
         self.do_add_matrix_expr(v, suffix, ind_vars,
                                 'Sstix', ["_spd_"+ss+"[0,0]"])
@@ -207,11 +211,13 @@ class EM3D_ColdPlasma(EM3D_Domain):
                                 "1j*_spd_"+ss+"[0,1]"])
         self.do_add_matrix_expr(v, suffix, ind_vars,
                                 'Pstix', ["_spd_"+ss+"[2,2]"])
-
+        self.do_add_matrix_expr(v, suffix, ind_vars,
+                                'Rstix', ["_spd_"+ss+"[0,0] + 1j*_spd_"+ss+"[0,1]"])
+        self.do_add_matrix_expr(v, suffix, ind_vars,
+                                'Lstix', ["_spd_"+ss+"[0,0] - 1j*_spd_"+ss+"[0,1]"])
         var = ['x', 'y', 'z']
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'epsilonr')
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'mur')
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'sigma')
 
         return
-

@@ -299,6 +299,10 @@ class EM2Da_ColdPlasma(EM2Da_Domain):
                                 "1j*_spd_"+ss+"[0,1]"])
         self.do_add_matrix_expr(v, suffix, ind_vars,
                                 'Pstix', ["_spd_"+ss+"[2,2]"])
+        self.do_add_matrix_expr(v, suffix, ind_vars,
+                                'Rstix', ["_spd_"+ss+"[0,0] + 1j*_spd_"+ss+"[0,1]"])
+        self.do_add_matrix_expr(v, suffix, ind_vars,
+                                'Lstix', ["_spd_"+ss+"[0,0] - 1j*_spd_"+ss+"[0,1]"])
 
         var = ['r', 'phi', 'z']
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'epsilonr')

@@ -1,7 +1,9 @@
 '''
    Cold plasma:
 '''
-from petram.phys.common.rf_dispersion_lkplasma import vtable_data0
+from petram.phys.common.rf_dispersion_lkplasma import (vtable_data0,
+                                                       default_kpe_option,
+                                                       kpe_options)
 
 from petram.phys.phys_const import mu0, epsilon0
 from petram.phys.numba_coefficient import (func_to_numba_coeff_scalar,
@@ -45,6 +47,8 @@ Expansion of matrix is as follows
   Ephx = rho Ephi
 '''
 
+kpe_alg_options = ["std", "em2da"]
+
 
 def domain_constraints():
     return [EM2Da_LocalKPlasma]
@@ -60,7 +64,7 @@ class EM2Da_LocalKPlasma(EM2Da_Domain):
     @classmethod
     def fancy_tree_name(cls):
         return "LocalKPlasma"
-    
+
     def has_bf_contribution(self, kfes):
         if kfes == 0:
             return True
@@ -82,15 +86,26 @@ class EM2Da_LocalKPlasma(EM2Da_Domain):
 
     def attribute_set(self, v):
         EM2Da_Domain.attribute_set(self, v)
+        v["kpe_mode"] = default_kpe_option
+        v["kpe_alg"] = kpe_alg_options[0]
         return v
 
     def panel1_param(self):
         panels = super(EM2Da_LocalKPlasma, self).panel1_param()
+        panels.append(["kpe mode", None, 1, {"values": kpe_options}])
+        panels.append(["kpe alg.", None, 1, {"values": kpe_alg_options}])
         return panels
 
     def get_panel1_value(self):
         values = super(EM2Da_LocalKPlasma, self).get_panel1_value()
+        values.extend([self.kpe_mode, self.kpe_alg])
         return values
+
+    def import_panel1_value(self, v):
+        check = super(EM2Da_LocalKPlasma, self).import_panel1_value(v[:-2])
+        self.kpe_mode = v[-2]
+        self.kpe_alg = v[-1]
+        return check
 
     @property
     def jited_coeff(self):
@@ -101,20 +116,22 @@ class EM2Da_LocalKPlasma(EM2Da_Domain):
 
     def get_coeffs(self):
         freq, omega = self.get_root_phys().get_freq_omega()
-        B, dens_e, t_e, dens_i, t_i, t_c, masses, charges, kpakpe, kpevec, tmode = self.vt.make_value_or_expression(
+        B, dens_e, t_e, dens_i, t_i, t_c, masses, charges, kpakpe, kpevec, mmode = self.vt.make_value_or_expression(
             self)
         ind_vars = self.get_root_phys().ind_vars
+        kpe_mode = self.kpe_mode
 
         from petram.phys.common.rf_dispersion_lkplasma import build_coefficients
         coeff1, coeff2, coeff3, coeff4 = build_coefficients(ind_vars, omega, B, t_c,  dens_e, t_e,
-                                                            dens_i, t_i, masses, charges, kpakpe, kpevec, 
-                                                            self._global_ns, self._local_ns,
-                                                            sdim=2)
+                                                            dens_i, t_i, masses, charges, kpakpe, kpevec,
+                                                            kpe_mode, self._global_ns, self._local_ns,
+                                                            kpe_alg=self.kpe_alg,
+                                                            sdim=2, mmode=mmode)
 
-        return coeff1, coeff2, coeff3, coeff4, tmode
+        return coeff1, coeff2, coeff3, coeff4, mmode
 
     def add_bf_contribution(self, engine, a, real=True, kfes=0):
-        coeff1, coeff2, coeff3, coeff_stix, tmode = self.jited_coeff
+        coeff1, coeff2, coeff3, coeff_stix, mmode = self.jited_coeff
         self.set_integrator_realimag_mode(real)
 
         invmu = coeff2.inv()
@@ -130,7 +147,7 @@ class EM2Da_LocalKPlasma(EM2Da_Domain):
             return invmu[0, 0]/ptx[0]
 
         def invmu_o_r_tt(ptx, invmu):
-            return invmu[0, 0]/ptx[0]*tmode*tmode
+            return invmu[0, 0]/ptx[0]*mmode*mmode
 
         def eps11_x_r(ptx, eps11_):
             return eps11_*ptx[0]
@@ -158,7 +175,7 @@ class EM2Da_LocalKPlasma(EM2Da_Domain):
                                 a.AddDomainIntegrator,
                                 mfem.VectorFEMassIntegrator)
 
-            if tmode != 0:
+            if mmode != 0:
                 imu_o_r_2 = func_to_numba_coeff_scalar(invmu_o_r_tt,
                                                        complex=True,
                                                        dependency=(invmu,))
@@ -197,7 +214,7 @@ class EM2Da_LocalKPlasma(EM2Da_Domain):
             dprint1("Add mixed contribution(imag)" + "(" + str(r) + "," + str(c) + ')'
                     + str(self._sel_index))
 
-        coeff1, coeff2, coeff3, coeff_stix, tmode = self.jited_coeff
+        coeff1, coeff2, coeff3, coeff_stix, mmode = self.jited_coeff
         self.set_integrator_realimag_mode(real)
 
         invmu = coeff2.inv()
@@ -207,7 +224,7 @@ class EM2Da_LocalKPlasma(EM2Da_Domain):
         eps21 = coeff4[1, [0, 2]]
 
         def iinvmu_o_r_t(ptx, invmu):
-            return 1j*invmu[0, 0]/ptx[0]*tmode
+            return 1j*invmu[0, 0]/ptx[0]*mmode
         imv_o_r_3 = func_to_numba_coeff_scalar(iinvmu_o_r_t,
                                                complex=True,
                                                dependency=(invmu,))
@@ -245,12 +262,14 @@ class EM2Da_LocalKPlasma(EM2Da_Domain):
             return
 
         freq, omega = self.get_root_phys().get_freq_omega()
-        B, dens_e, t_e, dens_i, t_i, t_c, masses, charges, kpakpe, kpevec, tmode = self.vt.make_value_or_expression(
+        B, dens_e, t_e, dens_i, t_i, t_c, masses, charges, kpakpe, kpevec, mmode = self.vt.make_value_or_expression(
             self)
-        
-        ind_vars = self.get_root_phys().ind_vars
 
-        add_constant(v, 'm_mode', suffix, np.float64(tmode),
+        ind_vars = self.get_root_phys().ind_vars
+        kpe_mode = self.kpe_mode
+        kpe_alg = self.kpe_alg
+
+        add_constant(v, 'm_mode', suffix, np.float64(mmode),
                      domains=self._sel_index,
                      gdomain=self._global_ns)
 
@@ -260,9 +279,9 @@ class EM2Da_LocalKPlasma(EM2Da_Domain):
         ret = build_variables(v, ss, ind_vars,
                               omega, B, t_c,  dens_e, t_e,
                               dens_i, t_i, masses, charges,
-                              kpakpe, kpevec,
+                              kpakpe, kpevec, kpe_mode, kpe_alg,
                               self._global_ns, self._local_ns,
-                              sdim=1, terms=self.stix_terms)
+                              sdim=2)
 
         v["_e_"+ss] = ret[0]
         v["_m_"+ss] = ret[1]
@@ -271,15 +290,24 @@ class EM2Da_LocalKPlasma(EM2Da_Domain):
         v["_nuei_"+ss] = ret[4]
         v["_eac_"+ss] = ret[5]
         v["_eae_"+ss] = ret[6]
-        v["_eaii_"+ss] = ret[7]
+        v["_eai_"+ss] = ret[7]
+        v["_nref_"+ss] = ret[8]
 
-        self.do_add_matrix_expr(v, suffix, ind_vars, 'epsilonr', ["_e_"+ss + "/(-omega*omega*e0)"])
-        self.do_add_matrix_expr(v, suffix, ind_vars, 'epsilonrac', ["_eac_"+ss + "/(-omega*omega*e0)"])
-        self.do_add_matrix_expr(v, suffix, ind_vars, 'epsilonrae', ["_eae_"+ss + "/(-omega*omega*e0)"])
-        self.do_add_matrix_expr(v, suffix, ind_vars, 'epsilonrai', ["_eai_"+ss + "/(-omega*omega*e0)"])
-        
-        self.do_add_matrix_expr(v, suffix, ind_vars, 'mur', ["_m_"+ss + "/mu0"])
-        self.do_add_matrix_expr(v, suffix, ind_vars, 'sigma', ["_s_"+ss + "/(-1j*omega)"])
+        self.do_add_matrix_expr(v, suffix, ind_vars, 'epsilonr', [
+                                "_e_"+ss + "/(-omega*omega*e0)"])
+        self.do_add_matrix_expr(v, suffix, ind_vars, 'epsilonrac', [
+                                "_eac_"+ss + "/(-omega*omega*e0)"])
+        self.do_add_matrix_expr(v, suffix, ind_vars, 'epsilonrae', [
+                                "_eae_"+ss + "/(-omega*omega*e0)"])
+        self.do_add_matrix_expr(v, suffix, ind_vars, 'epsilonrai', [
+                                "_eai_"+ss + "/(-omega*omega*e0)"])
+
+        self.do_add_matrix_expr(v, suffix, ind_vars, 'Nrfr', ["_nref_"+ss])
+
+        self.do_add_matrix_expr(v, suffix, ind_vars,
+                                'mur', ["_m_"+ss + "/mu0"])
+        self.do_add_matrix_expr(v, suffix, ind_vars, 'sigma', [
+                                "_s_"+ss + "/(-1j*omega)"])
         self.do_add_matrix_expr(v, suffix, ind_vars, 'nuei', ["_nuei_"+ss])
         self.do_add_matrix_expr(v, suffix, ind_vars,
                                 'Sstix', ["_spd_"+ss+"[0,0]"])
@@ -287,6 +315,10 @@ class EM2Da_LocalKPlasma(EM2Da_Domain):
                                 "1j*_spd_"+ss+"[0,1]"])
         self.do_add_matrix_expr(v, suffix, ind_vars,
                                 'Pstix', ["_spd_"+ss+"[2,2]"])
+        self.do_add_matrix_expr(v, suffix, ind_vars,
+                                'Rstix', ["_spd_"+ss+"[0,0] + 1j*_spd_"+ss+"[0,1]"])
+        self.do_add_matrix_expr(v, suffix, ind_vars,
+                                'Lstix', ["_spd_"+ss+"[0,0] - 1j*_spd_"+ss+"[0,1]"])
 
         var = ['r', 'phi', 'z']
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'epsilonr')

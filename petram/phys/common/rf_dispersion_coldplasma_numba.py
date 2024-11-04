@@ -208,27 +208,31 @@ def rotate_dielectric(B, M):
     # alternative: rotate ez to match with B
     #  ans2 below agrees with ans
     #
-    # def rot_mat(ax, th):
-    #    mat = array([[ax[0]**2*(1-cos(th))+cos(th),  ax[0]*ax[1]*(1-cos(th))-ax[2]*sin(th), ax[0]*ax[2]*(1-cos(th))+ax[1]*sin(th)],
-    #                 [ax[0]*ax[1]*(1-cos(th))+ax[2]*sin(th), ax[1]**2*(1-cos(th))+cos(th),  ax[1]*ax[2]*(1-cos(th))-ax[0]*sin(th)],
-    #                 [ax[0]*ax[2]*(1-cos(th))-ax[1]*sin(th), ax[1]*ax[2]*(1-cos(th))+ax[0]*sin(th), ax[2]**2*(1-cos(th))+cos(th)]], 
-    #             dtype=complex128)
-    #    return mat
+    '''
+    def rot_mat(ax, th):
+        mat = array([[ax[0]**2*(1-cos(th))+cos(th),  ax[0]*ax[1]*(1-cos(th))-ax[2]*sin(th), ax[0]*ax[2]*(1-cos(th))+ax[1]*sin(th)],
+                     [ax[0]*ax[1]*(1-cos(th))+ax[2]*sin(th), ax[1]**2*(1-cos(th))+cos(th),  ax[1]*ax[2]*(1-cos(th))-ax[0]*sin(th)],
+                     [ax[0]*ax[2]*(1-cos(th))-ax[1]*sin(th), ax[1]*ax[2]*(1-cos(th))+ax[0]*sin(th), ax[2]**2*(1-cos(th))+cos(th)]],
+                 dtype=complex128)
+        return mat
     #
-    # ez = array([0, 0, 1.0])
-    # bn = B/sqrt(B[0]**2 + B[1]**2 + B[2]**2)
-    # ax = cross(bn, ez)
+    ez = array([0, 0, 1.0])
+    bn = B/sqrt(B[0]**2 + B[1]**2 + B[2]**2)
+    ax = cross(bn, ez)
     # # if bn // ez don't do anything
-    # if sqrt(sum(ax**2)) < 1e-7: 
-    #     ans2 = M
-    # else:
-    #     ax = ax/sqrt(sum(ax**2))
-    #     ay = cross(ax, bn)
-    #     th = arctan2(sum(ez*ay), sum(ez*bn))
-    #     mata = rot_mat(ax, -th)
-    #     matb = rot_mat(ax, th)
-    #
-    #     ans2 = dot(matb, dot(M, mata))
+    if sqrt(sum(ax**2)) < 1e-7:
+         ans2 = M
+    else:
+        ax = ax/sqrt(sum(ax**2))
+        ay = cross(ax, bn)
+        th = arctan2(sum(ez*ay), sum(ez*bn))
+        mata = rot_mat(ax, th)
+        matb = rot_mat(ax, -th)
+        ans2 = dot(matb, dot(M, mata))
+
+    print(np.sum(np.abs(ans-ans2)))
+    '''
+    #print(ans, ans2)
 
     return ans
 
