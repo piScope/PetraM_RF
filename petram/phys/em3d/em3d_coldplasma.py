@@ -207,16 +207,16 @@ class EM3D_ColdPlasma(EM3D_Domain):
         v["_eac_"+ss] = var6
 
         self.do_add_matrix_expr(v, suffix, ind_vars, 'epsilonr', [
-                                "_e_"+ss + "/(-omega*omega*e0)"])
+                                "_e_"+ss + "/(-omega*omega*e0)"], ['omega'])
         self.do_add_matrix_expr(v, suffix, ind_vars, 'epsilonrac',
-                                ["_eac_"+ss + "/(-omega*omega*e0)"])
+                                ["_eac_"+ss + "/(-omega*omega*e0)"], ['omega'])
         add_expression(v, 'Pcol', suffix, ind_vars,
-                       "w*conj(E).dot(epsilonrac.dot(E))/2j*e0", ['E', 'epsilonrac', 'w'])
+                       "omega*conj(E).dot(epsilonrac.dot(E))/2j*e0", ['E', 'epsilonrac', 'omega'])
 
         self.do_add_matrix_expr(v, suffix, ind_vars,
                                 'mur', ["_m_"+ss + "/mu0"])
         self.do_add_matrix_expr(v, suffix, ind_vars, 'sigma', [
-                                "_s_"+ss + "/(-1j*omega)"])
+                                "_s_"+ss + "/(-1j*omega)"], ["omega"])
         self.do_add_matrix_expr(v, suffix, ind_vars, 'nuei', ["_nuei_"+ss])
         self.do_add_matrix_expr(v, suffix, ind_vars,
                                 'Sstix', ["_spd_"+ss+"[0,0]"])

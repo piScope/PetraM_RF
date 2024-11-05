@@ -250,12 +250,12 @@ class EM1D_ColdPlasma(EM1D_Vac):
         v["_eac_"+ss] = var6
 
         self.do_add_matrix_expr(v, suffix, ind_vars, 'epsilonr', [
-                                "_e_"+ss + "/(-omega*omega*e0)"])
+                                "_e_"+ss + "/(-omega*omega*e0)"], ["omega"])
         self.do_add_matrix_expr(v, suffix, ind_vars, 'epsilonrac', [
-                                "_eac_"+ss + "/(-omega*omega*e0)"])
+                                "_eac_"+ss + "/(-omega*omega*e0)"], ["omega"])
 
         add_expression(v, 'Pcol', suffix, ind_vars,
-                       "w*conj(E).dot(epsilonrac.dot(E))/2j*e0", ['E', 'epsilonrac', 'w'])
+                       "omega*conj(E).dot(epsilonrac.dot(E))/2j*e0", ['E', 'epsilonrac', 'omega'])
 
         self.do_add_matrix_expr(v, suffix, ind_vars,
                                 'mur', ["_m_"+ss + "/mu0"])

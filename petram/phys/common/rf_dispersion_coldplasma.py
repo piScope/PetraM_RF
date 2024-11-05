@@ -210,7 +210,7 @@ def build_variables(solvar, ss, ind_vars, omega, B, dens_e, t_e, dens_i, masses,
     densi_var = make_variable(dens_i)
 
     params = {'omega': omega, 'masses': masses, 'charges': charges,
-              'col_model': col_model_options.index(col_mode)}
+              'col_model': np.int32(col_model_options.index(col_mode))}
 
     if terms == default_stix_option:
         def epsilonr(*_ptx, B=None, dens_e=None, t_e=None, dens_i=None):

@@ -228,7 +228,7 @@ def make_function_variable():
 
     def npape(*ptx, B=None, t_c=None, dens_e=None, t_e=None, dens_i=None, t_i=None, kpakpe=None, kpevec=None):
         e_cold = epsilonr_pl_cold_std(
-            omega, B, dens_i, masses, charges, t_e, dens_e)
+            omega, B, dens_i, masses, charges, t_e, dens_e, col_model)
 
         npape = eval_npara_nperp(array(ptx), omega, kpakpe, kpe_mode, e_cold)
         return npape
