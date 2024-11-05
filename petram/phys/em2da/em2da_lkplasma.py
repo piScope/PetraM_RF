@@ -283,53 +283,9 @@ class EM2Da_LocalKPlasma(EM2Da_Domain):
                               self._global_ns, self._local_ns,
                               sdim=2)
 
-        v["_e_"+ss] = ret[0]
-        v["_m_"+ss] = ret[1]
-        v["_s_"+ss] = ret[2]
-        v["_spd_"+ss] = ret[3]
-        v["_nuei_"+ss] = ret[4]
-        v["_eac_"+ss] = ret[5]
-        v["_eae_"+ss] = ret[6]
-        v["_eai_"+ss] = ret[7]
-        v["_nref_"+ss] = ret[8]
 
-        self.do_add_matrix_expr(v, suffix, ind_vars, 'epsilonr', [
-                                "_e_"+ss + "/(-omega*omega*e0)"], ["omega"])
-        self.do_add_matrix_expr(v, suffix, ind_vars, 'epsilonrac', [
-                                "_eac_"+ss + "/(-omega*omega*e0)"], ["omega"])
-        self.do_add_matrix_expr(v, suffix, ind_vars, 'epsilonrae', [
-                                "_eae_"+ss + "/(-omega*omega*e0)"], ["omega"])
-        self.do_add_matrix_expr(v, suffix, ind_vars, 'epsilonrai', [
-                                "_eai_"+ss + "/(-omega*omega*e0)"], ["omega"])
-        
-        add_expression(v, 'Pcol', suffix, ind_vars,
-                       "omega*conj(E).dot(epsilonrac.dot(E))/2j*e0", ['E', 'epsilonrac', 'omega'])
-        add_expression(v, 'Pabse', suffix, ind_vars,
-                       "omega*conj(E).dot(epsilonrae.dot(E))/2j*e0", ['E', 'epsilonrac', 'omega'])
-        add_expression(v, 'Pabsi1', suffix, ind_vars,
-                       "omega*conj(E).dot(epsilonrai[0].dot(E))/2j*e0", ['E', 'epsilonrac', 'omega'])
-        add_expression(v, 'Pabsi2', suffix, ind_vars,
-                       "*conj(E).dot(epsilonrai[1].dot(E))/2j*e0", ['E', 'epsilonrac', 'omega'])
-        add_expression(v, 'Pabsi3', suffix, ind_vars,
-                       "w*conj(E).dot(epsilonrai[2].dot(E))/2j*e0", ['E', 'epsilonrac', 'omega'])
-
-        self.do_add_matrix_expr(v, suffix, ind_vars, 'Nrfr', ["_nref_"+ss])
-
-        self.do_add_matrix_expr(v, suffix, ind_vars,
-                                'mur', ["_m_"+ss + "/mu0"])
-        self.do_add_matrix_expr(v, suffix, ind_vars, 'sigma', [
-                                "_s_"+ss + "/(-1j*omega)"], ["omega"])
-        self.do_add_matrix_expr(v, suffix, ind_vars, 'nuei', ["_nuei_"+ss])
-        self.do_add_matrix_expr(v, suffix, ind_vars,
-                                'Sstix', ["_spd_"+ss+"[0,0]"])
-        self.do_add_matrix_expr(v, suffix, ind_vars, 'Dstix', [
-                                "1j*_spd_"+ss+"[0,1]"])
-        self.do_add_matrix_expr(v, suffix, ind_vars,
-                                'Pstix', ["_spd_"+ss+"[2,2]"])
-        self.do_add_matrix_expr(v, suffix, ind_vars,
-                                'Rstix', ["_spd_"+ss+"[0,0] + 1j*_spd_"+ss+"[0,1]"])
-        self.do_add_matrix_expr(v, suffix, ind_vars,
-                                'Lstix', ["_spd_"+ss+"[0,0] - 1j*_spd_"+ss+"[0,1]"])
+        from petram.phys.common.rf_dispersion_lkplasma import add_domain_variables_common
+        add_domain_variables_common(self, ret, v, suffix, ind_vars)
 
         var = ['r', 'phi', 'z']
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'epsilonr')

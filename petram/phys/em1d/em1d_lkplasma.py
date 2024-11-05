@@ -91,21 +91,19 @@ class EM1D_LocalKPlasma(EM1D_Vac):
         self._jited_coeff = self.get_coeffs()
 
     def get_coeffs(self):
-        freq, omega = self.get_root_phys().get_freq_omega()
-        B, dens_e, t_e, dens_i, masses, charges, kpakpe, kpevec, ky, kz = self.vt.make_value_or_expression(
+        _freq, omega = self.get_root_phys().get_freq_omega()
+        B, dens_e, t_e, dens_i, t_i, t_c, masses, charges, kpakpe, kpevec, ky, kz = self.vt.make_value_or_expression(
             self)
         ind_vars = self.get_root_phys().ind_vars
         kpe_mode = self.kpe_mode
         kpe_alg = self.kpe_alg
 
-        from petram.phys.common.rf_dispersion_coldplasma import build_coefficients
+        from petram.phys.common.rf_dispersion_lkplasma import build_coefficients
 
-        coeff1, coeff2, coeff3, coeff4 = build_coefficients(ind_vars, omega, B, dens_e, t_e,
-                                                            dens_i, masses, charges, kpakpe, kpevec,
-                                                            kpe_mode,
-                                                            self._global_ns, self._local_ns,
-                                                            kpe_alg=kpe_alg,
-                                                            sdim=1, terms=self.stix_terms)
+        coeff1, coeff2, coeff3, coeff4 = build_coefficients(ind_vars, omega, B, t_c, dens_e, t_e,
+                                                            dens_i, t_i, masses, charges, kpakpe, kpevec,
+                                                            kpe_mode, self._global_ns, self._local_ns,
+                                                            kpe_alg=kpe_alg, sdim=1, kymode=ky, kzmode=kz)
         return coeff1, coeff2, coeff3, coeff4, ky, kz
 
     def add_bf_contribution(self, engine, a, real=True, kfes=0):
@@ -114,7 +112,7 @@ class EM1D_LocalKPlasma(EM1D_Vac):
         else:
             dprint1("Add BF contribution(imag)" + str(self._sel_index))
 
-        coeff1, coeff2, coeff3, coeff4, _coeff_nuei,  ky, kz = self.jited_coeff
+        coeff1, coeff2, coeff3, coeff4,  ky, kz = self.jited_coeff
         self.set_integrator_realimag_mode(real)
 
         # if self.has_pml():
@@ -162,7 +160,7 @@ class EM1D_LocalKPlasma(EM1D_Vac):
             dprint1("Add mixed contribution(imag)" + "(" + str(r) + "," + str(c) + ')'
                     + str(self._sel_index))
 
-        coeff1, coeff2, coeff3, coeff4, _coeff_nuei, ky, kz = self.jited_coeff
+        coeff1, coeff2, coeff3, coeff4, ky, kz = self.jited_coeff
         self.set_integrator_realimag_mode(real)
 
         # super(EM1D_LocalKPlasma, self).add_mix_contribution(engine, mbf, r, c, is_trans,
@@ -207,7 +205,7 @@ class EM1D_LocalKPlasma(EM1D_Vac):
             return
 
         freq, omega = self.get_root_phys().get_freq_omega()
-        B, dens_e, t_e, dens_i, masses, charges, kpakpe, kpevec, ky, kz = self.vt.make_value_or_expression(
+        B, dens_e, t_e, dens_i, t_i, t_c, masses, charges, kpakpe, kpevec, ky, kz = self.vt.make_value_or_expression(
             self)
 
         ind_vars = self.get_root_phys().ind_vars
@@ -225,55 +223,15 @@ class EM1D_LocalKPlasma(EM1D_Vac):
 
         ss = self.parent.parent.name()+'_'+self.name()  # phys module name + name
         ret = build_variables(v, ss, ind_vars,
-                              omega, B, dens_e, t_e,
-                              dens_i, masses, charges,
+                              omega, B, t_c, dens_e, t_e,
+                              dens_i, t_i, masses, charges,
                               kpakpe, kpevec, kpe_mode, kpe_alg,
                               self._global_ns, self._local_ns,
                               sdim=1)
 
-        v["_e_"+ss] = ret[0]
-        v["_m_"+ss] = ret[1]
-        v["_s_"+ss] = ret[2]
-        v["_spd_"+ss] = ret[3]
-        v["_nuei_"+ss] = ret[4]
-        v["_eac_"+ss] = ret[5]
-        v["_eae_"+ss] = ret[6]
-        v["_eai_"+ss] = ret[7]
-        v["_nref_"+ss] = ret[8]
+        from petram.phys.common.rf_dispersion_lkplasma import add_domain_variables_common
+        add_domain_variables_common(self, ret, v, suffix, ind_vars)
 
-        self.do_add_matrix_expr(v, suffix, ind_vars, 'epsilonr', [
-                                "_e_"+ss + "/(-omega*omega*e0)"], ["omega"])
-        self.do_add_matrix_expr(v, suffix, ind_vars, 'epsilonrac', [
-                                "_eac_"+ss + "/(-omega*omega*e0)"], ["omega"])
-        self.do_add_matrix_expr(v, suffix, ind_vars, 'epsilonrae', [
-                                "_eae_"+ss + "/(-omega*omega*e0)"], ["omega"])
-        self.do_add_matrix_expr(v, suffix, ind_vars, 'epsilonrai', [
-                                "_eai_"+ss + "/(-omega*omega*e0)"], ["omega"])
-
-        add_expression(v, 'Pcol', suffix, ind_vars,
-                       "omega*conj(E).dot(epsilonrac.dot(E))/2j*e0", ['E', 'epsilonrac', 'omega'])
-        add_expression(v, 'Pabsi1', suffix, ind_vars,
-                       "omega*conj(E).dot(epsilonrai[0].dot(E))/2j*e0", ['E', 'epsilonrac', 'omega'])
-        add_expression(v, 'Pabsi2', suffix, ind_vars,
-                       "omega*conj(E).dot(epsilonrai[1].dot(E))/2j*e0", ['E', 'epsilonrac', 'omega'])
-        add_expression(v, 'Pabsi3', suffix, ind_vars,
-                       "omega*conj(E).dot(epsilonrai[2].dot(E))/2j*e0", ['E', 'epsilonrac', 'omega'])
-
-        self.do_add_matrix_expr(v, suffix, ind_vars,
-                                'mur', ["_m_"+ss + "/mu0"])
-        self.do_add_matrix_expr(v, suffix, ind_vars, 'sigma', [
-                                "_s_"+ss + "/(-1j*omega)"], ["omega"])
-        self.do_add_matrix_expr(v, suffix, ind_vars, 'nuei', ["_nuei_"+ss])
-        self.do_add_matrix_expr(v, suffix, ind_vars,
-                                'Sstix', ["_spd_"+ss+"[0,0]"])
-        self.do_add_matrix_expr(v, suffix, ind_vars, 'Dstix', [
-                                "1j*_spd_"+ss+"[0,1]"])
-        self.do_add_matrix_expr(v, suffix, ind_vars,
-                                'Pstix', ["_spd_"+ss+"[2,2]"])
-        self.do_add_matrix_expr(v, suffix, ind_vars,
-                                'Rstix', ["_spd_"+ss+"[0,0] + 1j*_spd_"+ss+"[0,1]"])
-        self.do_add_matrix_expr(v, suffix, ind_vars,
-                                'Lstix', ["_spd_"+ss+"[0,0] - 1j*_spd_"+ss+"[0,1]"])
         var = ['x', 'y', 'z']
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'epsilonr')
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'mur')

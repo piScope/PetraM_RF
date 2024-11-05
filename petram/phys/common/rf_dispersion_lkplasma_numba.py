@@ -395,8 +395,9 @@ def eval_kpe_std(ptx, kpara, kperp, k, b):
     # print(ret)
     return ret
 
+
 @njit(float64[:](float64[:], float64, float64, float64[:], float64[:]))
-def eval_kpe_em1da(ptx, kpara, kperp, k, b):
+def eval_kpe_em1d(ptx, kpara, kperp, k, b):
     #
     #   kvec specifies the direction of k on r-z plane
     #
@@ -407,6 +408,7 @@ def eval_kpe_em1da(ptx, kpara, kperp, k, b):
 
     #print('kvec', kvec)
     return kvec
+
 
 @njit(float64[:](float64[:], float64, float64, float64[:], float64[:]))
 def eval_kpe_em2da(ptx, kpara, kperp, k, b):
@@ -420,6 +422,7 @@ def eval_kpe_em2da(ptx, kpara, kperp, k, b):
 
     #print('kvec', kvec)
     return kvec
+
 
 @njit(float64[:](float64[:], float64, float64, float64[:], float64[:]))
 def eval_kpe_em2d(ptx, kpara, kperp, k, b):
