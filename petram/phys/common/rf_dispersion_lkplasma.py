@@ -58,11 +58,11 @@ vtable_data0 = [('B', VtableElement('bext', type='array',
                                            tip="ion charges normalized by q(=1.60217662e-19 [C])")),
                 ('kpa_kpe', VtableElement('kpa_kpe', type='array',
                                           guilabel='kpa, kpe',
-                                          default="1, 1.",
+                                          default="(1., 1.)",
                                           tip="k_parallel and k_perp for computing dielectric. ")),
                 ('kpe_vec', VtableElement('kpe_vec', type='array',
                                           guilabel='kpe dir.',
-                                          default="0, 0, 1",
+                                          default="(0., 0., 1.)",
                                           tip="k_perp direction. Adjusted to be normal to the magnetic field.")), ]
 
 kpe_options = ["explicit", "fast wave", "slow wave"]
@@ -264,7 +264,8 @@ def build_coefficients(ind_vars, omega, B, t_c, dens_e, t_e, dens_i, t_i,
                        return_complex=False, return_mfem_constant=True)
     kpakpe_coeff = VCoeff(2, kpakpe, ind_vars, l, g,
                           return_complex=False, return_mfem_constant=True)
-    kpevec_coeff = VCoeff(sdim, kpevec, ind_vars, l, g,
+
+    kpevec_coeff = VCoeff(3, kpevec, ind_vars, l, g,
                           return_complex=False, return_mfem_constant=True)
 
     import petram.phys.common.rf_dispersion_lkplasma_numba

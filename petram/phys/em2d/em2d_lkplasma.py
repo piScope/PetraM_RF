@@ -26,7 +26,7 @@ vtable_data.extend([('kz', VtableElement('kz', type='float',
                                          no_func=True,
                                          tip="out-of-plane wave number")), ])
 
-kpe_alg_options = ["std", "em2da"]
+kpe_alg_options = ["std", "em2d"]
 
 
 def domain_constraints():
@@ -103,7 +103,7 @@ class EM2D_LocalK(EM2D_Domain, EM2D_Domain_helper):
         coeff1, coeff2, coeff3, coeff4 = build_coefficients(ind_vars, omega, B, t_c, dens_e, t_e,
                                                             dens_i, t_i, masses, charges, kpakpe, kpevec,
                                                             kpe_mode, self._global_ns, self._local_ns,
-                                                            kpe_alg=kpe_alg, sdim=1, kzmode=kz)
+                                                            kpe_alg=kpe_alg, sdim=2, kzmode=kz)
 
         return coeff1, coeff2, coeff3, coeff4, kz
 
