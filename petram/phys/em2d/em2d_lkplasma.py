@@ -109,7 +109,7 @@ class EM2D_LocalK(EM2D_Domain, EM2D_Domain_helper):
 
     def get_coeffs_2(self):
         # e, m, s
-        coeff1, coeff2, coeff3, coeff_stix, _coeff_nuei, kz = self.jited_coeff
+        coeff1, coeff2, coeff3, coeff_stix, kz = self.jited_coeff
         '''
         coeff4 = ComplexMatrixSum(
             coeff1, coeff3)      # -> coeff4 = coeff1 + coeff3

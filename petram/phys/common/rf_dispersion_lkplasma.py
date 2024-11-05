@@ -24,7 +24,7 @@ else:
 
 vtable_data0 = [('B', VtableElement('bext', type='array',
                                     guilabel='magnetic field',
-                                    default="=[0,0,0]",
+                                    default="=[0.,0.,0.]",
                                     tip="external magnetic field")),
                 ('dens_e', VtableElement('dens_e', type='float',
                                          guilabel='electron density(m-3)',

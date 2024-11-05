@@ -290,7 +290,6 @@ def rotate_dielectric(B, K, M):
     #  M : dielectric matrix.
     #
     #
-
     B = ascontiguousarray(B)
     M = ascontiguousarray(M)
     K = ascontiguousarray(K)
@@ -391,7 +390,7 @@ def eval_kpe_std(ptx, kpara, kperp, k, b):
     bn = b/sqrt(b[0]**2 + b[1]**2 + b[2]**2)
     kn = k/sqrt(k[0]**2 + k[1]**2 + k[2]**2)
     tmp = cross(bn, kn)
-    ret = cross(bn, tmp)
+    ret = -cross(bn, tmp)
     # print(ret)
     return ret
 

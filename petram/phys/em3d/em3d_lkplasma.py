@@ -61,7 +61,7 @@ class EM3D_LocalKPlasma(EM3D_Domain):
 
     def get_panel1_value(self):
         values = super(EM3D_LocalKPlasma, self).get_panel1_value()
-        values.extend([self.col_model, self.stix_terms_str(), self])
+        values.extend([self.kpe_mode, self.kpe_alg])
         return values
 
     def import_panel1_value(self, v):
@@ -108,7 +108,7 @@ class EM3D_LocalKPlasma(EM3D_Domain):
         else:
             dprint1("Add BF contribution(imag)" + str(self._sel_index))
 
-        coeff1, coeff2, coeff3, coeff4, _coeff_nuei = self.jited_coeff
+        coeff1, coeff2, coeff3, coeff4 = self.jited_coeff
         self.set_integrator_realimag_mode(real)
 
         if self.has_pml():
