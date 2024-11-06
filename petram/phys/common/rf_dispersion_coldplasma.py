@@ -29,7 +29,7 @@ vtable_data0 = [('B', VtableElement('bext', type='array',
                                          default="1e19",
                                          tip="electron density")),
                 ('temperature', VtableElement('temperature', type='float',
-                                              guilabel='w_col(1/s) or Tc(eV)',
+                                              guilabel='Tc(ev) or w_col(1/s)',
                                               default="10.",
                                               tip="angular collision freq. or effecitive temperature for collisions")),
                 ('dens_i', VtableElement('dens_i', type='array',
@@ -50,8 +50,8 @@ vtable_data0 = [('B', VtableElement('bext', type='array',
 stix_options = ("SDP", "SD", "SP", "DP", "P", "w/o xx", "None")
 default_stix_option = "(default) include all"
 
-col_model_options = ["Tc", "wcol"]
-default_col_model = col_model_options[0]
+col_model_options = ["w/o col.", "Tc", "wcol"]
+default_col_model = col_model_options[1]
 
 
 def value2int(num_ions, value):
@@ -65,7 +65,7 @@ def value2int(num_ions, value):
     return [stix_options.index(x) for x in panelvalue]
 
 
-def build_coefficients(ind_vars, omega, B, dens_e, t_e, dens_i, masses, charges, col_mode,
+def build_coefficients(ind_vars, omega, B, dens_e, t_e, dens_i, masses, charges, col_model,
                        g_ns, l_ns, sdim=3, terms=default_stix_option):
 
     from petram.phys.common.rf_dispersion_coldplasma_numba import (epsilonr_pl_cold_std,
@@ -92,14 +92,16 @@ def build_coefficients(ind_vars, omega, B, dens_e, t_e, dens_i, masses, charges,
     dens_i_coeff = VCoeff(num_ions, [dens_i, ], ind_vars, l, g,
                           return_complex=False, return_mfem_constant=True)
 
+    col_model = col_model_options.index(col_model)
     params = {'omega': omega, 'masses': masses, 'charges': charges,
-              'col_model': col_model_options.index(col_mode)}
+              'col_model': col_model}
 
     if terms == default_stix_option:
 
         def epsilonr(ptx, B, dens_e, t_e, dens_i):
-            out = -epsilon0 * omega * omega*epsilonr_pl_cold(
+            e_cold = epsilonr_pl_cold(
                 omega, B, dens_i, masses, charges, t_e, dens_e, col_model)
+            out = -epsilon0 * omega * omega*e_cold
             return out
 
         def sdp(ptx, B, dens_e, t_e, dens_i):
@@ -169,7 +171,7 @@ def build_coefficients(ind_vars, omega, B, dens_e, t_e, dens_i, masses, charges,
 
 
 def build_variables(solvar, ss, ind_vars, omega, B, dens_e, t_e, dens_i, masses, charges,
-                    col_mode, g_ns, l_ns, sdim=3, terms=default_stix_option):
+                    col_model, g_ns, l_ns, sdim=3, terms=default_stix_option):
 
     from petram.phys.common.rf_dispersion_coldplasma_numba import (epsilonr_pl_cold_std,
                                                                    epsilonr_pl_cold_g,
@@ -209,8 +211,9 @@ def build_variables(solvar, ss, ind_vars, omega, B, dens_e, t_e, dens_i, masses,
     dense_var = make_variable(dens_e)
     densi_var = make_variable(dens_i)
 
-    params = {'omega': omega, 'masses': masses, 'charges': charges,
-              'col_model': np.int32(col_model_options.index(col_mode))}
+    col_model = col_model_options.index(col_model)
+    params = {'omega': omega, 'masses': masses,
+              'charges': charges, 'col_model': col_model}
 
     if terms == default_stix_option:
         def epsilonr(*_ptx, B=None, dens_e=None, t_e=None, dens_i=None):

@@ -4,6 +4,9 @@
 from petram.phys.common.rf_dispersion_lkplasma import (vtable_data0,
                                                        default_kpe_option,
                                                        kpe_options)
+from petram.phys.common.rf_dispersion_coldplasma import (col_model_options,
+                                                         default_col_model,)
+
 
 from petram.phys.phys_const import mu0, epsilon0
 from petram.phys.numba_coefficient import (func_to_numba_coeff_scalar,
@@ -37,7 +40,7 @@ vtable_data.extend([
 Expansion of matrix is as follows
 
                [e_rz  e_12 ][Erz ]
-[Wrz, Wphx] =  [           ][    ] = Wrz e_rz Erz + Wrz e_12 Ephi 
+[Wrz, Wphx] =  [           ][    ] = Wrz e_rz Erz + Wrz e_12 Ephi
                [e_21  e_phi][Ephx]
 
                                 + Wphi e_21 Erz + Wphi*e_phi*Ephi
@@ -88,23 +91,26 @@ class EM2Da_LocalKPlasma(EM2Da_Domain):
         EM2Da_Domain.attribute_set(self, v)
         v["kpe_mode"] = default_kpe_option
         v["kpe_alg"] = kpe_alg_options[0]
+        v["col_model"] = default_col_model
         return v
 
     def panel1_param(self):
         panels = super(EM2Da_LocalKPlasma, self).panel1_param()
         panels.append(["kpe mode", None, 1, {"values": kpe_options}])
         panels.append(["kpe alg.", None, 1, {"values": kpe_alg_options}])
+        panels.append(["col. model", None, 1, {"values": col_model_options}])
         return panels
 
     def get_panel1_value(self):
         values = super(EM2Da_LocalKPlasma, self).get_panel1_value()
-        values.extend([self.kpe_mode, self.kpe_alg])
+        values.extend([self.kpe_mode, self.kpe_alg, self.col_model])
         return values
 
     def import_panel1_value(self, v):
-        check = super(EM2Da_LocalKPlasma, self).import_panel1_value(v[:-2])
-        self.kpe_mode = v[-2]
-        self.kpe_alg = v[-1]
+        check = super(EM2Da_LocalKPlasma, self).import_panel1_value(v[:-3])
+        self.kpe_mode = v[-3]
+        self.kpe_alg = v[-2]
+        self.col_model = v[-1]
         return check
 
     @property
@@ -125,7 +131,8 @@ class EM2Da_LocalKPlasma(EM2Da_Domain):
         from petram.phys.common.rf_dispersion_lkplasma import build_coefficients
         coeff1, coeff2, coeff3, coeff4 = build_coefficients(ind_vars, omega, B, t_c,  dens_e, t_e,
                                                             dens_i, t_i, masses, charges, kpakpe, kpevec,
-                                                            kpe_mode, self._global_ns, self._local_ns,
+                                                            kpe_mode, self.col_model,
+                                                            self._global_ns, self._local_ns,
                                                             kpe_alg=kpe_alg, sdim=2, mmode=mmode)
 
         return coeff1, coeff2, coeff3, coeff4, mmode
@@ -279,10 +286,9 @@ class EM2Da_LocalKPlasma(EM2Da_Domain):
         ret = build_variables(v, ss, ind_vars,
                               omega, B, t_c,  dens_e, t_e,
                               dens_i, t_i, masses, charges,
-                              kpakpe, kpevec, kpe_mode, kpe_alg,
+                              kpakpe, kpevec, kpe_mode, kpe_alg, self.col_model,
                               self._global_ns, self._local_ns,
                               sdim=2)
-
 
         from petram.phys.common.rf_dispersion_lkplasma import add_domain_variables_common
         add_domain_variables_common(self, ret, v, suffix, ind_vars)

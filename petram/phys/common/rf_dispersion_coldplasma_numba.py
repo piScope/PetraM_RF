@@ -122,7 +122,10 @@ def epsilonr_pl_cold_std(w, B, denses, masses, charges, Te, ne, col_model):
     D = 0j
 
     if ne > 0.:
-        if col_model == 1:
+        if col_model == 0:
+            wcol = Te
+            Se, Pe, De = SPD_el_b(w, b_norm, ne, 0.)
+        elif col_model == 2:
             wcol = Te
             Se, Pe, De = SPD_el_b(w, b_norm, ne, wcol)
         else:
@@ -133,7 +136,9 @@ def epsilonr_pl_cold_std(w, B, denses, masses, charges, Te, ne, col_model):
 
     for dens, mass, charge, nu_ei in zip(denses, masses, charges, nu_eis):
         if dens > 0.:
-            if col_model == 1:
+            if col_model == 0:
+                Si, Pi, Di = SPD_ion_b(w, b_norm, dens, mass, charge, 0)
+            elif col_model == 2:
                 wcol = Te
                 Si, Pi, Di = SPD_ion_b(w, b_norm, dens, mass, charge, wcol)
             else:
@@ -163,7 +168,9 @@ def epsilonr_pl_cold_g(w, B, denses, masses, charges, Te, ne, terms, col_model):
                [0.,   0.,    1.+0j]])
 
     if ne > 0.:
-        if col_model == 1:
+        if col_model == 0:
+            S, P, D = SPD_el_b(w, b_norm, ne, 0.)
+        elif col_model == 2:
             wcol = Te
             S, P, D = SPD_el_b(w, b_norm, ne, wcol)
         else:
@@ -194,7 +201,9 @@ def epsilonr_pl_cold_g(w, B, denses, masses, charges, Te, ne, terms, col_model):
     kion = 1
     for dens, mass, charge, nu_ei in zip(denses, masses, charges, nu_eis):
         if dens > 0.:
-            if col_model == 1:
+            if col_model == 0:
+                S, P, D = SPD_ion_b(w, b_norm, dens, mass, charge, 0.0)
+            elif col_model == 2:
                 wcol = Te
                 S, P, D = SPD_ion_b(w, b_norm, dens, mass, charge, wcol)
             else:
