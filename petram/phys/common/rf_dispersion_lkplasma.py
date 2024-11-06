@@ -149,6 +149,20 @@ def make_function_variable():
             omega, B, dens_i, masses, charges, t_e, dens_e, col_model)
         return out
 
+    def sdphot(*_ptx,  B=None, t_c=None, dens_e=None, t_e=None, dens_i=None, t_i=None, kpakpe=None, kpevec=None):
+        e_cold = epsilonr_pl_cold_std(
+            omega, B, dens_i, masses, charges, t_e, dens_e, col_model)
+
+        npape = eval_npara_nperp(array(ptx), omega, kpakpe, kpe_mode, e_cold)
+        npara = npape[0].real
+        nperp = npape[1].real
+        kpe = kpe_alg(array(ptx), omega*npara/c, omega*nperp/c, kpevec, B)
+
+        e_hot = epsilonr_pl_hot_std(omega, B, t_i, dens_i,  masses, charges,
+                                    t_e, dens_e,
+                                    npara, nperp, nhrms)
+        return e_hot
+
     def mur(*_ptx):
         return mu0*np.eye(3, dtype=np.complex128)
 
@@ -236,7 +250,7 @@ def make_function_variable():
         npape = eval_npara_nperp(array(ptx), omega, kpakpe, kpe_mode, e_cold)
         return npape
 
-    return epsilonr, sdp, mur, sigma, nuei, epsilonrac, epsilonrae, epsilonrai, npape
+    return epsilonr, sdp, mur, sigma, nuei, epsilonrac, epsilonrae, epsilonrai, npape, spdhot
 
 
 def build_coefficients(ind_vars, omega, B, t_c, dens_e, t_e, dens_i, t_i,
@@ -375,7 +389,7 @@ def build_variables(solvar, ss, ind_vars, omega, B, t_c, dens_e, t_e, dens_i, t_
               'c': speed_of_light, "kpe_mode": kpe_options.index(kpe_mode),
               'kpe_alg': kpe_alg, 'col_model': col_model}
 
-    epsilonr, sdp, mur, sigma, nuei, epsilonrac, epsilonrae, epsilonrai, npape = make_function_variable()
+    epsilonr, sdp, mur, sigma, nuei, epsilonrac, epsilonrae, epsilonrai, npape, spdhot = make_function_variable()
 
     solvar["B_"+ss] = B_var
     solvar["tc_"+ss] = tc_var
@@ -409,8 +423,10 @@ def build_variables(solvar, ss, ind_vars, omega, B, t_c, dens_e, t_e, dens_i, t_
                           dependency=dependency, params=params)(epsilonrai)
     var9 = variable.array(complex=True, shape=(2, ),
                           dependency=dependency, params=params)(npape)
+    var10 = variable.array(complex=True, shape=(3, 3),
+                           dependency=dependency, params=params)(spdhot)
 
-    return var1, var2, var3, var4, var5, var6, var7, var8, var9
+    return var1, var2, var3, var4, var5, var6, var7, var8, var9, var10
 
 
 def add_domain_variables_common(obj, ret, v, suffix, ind_vars):
@@ -427,6 +443,7 @@ def add_domain_variables_common(obj, ret, v, suffix, ind_vars):
     v["_eae_"+ss] = ret[6]
     v["_eai_"+ss] = ret[7]
     v["_nref_"+ss] = ret[8]
+    v["_spdhot_"+ss] = ret[9]
 
     obj.do_add_matrix_expr(v, suffix, ind_vars, 'epsilonr', [
         "_e_"+ss + "/(-omega*omega*e0)"], ["omega"])
@@ -436,6 +453,8 @@ def add_domain_variables_common(obj, ret, v, suffix, ind_vars):
         "_eae_"+ss + "/(-omega*omega*e0)"], ["omega"])
     obj.do_add_matrix_expr(v, suffix, ind_vars, 'epsilonrai', [
         "_eai_"+ss + "/(-omega*omega*e0)"], ["omega"])
+
+    obj.do_add_matrix_expr(v, suffix, ind_vars, 'EPSstix', ["_spdhot_"+ss],)
 
     add_expression(v, 'Pcol', suffix, ind_vars,
                    "omega*conj(E).dot(epsilonrac.dot(E))/2j*e0", ['E', 'epsilonrac', 'omega'])
