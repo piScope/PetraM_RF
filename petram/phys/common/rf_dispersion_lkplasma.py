@@ -250,7 +250,7 @@ def make_function_variable():
         npape = eval_npara_nperp(array(ptx), omega, kpakpe, kpe_mode, e_cold)
         return npape
 
-    return epsilonr, sdp, mur, sigma, nuei, epsilonrac, epsilonrae, epsilonrai, npape, spdhot
+    return epsilonr, sdp, mur, sigma, nuei, epsilonrac, epsilonrae, epsilonrai, npape, sdphot
 
 
 def build_coefficients(ind_vars, omega, B, t_c, dens_e, t_e, dens_i, t_i,
@@ -389,7 +389,7 @@ def build_variables(solvar, ss, ind_vars, omega, B, t_c, dens_e, t_e, dens_i, t_
               'c': speed_of_light, "kpe_mode": kpe_options.index(kpe_mode),
               'kpe_alg': kpe_alg, 'col_model': col_model}
 
-    epsilonr, sdp, mur, sigma, nuei, epsilonrac, epsilonrae, epsilonrai, npape, spdhot = make_function_variable()
+    epsilonr, sdp, mur, sigma, nuei, epsilonrac, epsilonrae, epsilonrai, npape, sdphot = make_function_variable()
 
     solvar["B_"+ss] = B_var
     solvar["tc_"+ss] = tc_var
@@ -424,7 +424,7 @@ def build_variables(solvar, ss, ind_vars, omega, B, t_c, dens_e, t_e, dens_i, t_
     var9 = variable.array(complex=True, shape=(2, ),
                           dependency=dependency, params=params)(npape)
     var10 = variable.array(complex=True, shape=(3, 3),
-                           dependency=dependency, params=params)(spdhot)
+                           dependency=dependency, params=params)(sdphot)
 
     return var1, var2, var3, var4, var5, var6, var7, var8, var9, var10
 
