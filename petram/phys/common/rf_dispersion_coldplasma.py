@@ -171,7 +171,7 @@ def build_coefficients(ind_vars, omega, B, dens_e, t_e, dens_i, masses, charges,
 
 
 def build_variables(solvar, ss, ind_vars, omega, B, dens_e, t_e, dens_i, masses, charges,
-                    col_model, g_ns, l_ns, sdim=3, terms=default_stix_option):
+                    col_model, g_ns, l_ns, terms=default_stix_option):
 
     from petram.phys.common.rf_dispersion_coldplasma_numba import (epsilonr_pl_cold_std,
                                                                    epsilonr_pl_cold_g,
@@ -281,3 +281,39 @@ def build_variables(solvar, ss, ind_vars, omega, B, dens_e, t_e, dens_i, masses,
                           dependency=dependency, params=params)(epsilonrac)
 
     return var1, var2, var3, var4, var5, var6
+
+def add_domain_variables_common(obj, ret, v, suffix, ind_vars):
+    from petram.helper.variables import add_expression, add_constant
+
+    ss = obj.parent.parent.name()+'_' + obj.name()  # phys module name + name
+
+    v["_e_"+ss] = ret[0]
+    v["_m_"+ss] = ret[1]
+    v["_s_"+ss] = ret[2]
+    v["_spd_"+ss] = ret[3]
+    v["_nuei_"+ss] = ret[4]
+    v["_eac_"+ss] = ret[5]
+
+    obj.do_add_matrix_expr(v, suffix, ind_vars, 'epsilonr', [
+                            "_e_"+ss + "/(-omega*omega*e0)"], ["omega"])
+    obj.do_add_matrix_expr(v, suffix, ind_vars, 'epsilonrac', [
+                            "_eac_"+ss + "/(-omega*omega*e0)"], ["omega"])
+
+    add_expression(v, 'Pcol', suffix, ind_vars,
+                   "omega*conj(E).dot(epsilonrac.dot(E))/1j*e0", ['E', 'epsilonrac', 'omega'])
+
+    obj.do_add_matrix_expr(v, suffix, ind_vars,
+                            'mur', ["_m_"+ss + "/mu0"])
+    obj.do_add_matrix_expr(v, suffix, ind_vars, 'sigma', [
+                            "_s_"+ss + "/(-1j*omega)"])
+    obj.do_add_matrix_expr(v, suffix, ind_vars, 'nuei', ["_nuei_"+ss])
+    obj.do_add_matrix_expr(v, suffix, ind_vars,
+                            'Sstix', ["_spd_"+ss+"[0,0]"])
+    obj.do_add_matrix_expr(v, suffix, ind_vars, 'Dstix', [
+                            "1j*_spd_"+ss+"[0,1]"])
+    obj.do_add_matrix_expr(v, suffix, ind_vars,
+                            'Pstix', ["_spd_"+ss+"[2,2]"])
+    obj.do_add_matrix_expr(v, suffix, ind_vars,
+                            'Rstix', ["_spd_"+ss+"[0,0] + 1j*_spd_"+ss+"[0,1]"])
+    obj.do_add_matrix_expr(v, suffix, ind_vars,
+                            'Lstix', ["_spd_"+ss+"[0,0] - 1j*_spd_"+ss+"[0,1]"])
