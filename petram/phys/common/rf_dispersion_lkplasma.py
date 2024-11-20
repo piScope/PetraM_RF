@@ -457,15 +457,15 @@ def add_domain_variables_common(obj, ret, v, suffix, ind_vars):
     obj.do_add_matrix_expr(v, suffix, ind_vars, 'EPSstix', ["_spdhot_"+ss],)
 
     add_expression(v, 'Pcol', suffix, ind_vars,
-                   "omega*conj(E).dot(epsilonrac.dot(E))/2j*e0", ['E', 'epsilonrac', 'omega'])
+                   "omega*conj(E).dot(epsilonrac.dot(E))/1j*e0", ['E', 'epsilonrac', 'omega'])
     add_expression(v, 'Pabse', suffix, ind_vars,
-                   "omega*conj(E).dot(epsilonrae.dot(E))/2j*e0", ['E', 'epsilonrae', 'omega'])
+                   "omega*conj(E).dot(epsilonrae.dot(E))/1j*e0", ['E', 'epsilonrae', 'omega'])
     add_expression(v, 'Pabsi1', suffix, ind_vars,
-                   "omega*conj(E).dot(epsilonrai[0].dot(E))/2j*e0", ['E', 'epsilonrai', 'omega'])
+                   "omega*conj(E).dot(epsilonrai[0].dot(E))/1j*e0", ['E', 'epsilonrai', 'omega'])
     add_expression(v, 'Pabsi2', suffix, ind_vars,
-                   "omega*conj(E).dot(epsilonrai[1].dot(E))/2j*e0", ['E', 'epsilonrai', 'omega'])
+                   "omega*conj(E).dot(epsilonrai[1].dot(E))/1j*e0", ['E', 'epsilonrai', 'omega'])
     add_expression(v, 'Pabsi3', suffix, ind_vars,
-                   "omega*conj(E).dot(epsilonrai[2].dot(E))/2j*e0", ['E', 'epsilonrai', 'omega'])
+                   "omega*conj(E).dot(epsilonrai[2].dot(E))/1j*e0", ['E', 'epsilonrai', 'omega'])
 
     obj.do_add_matrix_expr(v, suffix, ind_vars, 'Nrfr', ["_nref_"+ss])
 
