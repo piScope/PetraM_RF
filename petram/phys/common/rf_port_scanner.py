@@ -164,12 +164,12 @@ class PortScanner(DefaultParametricScanner):
                 if (isinstance(obj, EM3D_Port) or
                     isinstance(obj, EM2Da_Port) or
                         isinstance(obj, EM1D_Port)):
-                    pnames.append((obj.port_idx, obj.get_probe()))
+                    pnames.append((int(obj.port_idx), obj.get_probe()))
 
                 elif isinstance(obj, EM3D_PortArray):
                     dprint1("Smatrix collection is not supported for PortArray")
 
-        ports = [int(x[0]) for x in sorted(pnames)]
+        ports = [x[0] for x in sorted(pnames)]
         pnames = [x[1] for x in sorted(pnames)]
 
         from petram.sol.probe import list_probes, load_probe,  Probe
