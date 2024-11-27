@@ -168,6 +168,10 @@ class EM1D_Port(EM1D_Bdry):
         return ([["port id", str(self.port_idx), 0, {}], ] +
                 self.vt.panel_param(self))
 
+    def panel1_tip(self):
+        ll = self.vt.panel_tip()
+        return ["Port ID"] + ll
+
     def get_panel1_value(self):
         return ([str(self.port_idx), ] +
                 self.vt.get_panel_value(self))
