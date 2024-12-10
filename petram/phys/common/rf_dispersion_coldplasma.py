@@ -178,6 +178,8 @@ def build_variables(solvar, ss, ind_vars, omega, B, dens_e, t_e, dens_i, masses,
                                                                    epsilonr_pl_cold,
                                                                    epsilonr_pl_cold_generic,
                                                                    f_collisions)
+    from petram.phys.common.rf_plasma_wc_wp import wpesq, wpisq, wce, wci    
+
 
     Da = 1.66053906660e-27      # atomic mass unit (u or Dalton) (kg)
 
@@ -261,6 +263,48 @@ def build_variables(solvar, ss, ind_vars, omega, B, dens_e, t_e, dens_i, masses,
         nuei = f_collisions(dens_i, charges, t_e, dens_e)
         return nuei
 
+    def fce(*_ptx, B=None, dens_e=None, t_e=None, dens_i=None):
+        freq = omega/2/pi
+        b_norm = sqrt(B[0]**2+B[1]**2+B[2]**2)
+        fce = wce(b_norm, freq)*omega/2/pi
+        return fce
+
+    def fci(*_ptx, B=None, dens_e=None, t_e=None, dens_i=None):
+        from petram.phys.phys_const import Da
+
+        freq = omega/2/pi
+        fci = np.zeros(len(masses))
+        b_norm = sqrt(B[0]**2+B[1]**2+B[2]**2)
+
+        i = 0
+        for mass, charge in zip(masses, charges):
+            A = mass/Da
+            Z = charge
+            fci[i] = wci(b_norm, freq, A, Z)*omega/2/pi
+            i = i+1
+
+        return fci
+
+    def fpe(*_ptx, B=None, dens_e=None, t_e=None, dens_i=None):
+        freq = omega/2/pi
+        fpe = sqrt(wpesq(dens_e, freq)*omega**2)/2/pi
+        return fpe
+
+    def fpi(*_ptx, B=None, dens_e=None, t_e=None, dens_i=None):
+        from petram.phys.phys_const import Da
+
+        freq = omega/2/pi
+        fpi = np.zeros(len(masses))
+
+        i = 0
+        for dens, mass, charge in zip(dens_i, masses, charges):
+            A = mass/Da
+            Z = charge
+            fpi[i] = sqrt(wpisq(dens, A, Z, freq)*omega**2)/2/pi
+            i = i+1
+
+        return fpi
+
     solvar["B_"+ss] = B_var
     solvar["ne_"+ss] = dense_var
     solvar["te_"+ss] = te_var
@@ -280,7 +324,16 @@ def build_variables(solvar, ss, ind_vars, omega, B, dens_e, t_e, dens_i, masses,
     var6 = variable.array(complex=True, shape=(3, 3),
                           dependency=dependency, params=params)(epsilonrac)
 
-    return var1, var2, var3, var4, var5, var6
+    var7 = variable.float(dependency=dependency, params=params)(fce)
+    var8 = variable.array(complex=False, shape=(len(masses),),
+                          dependency=dependency, params=params)(fci)
+
+    var9 = variable.float(dependency=dependency, params=params)(fpe)
+    var10 = variable.array(complex=False, shape=(len(masses),),
+                           dependency=dependency, params=params)(fpi)
+
+    return var1, var2, var3, var4, var5, var6, var7, var8, var9, var10
+
 
 def add_domain_variables_common(obj, ret, v, suffix, ind_vars):
     from petram.helper.variables import add_expression, add_constant
@@ -293,27 +346,36 @@ def add_domain_variables_common(obj, ret, v, suffix, ind_vars):
     v["_spd_"+ss] = ret[3]
     v["_nuei_"+ss] = ret[4]
     v["_eac_"+ss] = ret[5]
+    v["_fce_"+ss] = ret[6]
+    v["_fci_"+ss] = ret[7]
+    v["_fpe_"+ss] = ret[8]
+    v["_fpi_"+ss] = ret[9]
 
     obj.do_add_matrix_expr(v, suffix, ind_vars, 'epsilonr', [
-                            "_e_"+ss + "/(-omega*omega*e0)"], ["omega"])
+        "_e_"+ss + "/(-omega*omega*e0)"], ["omega"])
     obj.do_add_matrix_expr(v, suffix, ind_vars, 'epsilonrac', [
-                            "_eac_"+ss + "/(-omega*omega*e0)"], ["omega"])
+        "_eac_"+ss + "/(-omega*omega*e0)"], ["omega"])
 
     add_expression(v, 'Pcol', suffix, ind_vars,
                    "omega*conj(E).dot(epsilonrac.dot(E))/1j*e0", ['E', 'epsilonrac', 'omega'])
 
+    add_expression(v, 'fce', suffix, ind_vars, "_fce_"+ss, [])
+    obj.do_add_matrix_expr(v, suffix, ind_vars, 'fci', ["_fci_"+ss])
+    add_expression(v, 'fpe', suffix, ind_vars, "_fpe_"+ss, [])
+    obj.do_add_matrix_expr(v, suffix, ind_vars, 'fpi', ["_fpi_"+ss])
+
     obj.do_add_matrix_expr(v, suffix, ind_vars,
-                            'mur', ["_m_"+ss + "/mu0"])
+                           'mur', ["_m_"+ss + "/mu0"])
     obj.do_add_matrix_expr(v, suffix, ind_vars, 'sigma', [
-                            "_s_"+ss + "/(-1j*omega)"])
+        "_s_"+ss + "/(-1j*omega)"])
     obj.do_add_matrix_expr(v, suffix, ind_vars, 'nuei', ["_nuei_"+ss])
     obj.do_add_matrix_expr(v, suffix, ind_vars,
-                            'Sstix', ["_spd_"+ss+"[0,0]"])
+                           'Sstix', ["_spd_"+ss+"[0,0]"])
     obj.do_add_matrix_expr(v, suffix, ind_vars, 'Dstix', [
-                            "1j*_spd_"+ss+"[0,1]"])
+        "1j*_spd_"+ss+"[0,1]"])
     obj.do_add_matrix_expr(v, suffix, ind_vars,
-                            'Pstix', ["_spd_"+ss+"[2,2]"])
+                           'Pstix', ["_spd_"+ss+"[2,2]"])
     obj.do_add_matrix_expr(v, suffix, ind_vars,
-                            'Rstix', ["_spd_"+ss+"[0,0] + 1j*_spd_"+ss+"[0,1]"])
+                           'Rstix', ["_spd_"+ss+"[0,0] + 1j*_spd_"+ss+"[0,1]"])
     obj.do_add_matrix_expr(v, suffix, ind_vars,
-                            'Lstix', ["_spd_"+ss+"[0,0] - 1j*_spd_"+ss+"[0,1]"])
+                           'Lstix', ["_spd_"+ss+"[0,0] - 1j*_spd_"+ss+"[0,1]"])

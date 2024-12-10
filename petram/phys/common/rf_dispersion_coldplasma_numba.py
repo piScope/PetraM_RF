@@ -5,10 +5,13 @@ from numpy import (pi, sin, cos, exp, sqrt, log, arctan2, cross,
 import numpy as np
 
 # vacuum permittivity
-e0 = 8.8541878176e-12
-q_base = 1.60217662e-19
+from petram.phys.phys_const import epsilon0 as e0
+from petram.phys.phys_const import q0 as q_base
+from petram.phys.phys_const import mass_electron as me
+
+
 qe = -q_base
-me = 9.10938356e-31
+
 
 iarray_ro = types.Array(int32, 1, 'C', readonly=True)
 darray_ro = types.Array(float64, 1, 'C', readonly=True)
