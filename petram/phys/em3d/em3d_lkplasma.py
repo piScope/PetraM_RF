@@ -175,7 +175,7 @@ class EM3D_LocalKPlasma(EM3D_Domain):
         freq, omega = self.get_root_phys().get_freq_omega()
         B, dens_e, t_e, dens_i, t_i, t_c, masses, charges, kpakpe, kpevec = self.vt.make_value_or_expression(
             self)
-        ind_vars = self.get_root_phys().ind_vars
+
         kpe_mode = self.kpe_mode
         kpe_alg = self.kpe_alg
 

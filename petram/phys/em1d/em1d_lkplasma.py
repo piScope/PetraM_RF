@@ -213,7 +213,6 @@ class EM1D_LocalKPlasma(EM1D_Vac):
         B, dens_e, t_e, dens_i, t_i, t_c, masses, charges, kpakpe, kpevec, ky, kz = self.vt.make_value_or_expression(
             self)
 
-        ind_vars = self.get_root_phys().ind_vars
         kpe_mode = self.kpe_mode
         kpe_alg = self.kpe_alg
 
