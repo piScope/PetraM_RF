@@ -78,7 +78,7 @@ def make_functions():
 
     def epsilonr(_ptx, B, t_c, dens_e, t_e, dens_i, t_i, kpakpe, kpevec):
         e_cold = epsilonr_pl_cold_std(
-            omega, B, dens_i, masses, charges, t_e, dens_e, col_model)
+            omega, B, dens_i, masses, charges, t_c, dens_e, col_model)
 
         npape = eval_npara_nperp(_ptx, omega, kpakpe, kpe_mode, e_cold)
         npara = npape[0].real
@@ -123,7 +123,7 @@ def make_function_variable():
 
     def epsilonr(*ptx, B=None, t_c=None, dens_e=None, t_e=None, dens_i=None, t_i=None, kpakpe=None, kpevec=None):
         e_cold = epsilonr_pl_cold_std(
-            omega, B, dens_i, masses, charges, t_e, dens_e, col_model)
+            omega, B, dens_i, masses, charges, t_c, dens_e, col_model)
 
         npape = eval_npara_nperp(array(ptx), omega, kpakpe, kpe_mode, e_cold)
         npara = npape[0].real
@@ -152,7 +152,7 @@ def make_function_variable():
 
     def sdphot(*ptx,  B=None, t_c=None, dens_e=None, t_e=None, dens_i=None, t_i=None, kpakpe=None, kpevec=None):
         e_cold = epsilonr_pl_cold_std(
-            omega, B, dens_i, masses, charges, t_e, dens_e, col_model)
+            omega, B, dens_i, masses, charges, t_c, dens_e, col_model)
 
         npape = eval_npara_nperp(array(ptx), omega, kpakpe, kpe_mode, e_cold)
         npara = npape[0].real
@@ -179,7 +179,7 @@ def make_function_variable():
     def epsilonrac(*ptx, B=None, t_c=None, dens_e=None, t_e=None, dens_i=None, t_i=None, kpakpe=None, kpevec=None):
 
         e_cold = epsilonr_pl_cold_std(
-            omega, B, dens_i, masses, charges, t_e, dens_e, col_model)
+            omega, B, dens_i, masses, charges, t_c, dens_e, col_model)
 
         npape = eval_npara_nperp(array(ptx), omega, kpakpe, kpe_mode, e_cold)
         npara = npape[0].real
@@ -199,7 +199,7 @@ def make_function_variable():
     def epsilonrae(*ptx, B=None, t_c=None, dens_e=None, t_e=None, dens_i=None, t_i=None, kpakpe=None, kpevec=None):
 
         e_cold = epsilonr_pl_cold_std(
-            omega, B, dens_i, masses, charges, t_e, dens_e, col_model)
+            omega, B, dens_i, masses, charges, t_c, dens_e, col_model)
 
         npape = eval_npara_nperp(array(ptx), omega, kpakpe, kpe_mode, e_cold)
         npara = npape[0].real
@@ -221,7 +221,7 @@ def make_function_variable():
     def epsilonrai(*ptx, B=None, t_c=None, dens_e=None, t_e=None, dens_i=None, t_i=None, kpakpe=None, kpevec=None):
 
         e_cold = epsilonr_pl_cold_std(
-            omega, B, dens_i, masses, charges, t_e, dens_e, col_model)
+            omega, B, dens_i, masses, charges, t_c, dens_e, col_model)
 
         npape = eval_npara_nperp(array(ptx), omega, kpakpe, kpe_mode, e_cold)
         npara = npape[0].real
@@ -247,7 +247,7 @@ def make_function_variable():
 
     def npape(*ptx, B=None, t_c=None, dens_e=None, t_e=None, dens_i=None, t_i=None, kpakpe=None, kpevec=None):
         e_cold = epsilonr_pl_cold_std(
-            omega, B, dens_i, masses, charges, t_e, dens_e, col_model)
+            omega, B, dens_i, masses, charges, t_c, dens_e, col_model)
 
         npape = eval_npara_nperp(array(ptx), omega, kpakpe, kpe_mode, e_cold)
         return npape
