@@ -187,7 +187,6 @@ class EM3D_ColdPlasma(EM3D_Domain):
         freq, omega = self.get_root_phys().get_freq_omega()
         B, dens_e, t_e, dens_i, masses, charges = self.vt.make_value_or_expression(
             self)
-        ind_vars = self.get_root_phys().ind_vars
         col_model = self.col_model
 
         from petram.phys.common.rf_dispersion_coldplasma import build_variables

@@ -223,7 +223,6 @@ class EM1D_ColdPlasma(EM1D_Vac):
         freq, omega = self.get_root_phys().get_freq_omega()
         B, dens_e, t_e, dens_i, masses, charges, ky, kz = self.vt.make_value_or_expression(
             self)
-        ind_vars = self.get_root_phys().ind_vars
         col_model = self.col_model
 
         add_constant(v, 'ky', suffix, np.float64(kz),

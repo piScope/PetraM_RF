@@ -198,7 +198,6 @@ class EM2D_ColdPlasma(EM2D_Domain, EM2D_Domain_helper):
         freq, omega = self.get_root_phys().get_freq_omega()
         B, dens_e, t_e, dens_i, masses, charges, kz = self.vt.make_value_or_expression(
             self)
-        ind_vars = self.get_root_phys().ind_vars
         col_model = self.col_model
 
         add_constant(v, 'kz', suffix, np.float64(kz),

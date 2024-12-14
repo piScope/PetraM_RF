@@ -118,11 +118,15 @@ def f_collisions(denses, charges, Te, ne):
 @njit(complex128[:, ::1](float64, float64[:], float64[:], darray_ro, iarray_ro, float64, float64, int32))
 def epsilonr_pl_cold_std(w, B, denses, masses, charges, Te, ne, col_model):
     b_norm = sqrt(B[0]**2+B[1]**2+B[2]**2)
-    nu_eis = f_collisions(denses, charges, Te, ne)
 
     S = 1 + 0j
     P = 1 + 0j
     D = 0j
+
+    if col_model not in [0, 2]:
+        nu_eis = f_collisions(denses, charges, Te, ne)
+    else:
+        nu_eis = np.array([0.]*len(masses))
 
     if ne > 0.:
         if col_model == 0:
@@ -164,7 +168,10 @@ def epsilonr_pl_cold_g(w, B, denses, masses, charges, Te, ne, terms, col_model):
     '''
 
     b_norm = sqrt(B[0]**2+B[1]**2+B[2]**2)
-    nu_eis = f_collisions(denses, charges, Te, ne)
+    if col_model not in [0, 2]:
+        nu_eis = f_collisions(denses, charges, Te, ne)
+    else:
+        nu_eis = np.array([0.]*len(masses))
 
     M = array([[1.+0j,   0., 0.],
                [0.,   1.+0j, 0.j],
@@ -178,7 +185,7 @@ def epsilonr_pl_cold_g(w, B, denses, masses, charges, Te, ne, terms, col_model):
             S, P, D = SPD_el_b(w, b_norm, ne, wcol)
         else:
             S, P, D = SPD_el(w, b_norm, ne, nu_eis)
-        #S, P, D = SPD_el(w, b_norm, ne, nu_eis)
+
         if terms[0] == 0:
             M2 = array([[S, -1j*D, 0j], [1j*D, S, 0j], [0., 0., P]])
 
