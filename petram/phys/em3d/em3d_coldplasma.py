@@ -193,41 +193,14 @@ class EM3D_ColdPlasma(EM3D_Domain):
         from petram.phys.common.rf_dispersion_coldplasma import build_variables
 
         ss = self.parent.parent.name()+'_'+self.name()  # phys module name + name
-        var1, var2, var3, var4, var5, var6 = build_variables(v, ss, ind_vars,
-                                                             omega, B, dens_e, t_e,
-                                                             dens_i, masses, charges, col_model,
-                                                             self._global_ns, self._local_ns,
-                                                             sdim=1, terms=self.stix_terms)
+        ret  = build_variables(v, ss, ind_vars, omega, B, dens_e, t_e,
+                               dens_i, masses, charges, col_model,
+                               self._global_ns, self._local_ns,
+                               terms=self.stix_terms,)
 
-        v["_e_"+ss] = var1
-        v["_m_"+ss] = var2
-        v["_s_"+ss] = var3
-        v["_spd_"+ss] = var4
-        v["_nuei_"+ss] = var5
-        v["_eac_"+ss] = var6
+        from petram.phys.common.rf_dispersion_coldplasma import add_domain_variables_common
+        add_domain_variables_common(self, ret, v, suffix, ind_vars)
 
-        self.do_add_matrix_expr(v, suffix, ind_vars, 'epsilonr', [
-                                "_e_"+ss + "/(-omega*omega*e0)"], ['omega'])
-        self.do_add_matrix_expr(v, suffix, ind_vars, 'epsilonrac',
-                                ["_eac_"+ss + "/(-omega*omega*e0)"], ['omega'])
-        add_expression(v, 'Pcol', suffix, ind_vars,
-                       "omega*conj(E).dot(epsilonrac.dot(E))/2j*e0", ['E', 'epsilonrac', 'omega'])
-
-        self.do_add_matrix_expr(v, suffix, ind_vars,
-                                'mur', ["_m_"+ss + "/mu0"])
-        self.do_add_matrix_expr(v, suffix, ind_vars, 'sigma', [
-                                "_s_"+ss + "/(-1j*omega)"], ["omega"])
-        self.do_add_matrix_expr(v, suffix, ind_vars, 'nuei', ["_nuei_"+ss])
-        self.do_add_matrix_expr(v, suffix, ind_vars,
-                                'Sstix', ["_spd_"+ss+"[0,0]"])
-        self.do_add_matrix_expr(v, suffix, ind_vars, 'Dstix', [
-                                "1j*_spd_"+ss+"[0,1]"])
-        self.do_add_matrix_expr(v, suffix, ind_vars,
-                                'Pstix', ["_spd_"+ss+"[2,2]"])
-        self.do_add_matrix_expr(v, suffix, ind_vars,
-                                'Rstix', ["_spd_"+ss+"[0,0] + 1j*_spd_"+ss+"[0,1]"])
-        self.do_add_matrix_expr(v, suffix, ind_vars,
-                                'Lstix', ["_spd_"+ss+"[0,0] - 1j*_spd_"+ss+"[0,1]"])
         var = ['x', 'y', 'z']
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'epsilonr')
         self.do_add_matrix_component_expr(v, suffix, ind_vars, var, 'mur')

@@ -40,11 +40,11 @@ from numpy import (pi, sin, cos, exp, sqrt, log, arctan2, cross,
                    sum, zeros, dot, array, ascontiguousarray)
 import numpy as np
 
+from petram.phys.common.rf_plasma_wc_wp import om, wpesq, wpisq, wce, wci
+
 iarray_ro = types.Array(int32, 1, 'C', readonly=True)
 darray_ro = types.Array(float64, 1, 'C', readonly=True)
 
-
-# constant
 
 # constants
 gausspertesla = 1.E4
@@ -53,32 +53,6 @@ me_gram = mass_electron * 1000.
 mp_gram = mass_proton * 1000.
 ergperkev = q_base * 1e10
 qe = -q_base
-
-
-@njit("float64(float64)")
-def om(freq):
-    return 2.0 * pi * freq
-
-
-@njit("float64(float64, float64)")
-def wpesq(ne, freq):
-    return 4.0 * pi * ne * meter3_per_cm3 * q0_cgs**2 / me_gram / om(freq)**2
-
-
-@njit("float64(float64, float64, float64, float64)")
-def wpisq(ni, A, Z, freq):
-    return 4.0 * pi * ni * meter3_per_cm3 * \
-        (q0_cgs * Z)**2 / (A * mp_gram) / om(freq)**2
-
-
-@njit("float64(float64, float64)")
-def wce(Bmagn, freq):
-    return (-q0_cgs * Bmagn * gausspertesla) / (me_gram * clight) / om(freq)
-
-
-@njit("float64(float64, float64, float64, float64)")
-def wci(Bmagn, freq, A, Z):
-    return (q0_cgs * Z * Bmagn * gausspertesla) / (A * mp_gram * clight) / om(freq)
 
 
 @njit("float64(float64)")
