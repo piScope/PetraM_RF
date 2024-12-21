@@ -202,7 +202,7 @@ def build_variables(solvar, ss, ind_vars, omega, B, dens_e, t_e, dens_i, masses,
 
     def make_variable(x):
         if isinstance(x, str):
-            d1 = ExpressionVariable(x, ind_vars)
+            d1 = ExpressionVariable(x, ind_vars, gns=g_ns)
         else:
             d1 = Constant(x)
         return d1
